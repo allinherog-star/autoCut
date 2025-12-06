@@ -150,7 +150,7 @@ export default function ExportPage() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden">
+    <div className="flex-1 flex min-h-0 overflow-hidden">
       {/* 左侧预览 */}
       <div className="flex-1 flex flex-col p-6 border-r border-surface-800">
         {/* 页面标题 */}

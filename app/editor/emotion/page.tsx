@@ -181,7 +181,7 @@ export default function EmotionPage() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden">
+    <div className="flex-1 flex min-h-0 overflow-hidden">
       {/* 左侧情绪时间线 */}
       <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-800">
         {/* 页面标题 */}

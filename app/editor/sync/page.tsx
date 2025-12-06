@@ -194,7 +194,7 @@ export default function SyncPage() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="flex-1 flex flex-col min-h-0 p-6 overflow-hidden">
       {/* 页面标题 */}
       <div className="mb-6">
         <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">

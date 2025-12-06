@@ -215,7 +215,7 @@ export default function EditPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col overflow-hidden bg-surface-950">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-surface-950">
         {/* 顶部工具栏 */}
         <div className="h-12 border-b border-surface-800 flex items-center justify-between px-4 bg-surface-900">
           {/* 左侧工具 */}

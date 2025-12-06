@@ -124,7 +124,7 @@ export default function EffectsPage() {
   const effects = getEffectsByTab()
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* 页面标题 */}
       <div className="p-6 border-b border-surface-800">
         <div className="flex items-center justify-between">

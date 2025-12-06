@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Wand2,
@@ -154,11 +154,24 @@ export default function UnderstandPage() {
     setPreviewSegment(null)
   }
 
-  // 完成当前步骤并进入下一步
-  const handleGoToNextStep = () => {
+  // 使用 ref 存储最新的回调函数，避免 useEffect 依赖循环
+  const handleGoToNextStepRef = useRef(() => {
     markStepCompleted(currentStep)
     goToNextStep()
-  }
+  })
+
+  // 更新 ref 中的函数
+  useEffect(() => {
+    handleGoToNextStepRef.current = () => {
+      markStepCompleted(currentStep)
+      goToNextStep()
+    }
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 稳定的回调函数
+  const handleGoToNextStep = useCallback(() => {
+    handleGoToNextStepRef.current()
+  }, [])
 
   // 模拟分析过程
   useEffect(() => {
@@ -287,10 +300,10 @@ export default function UnderstandPage() {
     } else {
       hideBottomBar()
     }
-  }, [isAnalyzing, segments, selectedCount, setBottomBar, hideBottomBar, handleReanalyze])
+  }, [isAnalyzing, segments, selectedCount, setBottomBar, hideBottomBar, handleGoToNextStep, handleReanalyze])
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* 页面标题 */}
       <div className="flex-shrink-0 px-6 pt-4 pb-3">
         <h1 className="text-xl font-display font-bold text-surface-100 mb-1">

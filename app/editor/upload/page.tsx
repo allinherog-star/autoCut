@@ -204,7 +204,7 @@ export default function UploadPage() {
   }, [hasFiles, mediaFiles.length, allUploaded, isUploading])
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* 页面标题 */}
       <div className="flex-shrink-0 px-6 pt-6 pb-4">
         <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">

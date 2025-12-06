@@ -211,7 +211,7 @@ export default function MusicPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* 顶部搜索和筛选 */}
       <div className="p-6 border-b border-surface-800">
         <div className="flex items-center gap-4 mb-4">

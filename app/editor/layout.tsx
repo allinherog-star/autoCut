@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, createContext, useContext, ReactNode, useCallback, useEffect } from 'react'
+import { useState, createContext, useContext, ReactNode, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
@@ -239,9 +239,15 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     setBottomBarConfigState(defaultBottomBarConfig)
   }, [])
 
-  // 路由变化时重置底部栏
+  // 追踪上一次的 pathname，只在真正变化时重置底部栏
+  const prevPathnameRef = useRef(pathname)
+  
   useEffect(() => {
-    setBottomBarConfigState(defaultBottomBarConfig)
+    // 只在 pathname 真正变化时重置底部栏（跳过初次挂载）
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname
+      setBottomBarConfigState(defaultBottomBarConfig)
+    }
   }, [pathname])
 
   const contextValue: EditorContextType = {
