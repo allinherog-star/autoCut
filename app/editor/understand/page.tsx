@@ -480,8 +480,8 @@ export default function UnderstandPage() {
                           </div>
 
                           {/* 中间内容区 */}
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex items-center gap-3 mb-0.5">
+                          <div className="flex-1 min-w-0 flex flex-col justify-start gap-1">
+                            <div className="flex items-center gap-3">
                               <span className="text-sm font-mono text-surface-400">
                                 {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
                               </span>
