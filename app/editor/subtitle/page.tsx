@@ -27,12 +27,31 @@ import { useEditor } from '../layout'
 // 类型定义
 // ============================================
 
+interface SubtitleStyle {
+  fontSize: number
+  color: string
+  backgroundColor: string
+  position: 'top' | 'center' | 'bottom'
+  alignment: 'left' | 'center' | 'right'
+  hasOutline: boolean
+}
+
+const defaultSubtitleStyle: SubtitleStyle = {
+  fontSize: 24,
+  color: '#FFFFFF',
+  backgroundColor: 'rgba(0,0,0,0.6)',
+  position: 'bottom',
+  alignment: 'center',
+  hasOutline: true,
+}
+
 interface SubtitleLine {
   id: string
   text: string
   startTime: number
   endTime: number
-  thumbnailUrl?: string // 画面缩略图
+  thumbnailUrl?: string
+  style: SubtitleStyle
 }
 
 interface VideoSegment {
@@ -46,15 +65,6 @@ interface VideoSegment {
   score: number
   subtitles: SubtitleLine[]
   isExpanded: boolean
-}
-
-interface SubtitleStyle {
-  fontSize: number
-  color: string
-  backgroundColor: string
-  position: 'top' | 'center' | 'bottom'
-  alignment: 'left' | 'center' | 'right'
-  hasOutline: boolean
 }
 
 // ============================================
@@ -74,9 +84,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['开场', '人物', '特写'],
     score: 92,
     subtitles: [
-      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 4, thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=120&h=68&fit=crop' },
-      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 4, endTime: 8, thumbnailUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=68&fit=crop' },
-      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 8, endTime: 12, thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=68&fit=crop' },
+      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 4, thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 4, endTime: 8, thumbnailUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 8, endTime: 12, thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
     ],
     isExpanded: true,
   },
@@ -90,10 +100,10 @@ const mockSegments: VideoSegment[] = [
     labels: ['对话', '双人', '情感'],
     score: 88,
     subtitles: [
-      { id: '2-1', text: '这个观点真的很有意思', startTime: 12, endTime: 16, thumbnailUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=120&h=68&fit=crop' },
-      { id: '2-2', text: '我之前从来没有这样想过', startTime: 16, endTime: 20, thumbnailUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=120&h=68&fit=crop' },
-      { id: '2-3', text: '你能详细解释一下吗？', startTime: 20, endTime: 24, thumbnailUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=120&h=68&fit=crop' },
-      { id: '2-4', text: '当然，让我来给你分析', startTime: 24, endTime: 28, thumbnailUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=120&h=68&fit=crop' },
+      { id: '2-1', text: '这个观点真的很有意思', startTime: 12, endTime: 16, thumbnailUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '2-2', text: '我之前从来没有这样想过', startTime: 16, endTime: 20, thumbnailUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '2-3', text: '你能详细解释一下吗？', startTime: 20, endTime: 24, thumbnailUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '2-4', text: '当然，让我来给你分析', startTime: 24, endTime: 28, thumbnailUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
     ],
     isExpanded: false,
   },
@@ -107,9 +117,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['高潮', '动作', '精彩'],
     score: 95,
     subtitles: [
-      { id: '3-1', text: '这一幕太震撼了！', startTime: 35, endTime: 40, thumbnailUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=120&h=68&fit=crop' },
-      { id: '3-2', text: '你看这个镜头切换得多流畅', startTime: 40, endTime: 46, thumbnailUrl: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=120&h=68&fit=crop' },
-      { id: '3-3', text: '简直是教科书级别的拍摄手法', startTime: 46, endTime: 52, thumbnailUrl: 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=120&h=68&fit=crop' },
+      { id: '3-1', text: '这一幕太震撼了！', startTime: 35, endTime: 40, thumbnailUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '3-2', text: '你看这个镜头切换得多流畅', startTime: 40, endTime: 46, thumbnailUrl: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '3-3', text: '简直是教科书级别的拍摄手法', startTime: 46, endTime: 52, thumbnailUrl: 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
     ],
     isExpanded: false,
   },
@@ -123,9 +133,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['结尾', '总结', '回顾'],
     score: 78,
     subtitles: [
-      { id: '4-1', text: '好了，今天的内容就到这里', startTime: 52, endTime: 58, thumbnailUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=120&h=68&fit=crop' },
-      { id: '4-2', text: '记得点赞关注不迷路哦', startTime: 58, endTime: 63, thumbnailUrl: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=120&h=68&fit=crop' },
-      { id: '4-3', text: '我们下期再见！', startTime: 63, endTime: 68, thumbnailUrl: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=120&h=68&fit=crop' },
+      { id: '4-1', text: '好了，今天的内容就到这里', startTime: 52, endTime: 58, thumbnailUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '4-2', text: '记得点赞关注不迷路哦', startTime: 58, endTime: 63, thumbnailUrl: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '4-3', text: '我们下期再见！', startTime: 63, endTime: 68, thumbnailUrl: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
     ],
     isExpanded: false,
   },
@@ -164,15 +174,9 @@ export default function SubtitlePage() {
   const [previewSubtitle, setPreviewSubtitle] = useState<SubtitleLine | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
-  // 字幕样式
-  const [style, setStyle] = useState<SubtitleStyle>({
-    fontSize: 24,
-    color: '#FFFFFF',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    position: 'bottom',
-    alignment: 'center',
-    hasOutline: true,
-  })
+  // 字幕样式编辑状态
+  const [styleEditingId, setStyleEditingId] = useState<string | null>(null)
+  const [styleEditingSegmentId, setStyleEditingSegmentId] = useState<string | null>(null)
 
   const totalSubtitles = segments.reduce((acc, seg) => acc + seg.subtitles.length, 0)
 
@@ -305,6 +309,23 @@ export default function SubtitlePage() {
       )
     )
   }
+
+  // 更新字幕样式
+  const updateSubtitleStyle = (segmentId: string, subtitleId: string, newStyle: Partial<SubtitleStyle>) => {
+    setSegments((prev) =>
+      prev.map((seg) =>
+        seg.id === segmentId
+          ? {
+              ...seg,
+              subtitles: seg.subtitles.map((sub) =>
+                sub.id === subtitleId ? { ...sub, style: { ...sub.style, ...newStyle } } : sub
+              ),
+            }
+          : seg
+      )
+    )
+  }
+
 
   return (
     <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -474,8 +495,9 @@ export default function SubtitlePage() {
                               {segment.subtitles.map((subtitle) => (
                                 <div
                                   key={subtitle.id}
-                                  className="flex items-center gap-3 p-2 rounded-lg bg-surface-900/50 border border-surface-700 group hover:border-surface-600 transition-colors"
+                                  className="rounded-lg bg-surface-900/50 border border-surface-700 group hover:border-surface-600 transition-colors"
                                 >
+                                <div className="flex items-center gap-3 p-2">
                                   {/* 画面缩略图 + 预览 */}
                                   <div
                                     className="relative w-28 h-16 rounded overflow-hidden bg-surface-800 flex-shrink-0 cursor-pointer group/preview"
@@ -573,27 +595,171 @@ export default function SubtitlePage() {
 
                                   {/* 操作按钮 */}
                                   {editingSubtitleId !== subtitle.id && (
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {/* 样式按钮 - 始终显示 */}
                                       <Button
-                                        variant="ghost"
+                                        variant={styleEditingId === subtitle.id ? 'primary' : 'ghost'}
                                         size="xs"
                                         isIconOnly
-                                        onClick={() => startEditSubtitle(subtitle.id, subtitle.text)}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (styleEditingId === subtitle.id) {
+                                            setStyleEditingId(null)
+                                            setStyleEditingSegmentId(null)
+                                          } else {
+                                            setStyleEditingId(subtitle.id)
+                                            setStyleEditingSegmentId(segment.id)
+                                          }
+                                        }}
+                                        title="字幕样式"
                                       >
-                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <Palette className="w-3.5 h-3.5" />
                                       </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="xs"
-                                        isIconOnly
-                                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                                        onClick={() => deleteSubtitle(segment.id, subtitle.id)}
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </Button>
+                                      {/* 编辑和删除按钮 - 悬停显示 */}
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          isIconOnly
+                                          onClick={() => startEditSubtitle(subtitle.id, subtitle.text)}
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          isIconOnly
+                                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                                          onClick={() => deleteSubtitle(segment.id, subtitle.id)}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
+
+                                {/* 字幕样式编辑面板 */}
+                                <AnimatePresence>
+                                  {styleEditingId === subtitle.id && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="mt-2 p-3 rounded-lg bg-surface-800 border border-surface-700">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <span className="text-xs font-medium text-surface-300">字幕样式</span>
+                                          <Button
+                                            variant="ghost"
+                                            size="xs"
+                                            onClick={() => {
+                                              setStyleEditingId(null)
+                                              setStyleEditingSegmentId(null)
+                                            }}
+                                          >
+                                            完成
+                                          </Button>
+                                        </div>
+
+                                        {/* 预览 */}
+                                        <div className="mb-3 p-3 rounded bg-surface-900 flex items-center justify-center min-h-[60px]">
+                                          <span
+                                            className={`px-2 py-1 rounded ${subtitle.style.hasOutline ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : ''}`}
+                                            style={{
+                                              fontSize: `${subtitle.style.fontSize * 0.5}px`,
+                                              color: subtitle.style.color,
+                                              backgroundColor: subtitle.style.backgroundColor,
+                                              textAlign: subtitle.style.alignment,
+                                            }}
+                                          >
+                                            {subtitle.text.slice(0, 15)}{subtitle.text.length > 15 ? '...' : ''}
+                                          </span>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                          {/* 字体大小 */}
+                                          <div>
+                                            <label className="text-xs text-surface-400 mb-1.5 block">
+                                              字体大小: {subtitle.style.fontSize}px
+                                            </label>
+                                            <Slider
+                                              value={[subtitle.style.fontSize]}
+                                              min={16}
+                                              max={48}
+                                              step={2}
+                                              onValueChange={(v) => updateSubtitleStyle(segment.id, subtitle.id, { fontSize: v[0] })}
+                                            />
+                                          </div>
+
+                                          {/* 位置 */}
+                                          <div>
+                                            <label className="text-xs text-surface-400 mb-1.5 block">位置</label>
+                                            <div className="flex gap-1">
+                                              {(['top', 'center', 'bottom'] as const).map((pos) => (
+                                                <Button
+                                                  key={pos}
+                                                  variant={subtitle.style.position === pos ? 'primary' : 'secondary'}
+                                                  size="xs"
+                                                  onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { position: pos })}
+                                                >
+                                                  {pos === 'top' && '顶部'}
+                                                  {pos === 'center' && '居中'}
+                                                  {pos === 'bottom' && '底部'}
+                                                </Button>
+                                              ))}
+                                            </div>
+                                          </div>
+
+                                          {/* 对齐 */}
+                                          <div>
+                                            <label className="text-xs text-surface-400 mb-1.5 block">对齐</label>
+                                            <div className="flex gap-1">
+                                              <Button
+                                                variant={subtitle.style.alignment === 'left' ? 'primary' : 'secondary'}
+                                                size="xs"
+                                                isIconOnly
+                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'left' })}
+                                              >
+                                                <AlignLeft className="w-3.5 h-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant={subtitle.style.alignment === 'center' ? 'primary' : 'secondary'}
+                                                size="xs"
+                                                isIconOnly
+                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'center' })}
+                                              >
+                                                <AlignCenter className="w-3.5 h-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant={subtitle.style.alignment === 'right' ? 'primary' : 'secondary'}
+                                                size="xs"
+                                                isIconOnly
+                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'right' })}
+                                              >
+                                                <AlignRight className="w-3.5 h-3.5" />
+                                              </Button>
+                                            </div>
+                                          </div>
+
+                                          {/* 描边 */}
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-xs text-surface-400">文字描边</label>
+                                            <Switch
+                                              checked={subtitle.style.hasOutline}
+                                              onCheckedChange={(checked) =>
+                                                updateSubtitleStyle(segment.id, subtitle.id, { hasOutline: checked })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
                               ))}
                             </div>
 
@@ -609,132 +775,32 @@ export default function SubtitlePage() {
         )}
       </div>
 
-      {/* 右侧样式配置 */}
-      <div className="w-80 p-6 bg-surface-900/50 overflow-y-auto">
-        <h2 className="text-lg font-semibold text-surface-100 mb-4 flex items-center gap-2">
-          <Palette className="w-5 h-5 text-amber-400" />
-          字幕样式
+      {/* 右侧统计面板 */}
+      <div className="w-64 p-6 bg-surface-900/50 overflow-y-auto">
+        <h2 className="text-lg font-semibold text-surface-100 mb-4">
+          字幕概览
         </h2>
 
-        {/* 预览区域 */}
-        <Card className="mb-6 overflow-hidden">
-          <div className="relative h-36 bg-surface-800 flex items-end justify-center p-4">
-            {/* 模拟视频背景 */}
-            <div className="absolute inset-0 bg-gradient-to-br from-surface-700 to-surface-900" />
-            {/* 字幕预览 */}
-            <div
-              className={`
-                relative px-4 py-2 rounded-lg text-center max-w-[90%]
-                ${style.position === 'top' ? 'self-start' : ''}
-                ${style.position === 'center' ? 'self-center' : ''}
-                ${style.position === 'bottom' ? 'self-end' : ''}
-              `}
-              style={{
-                backgroundColor: style.backgroundColor,
-                fontSize: `${style.fontSize * 0.6}px`,
-                textAlign: style.alignment,
-              }}
-            >
-              <span
-                className={`${style.hasOutline ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : ''}`}
-                style={{ color: style.color }}
-              >
-                这是字幕预览效果
-              </span>
-            </div>
-          </div>
-        </Card>
+        {/* 统计信息 */}
+        <div className="space-y-4">
+          <Card className="p-4">
+            <div className="text-3xl font-bold text-amber-400 mb-1">{segments.length}</div>
+            <div className="text-sm text-surface-400">视频片段</div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-3xl font-bold text-emerald-400 mb-1">{totalSubtitles}</div>
+            <div className="text-sm text-surface-400">字幕总数</div>
+          </Card>
 
-        {/* 样式选项 */}
-        <div className="space-y-6">
-          {/* 字体大小 */}
-          <div>
-            <label className="text-sm text-surface-300 mb-2 block">
-              字体大小: {style.fontSize}px
-            </label>
-            <Slider
-              value={[style.fontSize]}
-              min={16}
-              max={48}
-              step={2}
-              onValueChange={(v) => setStyle({ ...style, fontSize: v[0] })}
-            />
-          </div>
-
-          {/* 位置 */}
-          <div>
-            <label className="text-sm text-surface-300 mb-2 block">位置</label>
-            <div className="flex gap-2">
-              {(['top', 'center', 'bottom'] as const).map((pos) => (
-                <Button
-                  key={pos}
-                  variant={style.position === pos ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setStyle({ ...style, position: pos })}
-                >
-                  {pos === 'top' && '顶部'}
-                  {pos === 'center' && '居中'}
-                  {pos === 'bottom' && '底部'}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* 对齐 */}
-          <div>
-            <label className="text-sm text-surface-300 mb-2 block">对齐</label>
-            <div className="flex gap-2">
-              <Button
-                variant={style.alignment === 'left' ? 'primary' : 'secondary'}
-                size="sm"
-                isIconOnly
-                onClick={() => setStyle({ ...style, alignment: 'left' })}
-              >
-                <AlignLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={style.alignment === 'center' ? 'primary' : 'secondary'}
-                size="sm"
-                isIconOnly
-                onClick={() => setStyle({ ...style, alignment: 'center' })}
-              >
-                <AlignCenter className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={style.alignment === 'right' ? 'primary' : 'secondary'}
-                size="sm"
-                isIconOnly
-                onClick={() => setStyle({ ...style, alignment: 'right' })}
-              >
-                <AlignRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* 描边 */}
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-surface-300">文字描边</label>
-            <Switch
-              checked={style.hasOutline}
-              onCheckedChange={(checked) =>
-                setStyle({ ...style, hasOutline: checked })
-              }
-            />
-          </div>
-
-          {/* 统计信息 */}
           <div className="pt-4 border-t border-surface-700">
-            <h3 className="text-sm font-medium text-surface-200 mb-3">统计</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-surface-400">
-                <span>视频片段</span>
-                <span className="text-surface-200">{segments.length} 个</span>
-              </div>
-              <div className="flex justify-between text-surface-400">
-                <span>字幕总数</span>
-                <span className="text-surface-200">{totalSubtitles} 条</span>
-              </div>
-            </div>
+            <h3 className="text-sm font-medium text-surface-200 mb-3 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-amber-400" />
+              样式说明
+            </h3>
+            <p className="text-xs text-surface-500 leading-relaxed">
+              点击每条字幕右侧的 <span className="text-amber-400">调色板按钮</span> 可单独设置该字幕的样式，包括字体大小、位置、对齐和描边效果。
+            </p>
           </div>
         </div>
       </div>
