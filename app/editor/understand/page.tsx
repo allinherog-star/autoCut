@@ -425,27 +425,11 @@ export default function UnderstandPage() {
                         ${segment.isDiscarded ? 'opacity-60' : ''}
                       `}
                     >
-                      <div className="relative p-3">
-                        {/* 右上角标签 */}
-                        <div className="absolute top-2.5 right-2.5 flex flex-wrap gap-1.5 justify-end max-w-[200px]">
-                          {segment.labels.map((label, labelIndex) => (
-                            <span 
-                              key={label} 
-                              className={`
-                                inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-                                ${getLabelColor(label, labelIndex)}
-                              `}
-                            >
-                              <Tag className="w-3 h-3" />
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-
-                        <div className="flex gap-3">
+                      <div className="relative p-2.5">
+                        <div className="flex gap-2.5 items-stretch">
                           {/* 左侧缩略图 */}
                           <div 
-                            className="relative w-44 h-24 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
+                            className="relative w-40 h-20 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
                             onClick={() => openPreview(segment)}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -497,41 +481,45 @@ export default function UnderstandPage() {
                             </p>
                           </div>
 
-                          {/* 右侧：操作按钮 */}
-                          <div className="flex-shrink-0 flex items-center gap-2 self-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                leftIcon={<Video className="w-4 h-4" />}
-                                onClick={() => openPreview(segment)}
-                              >
-                                预览
-                              </Button>
-                              {segment.isDiscarded ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  leftIcon={<Undo2 className="w-4 h-4" />}
-                                  onClick={() => restoreSegment(segment.id)}
+                          {/* 右侧：标签 + 操作按钮 */}
+                          <div className="flex-shrink-0 flex flex-col items-end gap-2 self-start w-52">
+                            <div className="flex flex-wrap gap-1.5 justify-end w-full">
+                              {segment.labels.map((label, labelIndex) => (
+                                <span 
+                                  key={label} 
+                                  className={`
+                                    inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                    ${getLabelColor(label, labelIndex)}
+                                  `}
                                 >
-                                  恢复
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant={segment.isSelected ? 'primary' : 'secondary'}
-                                  size="sm"
-                                  leftIcon={
-                                    segment.isSelected ? (
-                                      <Check className="w-4 h-4" />
-                                    ) : (
-                                      <Eye className="w-4 h-4" />
-                                    )
-                                  }
-                                  onClick={() => toggleSegment(segment.id)}
-                                >
-                                  {segment.isSelected ? '已选中' : '选择'}
-                                </Button>
-                              )}
+                                  <Tag className="w-3 h-3" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                            {!segment.isSelected && (
+                              <div className="flex items-center gap-2">
+                                {segment.isDiscarded ? (
+                                  <Button
+                                    variant="outline"
+                                    size="xs"
+                                    leftIcon={<Undo2 className="w-4 h-4" />}
+                                    onClick={() => restoreSegment(segment.id)}
+                                  >
+                                    恢复
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="secondary"
+                                    size="xs"
+                                    leftIcon={<Eye className="w-4 h-4" />}
+                                    onClick={() => toggleSegment(segment.id)}
+                                  >
+                                    选择
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
