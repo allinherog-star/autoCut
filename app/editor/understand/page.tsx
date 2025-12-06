@@ -502,7 +502,7 @@ export default function UnderstandPage() {
                                 <Button
                                   variant="outline"
                                   size="xs"
-                                  className="border-red-400 text-red-300 hover:border-red-400 hover:bg-red-500/10"
+                                  className="border-red-600 text-red-500 hover:border-red-600 hover:bg-red-700/15"
                                   leftIcon={<X className="w-4 h-4" />}
                                   onClick={() => toggleSegment(segment.id)}
                                 >
