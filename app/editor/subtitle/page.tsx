@@ -415,8 +415,9 @@ export default function SubtitlePage() {
                               {segment.subtitles.length} 条字幕
                             </Badge>
                           </div>
-                          <p className="text-surface-100 font-medium text-sm line-clamp-2">
-                            {segment.description}
+                          {/* 字幕汇总（自动生成，不可编辑） */}
+                          <p className="text-surface-300 text-sm line-clamp-2">
+                            {segment.subtitles.map(s => s.text).join(' ｜ ')}
                           </p>
                         </div>
 
