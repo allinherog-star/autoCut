@@ -202,13 +202,14 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   }, [])
 
   const goToNextStep = useCallback(() => {
-    // 只有当前步骤已完成才能进入下一步
-    if (currentStep < steps.length - 1 && completedSteps.includes(currentStep)) {
+    if (currentStep < steps.length - 1) {
+      // 确保当前步骤标记完成
+      setCompletedSteps((prev) => (prev.includes(currentStep) ? prev : [...prev, currentStep]))
       const nextStep = currentStep + 1
       setCurrentStep(nextStep)
       router.push(steps[nextStep].path)
     }
-  }, [currentStep, completedSteps, router])
+  }, [currentStep, router])
 
   const goToPrevStep = useCallback(() => {
     if (currentStep > 0) {
