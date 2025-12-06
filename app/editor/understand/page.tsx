@@ -425,11 +425,11 @@ export default function UnderstandPage() {
                         ${segment.isDiscarded ? 'opacity-60' : ''}
                       `}
                     >
-                      <div className="relative p-2.5 min-h-[112px]">
+                      <div className="relative p-2.5 min-h-[104px]">
                         <div className="flex gap-2.5 items-stretch">
                           {/* 左侧缩略图 */}
                           <div 
-                            className="relative w-36 h-[81px] rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
+                            className="relative w-32 h-18 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
                             onClick={() => openPreview(segment)}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -482,7 +482,7 @@ export default function UnderstandPage() {
                           </div>
 
                           {/* 右侧：标签 + 操作按钮 */}
-                          <div className="flex-shrink-0 flex flex-col items-end gap-2 self-start w-52">
+                          <div className="flex-shrink-0 flex flex-col items-end gap-4 self-start w-52">
                             <div className="flex flex-wrap gap-1.5 justify-end w-full">
                               {segment.labels.map((label, labelIndex) => (
                                 <span 
@@ -497,29 +497,37 @@ export default function UnderstandPage() {
                                 </span>
                               ))}
                             </div>
-                            {!segment.isSelected && (
-                              <div className="flex items-center gap-2">
-                                {segment.isDiscarded ? (
-                                  <Button
-                                    variant="outline"
-                                    size="xs"
-                                    leftIcon={<Undo2 className="w-4 h-4" />}
-                                    onClick={() => restoreSegment(segment.id)}
-                                  >
-                                    恢复
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="secondary"
-                                    size="xs"
-                                    leftIcon={<Eye className="w-4 h-4" />}
-                                    onClick={() => toggleSegment(segment.id)}
-                                  >
-                                    选择
-                                  </Button>
-                                )}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              {segment.isSelected ? (
+                                <Button
+                                  variant="outline"
+                                  size="xs"
+                                  className="border-red-400 text-red-300 hover:border-red-400 hover:bg-red-500/10"
+                                  leftIcon={<X className="w-4 h-4" />}
+                                  onClick={() => toggleSegment(segment.id)}
+                                >
+                                  剔除
+                                </Button>
+                              ) : segment.isDiscarded ? (
+                                <Button
+                                  variant="outline"
+                                  size="xs"
+                                  leftIcon={<Undo2 className="w-4 h-4" />}
+                                  onClick={() => restoreSegment(segment.id)}
+                                >
+                                  恢复
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="secondary"
+                                  size="xs"
+                                  leftIcon={<Eye className="w-4 h-4" />}
+                                  onClick={() => toggleSegment(segment.id)}
+                                >
+                                  选择
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
