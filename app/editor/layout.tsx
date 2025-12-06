@@ -378,7 +378,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
           </aside>
 
           {/* 主内容区域 */}
-          <main className="flex-1 overflow-hidden flex flex-col">
+          <main className="relative flex-1 overflow-hidden flex flex-col">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
@@ -386,7 +386,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 min-h-0 overflow-hidden"
+                className="flex-1 min-h-0 overflow-hidden pb-28"
               >
                 {children}
               </motion.div>
@@ -400,7 +400,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
                   transition={{ duration: 0.2 }}
-                  className="flex-shrink-0 px-6 py-4 border-t border-surface-800 bg-surface-950"
+                  className="fixed left-64 right-0 bottom-0 z-30 px-6 py-4 border-t border-surface-800 bg-surface-950"
                 >
                   <Card variant="glass" className="p-4">
                     <div className="flex items-center justify-between">
