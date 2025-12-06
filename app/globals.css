@@ -1,0 +1,534 @@
+/**
+ * AutoCut 设计系统 - 全局样式
+ *
+ * 设计理念：
+ * - 深色主题，专业剪辑工具风格
+ * - 琥珀金作为主色调
+ * - 玻璃拟态与微妙渐变
+ * - 流畅的动画过渡
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   🔤 字体导入
+   ============================================ */
+
+/* Satoshi - 显示字体 */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+/* DM Sans - 正文字体 */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+/* JetBrains Mono - 等宽字体 */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ============================================
+   🎨 CSS 变量定义
+   ============================================ */
+
+@layer base {
+  :root {
+    /* 主色调 */
+    --color-primary: 251 191 36; /* amber-400 */
+    --color-primary-hover: 245 158 11; /* amber-500 */
+    --color-primary-active: 217 119 6; /* amber-600 */
+
+    /* 背景色 */
+    --color-bg-base: 9 9 11; /* surface-950 */
+    --color-bg-elevated: 12 12 15; /* surface-900 */
+    --color-bg-card: 17 17 20; /* surface-800 */
+    --color-bg-hover: 24 24 27; /* surface-700 */
+
+    /* 边框色 */
+    --color-border: 39 39 42; /* surface-600 */
+    --color-border-hover: 63 63 70; /* surface-500 */
+
+    /* 文字色 */
+    --color-text-primary: 228 228 231; /* surface-100 */
+    --color-text-secondary: 161 161 170; /* surface-300 */
+    --color-text-muted: 113 113 122; /* surface-400 */
+
+    /* 间距 */
+    --spacing-page: 1.5rem;
+    --spacing-section: 2rem;
+    --spacing-component: 1rem;
+
+    /* 圆角 */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+
+    /* 过渡 */
+    --transition-fast: 150ms;
+    --transition-base: 200ms;
+    --transition-slow: 300ms;
+    --transition-slower: 400ms;
+
+    /* 层级 */
+    --z-dropdown: 50;
+    --z-sticky: 100;
+    --z-modal: 200;
+    --z-popover: 300;
+    --z-tooltip: 400;
+    --z-toast: 500;
+  }
+
+  /* 深色主题（默认） */
+  .dark,
+  :root {
+    color-scheme: dark;
+  }
+
+  /* 浅色主题支持 */
+  .light {
+    color-scheme: light;
+    --color-bg-base: 250 250 250;
+    --color-bg-elevated: 255 255 255;
+    --color-bg-card: 255 255 255;
+    --color-bg-hover: 244 244 245;
+    --color-border: 228 228 231;
+    --color-border-hover: 212 212 216;
+    --color-text-primary: 24 24 27;
+    --color-text-secondary: 63 63 70;
+    --color-text-muted: 113 113 122;
+  }
+
+  /* 基础样式重置 */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    background-color: rgb(var(--color-bg-base));
+    color: rgb(var(--color-text-primary));
+    line-height: 1.6;
+  }
+
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-border-hover));
+  }
+
+  /* 选中样式 */
+  ::selection {
+    background-color: rgba(251, 191, 36, 0.3);
+    color: rgb(var(--color-text-primary));
+  }
+
+  /* 聚焦样式 */
+  :focus-visible {
+    outline: 2px solid rgba(251, 191, 36, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================
+   🧩 组件层 - 可复用组件样式
+   ============================================ */
+
+@layer components {
+  /* ------------------------------------
+     玻璃拟态效果
+     ------------------------------------ */
+  .glass {
+    background: rgba(17, 17, 20, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-subtle {
+    background: rgba(17, 17, 20, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-strong {
+    background: rgba(17, 17, 20, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* ------------------------------------
+     发光效果
+     ------------------------------------ */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+  }
+
+  .glow-primary-hover:hover {
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+  }
+
+  .text-glow-primary {
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+  }
+
+  /* ------------------------------------
+     渐变效果
+     ------------------------------------ */
+  .gradient-primary {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  }
+
+  .gradient-primary-subtle {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+  }
+
+  .gradient-surface {
+    background: linear-gradient(180deg, rgb(17, 17, 20) 0%, rgb(12, 12, 15) 100%);
+  }
+
+  .gradient-radial-glow {
+    background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.15) 0%, transparent 70%);
+  }
+
+  /* ------------------------------------
+     文字渐变
+     ------------------------------------ */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ------------------------------------
+     卡片样式
+     ------------------------------------ */
+  .card {
+    background: rgb(var(--color-bg-card));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: var(--radius-xl);
+    transition:
+      border-color var(--transition-base) ease,
+      box-shadow var(--transition-base) ease;
+  }
+
+  .card-interactive:hover {
+    border-color: rgb(var(--color-border-hover));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-elevated {
+    background: rgb(var(--color-bg-card));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: var(--radius-xl);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ------------------------------------
+     输入框样式
+     ------------------------------------ */
+  .input-base {
+    background: rgb(var(--color-bg-elevated));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: var(--radius-md);
+    color: rgb(var(--color-text-primary));
+    transition:
+      border-color var(--transition-fast) ease,
+      box-shadow var(--transition-fast) ease;
+  }
+
+  .input-base:hover {
+    border-color: rgb(var(--color-border-hover));
+  }
+
+  .input-base:focus {
+    border-color: rgba(251, 191, 36, 0.5);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+    outline: none;
+  }
+
+  /* ------------------------------------
+     按钮基础样式
+     ------------------------------------ */
+  .btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    transition:
+      background-color var(--transition-fast) ease,
+      color var(--transition-fast) ease,
+      box-shadow var(--transition-fast) ease,
+      transform var(--transition-fast) ease;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .btn-base:active {
+    transform: scale(0.98);
+  }
+
+  .btn-base:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ------------------------------------
+     网格背景
+     ------------------------------------ */
+  .bg-grid {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .bg-grid-sm {
+    background-size: 20px 20px;
+  }
+
+  .bg-grid-lg {
+    background-size: 60px 60px;
+  }
+
+  /* ------------------------------------
+     点状背景
+     ------------------------------------ */
+  .bg-dots {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* ------------------------------------
+     骨架屏加载效果
+     ------------------------------------ */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--color-bg-hover)) 25%,
+      rgb(var(--color-border)) 50%,
+      rgb(var(--color-bg-hover)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* ------------------------------------
+     时间轴专用样式
+     ------------------------------------ */
+  .timeline-track {
+    height: 3.5rem;
+    background: rgb(var(--color-bg-card));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: var(--radius-sm);
+  }
+
+  .timeline-clip {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(251, 191, 36, 0.1) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: var(--radius-sm);
+  }
+
+  .timeline-clip-selected {
+    border-color: rgb(251, 191, 36);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+  }
+
+  /* ------------------------------------
+     步骤指示器
+     ------------------------------------ */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all var(--transition-base) ease;
+  }
+
+  .step-indicator-pending {
+    background: rgb(var(--color-bg-hover));
+    color: rgb(var(--color-text-muted));
+    border: 1px solid rgb(var(--color-border));
+  }
+
+  .step-indicator-active {
+    background: rgba(251, 191, 36, 0.2);
+    color: rgb(251, 191, 36);
+    border: 1px solid rgb(251, 191, 36);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+  }
+
+  .step-indicator-completed {
+    background: rgb(34, 197, 94);
+    color: white;
+    border: 1px solid rgb(34, 197, 94);
+  }
+}
+
+/* ============================================
+   🛠️ 工具层 - 原子类扩展
+   ============================================ */
+
+@layer utilities {
+  /* ------------------------------------
+     文字截断
+     ------------------------------------ */
+  .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .text-truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ------------------------------------
+     隐藏滚动条
+     ------------------------------------ */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ------------------------------------
+     动画延迟
+     ------------------------------------ */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+  .animation-delay-700 {
+    animation-delay: 700ms;
+  }
+  .animation-delay-800 {
+    animation-delay: 800ms;
+  }
+
+  /* ------------------------------------
+     安全区域
+     ------------------------------------ */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ------------------------------------
+     GPU 加速
+     ------------------------------------ */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* ------------------------------------
+     交互反馈
+     ------------------------------------ */
+  .press-effect:active {
+    transform: scale(0.98);
+  }
+
+  .hover-lift {
+    transition: transform var(--transition-base) ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ------------------------------------
+     禁用文字选择
+     ------------------------------------ */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ------------------------------------
+     拖拽区域
+     ------------------------------------ */
+  .drag-area {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
