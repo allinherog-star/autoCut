@@ -3,18 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Type,
   Mic,
   Sparkles,
-  Check,
-  ChevronRight,
-  Edit3,
   TrendingUp,
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Bold,
-  Palette,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
@@ -98,8 +92,18 @@ const mockSubtitles: SubtitleItem[] = [
 ]
 
 const hotKeywords = [
-  '太绝了', '神器', '必看', '干货', '秒懂', '震惊',
-  '涨知识', '学会了', '收藏', '转发', '关注', 'YYDS',
+  '太绝了',
+  '神器',
+  '必看',
+  '干货',
+  '秒懂',
+  '震惊',
+  '涨知识',
+  '学会了',
+  '收藏',
+  '转发',
+  '关注',
+  'YYDS',
 ]
 
 // ============================================
@@ -128,7 +132,7 @@ export default function SubtitlePage() {
     markStepCompleted(currentStep)
     goToNextStep()
   })
-  
+
   // 更新 ref 中的函数
   useEffect(() => {
     handleConfirmRef.current = () => {
@@ -180,9 +184,7 @@ export default function SubtitlePage() {
 
   // 编辑字幕
   const updateSubtitle = (id: string, text: string) => {
-    setSubtitles((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, text } : s))
-    )
+    setSubtitles((prev) => prev.map((s) => (s.id === id ? { ...s, text } : s)))
   }
 
   // 格式化时间
@@ -198,12 +200,8 @@ export default function SubtitlePage() {
       <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-800">
         {/* 页面标题 */}
         <div className="flex-shrink-0 px-6 pt-6 pb-4">
-          <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
-            字幕推荐
-          </h1>
-          <p className="text-surface-400">
-            AI 自动识别语音生成字幕，并推荐热门关键词优化
-          </p>
+          <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">字幕推荐</h1>
+          <p className="text-surface-400">AI 自动识别语音生成字幕，并推荐热门关键词优化</p>
         </div>
 
         {/* 生成进度 */}
@@ -219,9 +217,7 @@ export default function SubtitlePage() {
                 <div className="flex items-center gap-3 mb-3">
                   <Mic className="w-5 h-5 text-amber-400 animate-pulse" />
                   <span className="text-surface-200">正在识别语音...</span>
-                  <span className="ml-auto font-mono text-amber-400">
-                    {Math.round(progress)}%
-                  </span>
+                  <span className="ml-auto font-mono text-amber-400">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} variant="primary" size="sm" />
               </Card>
@@ -232,94 +228,81 @@ export default function SubtitlePage() {
         {/* 字幕列表 */}
         {!isGenerating && (
           <div className="flex-1 overflow-y-auto space-y-2 px-6 min-h-0">
-              {subtitles.map((subtitle, index) => (
-                <motion.div
-                  key={subtitle.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
+            {subtitles.map((subtitle, index) => (
+              <motion.div
+                key={subtitle.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card
+                  className={`
+                    p-3 cursor-pointer transition-all duration-200
+                    ${expandedId === subtitle.id ? 'border-amber-400/30' : ''}
+                  `}
+                  onClick={() => setExpandedId(expandedId === subtitle.id ? null : subtitle.id)}
                 >
-                  <Card
-                    className={`
-                      p-3 cursor-pointer transition-all duration-200
-                      ${expandedId === subtitle.id ? 'border-amber-400/30' : ''}
-                    `}
-                    onClick={() =>
-                      setExpandedId(expandedId === subtitle.id ? null : subtitle.id)
-                    }
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* 时间码 */}
-                      <span className="text-xs font-mono text-surface-500 pt-1 w-20 flex-shrink-0">
-                        {formatTime(subtitle.startTime)} - {formatTime(subtitle.endTime)}
-                      </span>
+                  <div className="flex items-start gap-3">
+                    {/* 时间码 */}
+                    <span className="text-xs font-mono text-surface-500 pt-1 w-20 flex-shrink-0">
+                      {formatTime(subtitle.startTime)} - {formatTime(subtitle.endTime)}
+                    </span>
 
-                      {/* 字幕内容 */}
-                      <div className="flex-1 min-w-0">
-                        {expandedId === subtitle.id ? (
-                          <input
-                            type="text"
-                            value={subtitle.text}
-                            onChange={(e) => updateSubtitle(subtitle.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-surface-700 border border-surface-600 rounded px-2 py-1 text-surface-100 text-sm focus:border-amber-400 focus:outline-none"
-                          />
-                        ) : (
-                          <p className="text-surface-200 text-sm">
-                            {subtitle.text}
-                          </p>
-                        )}
+                    {/* 字幕内容 */}
+                    <div className="flex-1 min-w-0">
+                      {expandedId === subtitle.id ? (
+                        <input
+                          type="text"
+                          value={subtitle.text}
+                          onChange={(e) => updateSubtitle(subtitle.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full bg-surface-700 border border-surface-600 rounded px-2 py-1 text-surface-100 text-sm focus:border-amber-400 focus:outline-none"
+                        />
+                      ) : (
+                        <p className="text-surface-200 text-sm">{subtitle.text}</p>
+                      )}
 
-                        {/* 热词标签 */}
-                        {subtitle.hotKeywords.length > 0 && (
-                          <div className="flex gap-1.5 mt-2">
-                            {subtitle.hotKeywords.map((keyword) => (
-                              <Badge
-                                key={keyword}
-                                variant="primary"
-                                size="sm"
-                                className="text-xs"
-                              >
-                                <TrendingUp className="w-3 h-3" />
-                                {keyword}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 状态指示 */}
-                      <div className="flex items-center gap-2">
-                        {subtitle.hasVoice && (
-                          <Mic className="w-4 h-4 text-success" />
-                        )}
-                        {expandedId === subtitle.id ? (
-                          <ChevronUp className="w-4 h-4 text-surface-500" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-surface-500" />
-                        )}
-                      </div>
+                      {/* 热词标签 */}
+                      {subtitle.hotKeywords.length > 0 && (
+                        <div className="flex gap-1.5 mt-2">
+                          {subtitle.hotKeywords.map((keyword) => (
+                            <Badge key={keyword} variant="primary" size="sm" className="text-xs">
+                              <TrendingUp className="w-3 h-3" />
+                              {keyword}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </Card>
-                </motion.div>
-              ))}
+
+                    {/* 状态指示 */}
+                    <div className="flex items-center gap-2">
+                      {subtitle.hasVoice && <Mic className="w-4 h-4 text-success" />}
+                      {expandedId === subtitle.id ? (
+                        <ChevronUp className="w-4 h-4 text-surface-500" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-surface-500" />
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         )}
       </div>
 
       {/* 右侧样式配置 */}
       <div className="w-80 p-6 bg-surface-900/50 overflow-y-auto">
-        <h2 className="text-lg font-semibold text-surface-100 mb-4">
-          字幕样式
-        </h2>
+        <h2 className="text-lg font-semibold text-surface-100 mb-4">字幕样式</h2>
 
         {/* 预览区域 */}
         <Card className="mb-6 overflow-hidden">
           <div className="relative h-40 bg-surface-800 flex items-end justify-center p-4">
             <div
-              className={`
+              className="
                 px-4 py-2 rounded-lg text-center max-w-[90%]
-              `}
+              "
               style={{
                 backgroundColor: style.backgroundColor,
                 fontSize: `${style.fontSize * 0.6}px`,
@@ -339,9 +322,7 @@ export default function SubtitlePage() {
         <div className="space-y-6">
           {/* 字体大小 */}
           <div>
-            <label className="text-sm text-surface-300 mb-2 block">
-              字体大小: {style.fontSize}px
-            </label>
+            <label className="text-sm text-surface-300 mb-2 block">字体大小: {style.fontSize}px</label>
             <Slider
               value={[style.fontSize]}
               min={16}
@@ -404,29 +385,17 @@ export default function SubtitlePage() {
           {/* 描边 */}
           <div className="flex items-center justify-between">
             <label className="text-sm text-surface-300">文字描边</label>
-            <Switch
-              checked={style.hasOutline}
-              onCheckedChange={(checked) =>
-                setStyle({ ...style, hasOutline: checked })
-              }
-            />
+            <Switch checked={style.hasOutline} onCheckedChange={(checked) => setStyle({ ...style, hasOutline: checked })} />
           </div>
 
           {/* 热词高亮 */}
           <div className="pt-4 border-t border-surface-700">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <label className="text-sm text-surface-200 block">
-                  热词自动高亮
-                </label>
-                <span className="text-xs text-surface-500">
-                  自动识别并高亮流量关键词
-                </span>
+                <label className="text-sm text-surface-200 block">热词自动高亮</label>
+                <span className="text-xs text-surface-500">自动识别并高亮流量关键词</span>
               </div>
-              <Switch
-                checked={autoKeywords}
-                onCheckedChange={setAutoKeywords}
-              />
+              <Switch checked={autoKeywords} onCheckedChange={setAutoKeywords} />
             </div>
 
             {autoKeywords && (
