@@ -425,11 +425,11 @@ export default function UnderstandPage() {
                         ${segment.isDiscarded ? 'opacity-60' : ''}
                       `}
                     >
-                      <div className="relative p-2.5">
+                      <div className="relative p-2.5 min-h-[112px]">
                         <div className="flex gap-2.5 items-stretch">
                           {/* 左侧缩略图 */}
                           <div 
-                            className="relative w-40 h-20 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
+                            className="relative w-36 h-[81px] rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
                             onClick={() => openPreview(segment)}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
