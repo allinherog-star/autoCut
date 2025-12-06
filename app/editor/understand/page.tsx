@@ -134,6 +134,7 @@ export default function UnderstandPage() {
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [segments, setSegments] = useState<VideoSegment[]>([])
   const [activeTab, setActiveTab] = useState('all')
+  const [hoveredActionId, setHoveredActionId] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   
   // 预览状态
@@ -500,13 +501,25 @@ export default function UnderstandPage() {
                             <div className="flex items-center gap-2 mt-2">
                               {segment.isSelected ? (
                                 <Button
-                                  variant="outline"
+                                  variant="primary"
                                   size="xs"
-                                  className="border-red-600 text-red-500 hover:border-red-600 hover:bg-red-700/15"
-                                  leftIcon={<X className="w-4 h-4" />}
+                                  className={`border ${
+                                    hoveredActionId === segment.id
+                                      ? 'border-red-700 bg-red-700 text-white'
+                                      : 'border-amber-400 bg-amber-400 text-surface-950'
+                                  } hover:border-red-700 hover:bg-red-700 hover:text-white`}
+                                  leftIcon={
+                                    hoveredActionId === segment.id ? (
+                                      <X className="w-4 h-4" />
+                                    ) : (
+                                      <Check className="w-4 h-4" />
+                                    )
+                                  }
+                                  onMouseEnter={() => setHoveredActionId(segment.id)}
+                                  onMouseLeave={() => setHoveredActionId(null)}
                                   onClick={() => toggleSegment(segment.id)}
                                 >
-                                  剔除
+                                  {hoveredActionId === segment.id ? '剔除' : '已选中'}
                                 </Button>
                               ) : segment.isDiscarded ? (
                                 <Button
@@ -521,7 +534,7 @@ export default function UnderstandPage() {
                                 <Button
                                   variant="secondary"
                                   size="xs"
-                                  leftIcon={<Eye className="w-4 h-4" />}
+                                  leftIcon={<Check className="w-4 h-4" />}
                                   onClick={() => toggleSegment(segment.id)}
                                 >
                                   选择
