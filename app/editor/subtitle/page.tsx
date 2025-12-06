@@ -6,20 +6,18 @@ import {
   Mic,
   Sparkles,
   Play,
-  Check,
   Clock,
   Tag,
   Edit3,
-  Plus,
   Trash2,
   ChevronDown,
   ChevronUp,
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Type,
   Palette,
   Save,
+  Scissors,
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Switch, Slider } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
@@ -34,6 +32,7 @@ interface SubtitleLine {
   text: string
   startTime: number
   endTime: number
+  thumbnailUrl?: string // 画面缩略图
 }
 
 interface VideoSegment {
@@ -75,9 +74,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['开场', '人物', '特写'],
     score: 92,
     subtitles: [
-      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 4 },
-      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 4, endTime: 8 },
-      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 8, endTime: 12 },
+      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 4, thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=120&h=68&fit=crop' },
+      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 4, endTime: 8, thumbnailUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=68&fit=crop' },
+      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 8, endTime: 12, thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=68&fit=crop' },
     ],
     isExpanded: true,
   },
@@ -91,10 +90,10 @@ const mockSegments: VideoSegment[] = [
     labels: ['对话', '双人', '情感'],
     score: 88,
     subtitles: [
-      { id: '2-1', text: '这个观点真的很有意思', startTime: 12, endTime: 16 },
-      { id: '2-2', text: '我之前从来没有这样想过', startTime: 16, endTime: 20 },
-      { id: '2-3', text: '你能详细解释一下吗？', startTime: 20, endTime: 24 },
-      { id: '2-4', text: '当然，让我来给你分析', startTime: 24, endTime: 28 },
+      { id: '2-1', text: '这个观点真的很有意思', startTime: 12, endTime: 16, thumbnailUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=120&h=68&fit=crop' },
+      { id: '2-2', text: '我之前从来没有这样想过', startTime: 16, endTime: 20, thumbnailUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=120&h=68&fit=crop' },
+      { id: '2-3', text: '你能详细解释一下吗？', startTime: 20, endTime: 24, thumbnailUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=120&h=68&fit=crop' },
+      { id: '2-4', text: '当然，让我来给你分析', startTime: 24, endTime: 28, thumbnailUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=120&h=68&fit=crop' },
     ],
     isExpanded: false,
   },
@@ -108,9 +107,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['高潮', '动作', '精彩'],
     score: 95,
     subtitles: [
-      { id: '3-1', text: '这一幕太震撼了！', startTime: 35, endTime: 40 },
-      { id: '3-2', text: '你看这个镜头切换', startTime: 40, endTime: 45 },
-      { id: '3-3', text: '简直是教科书级别的拍摄', startTime: 45, endTime: 52 },
+      { id: '3-1', text: '这一幕太震撼了！', startTime: 35, endTime: 40, thumbnailUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=120&h=68&fit=crop' },
+      { id: '3-2', text: '你看这个镜头切换得多流畅', startTime: 40, endTime: 46, thumbnailUrl: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=120&h=68&fit=crop' },
+      { id: '3-3', text: '简直是教科书级别的拍摄手法', startTime: 46, endTime: 52, thumbnailUrl: 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=120&h=68&fit=crop' },
     ],
     isExpanded: false,
   },
@@ -124,9 +123,9 @@ const mockSegments: VideoSegment[] = [
     labels: ['结尾', '总结', '回顾'],
     score: 78,
     subtitles: [
-      { id: '4-1', text: '好了，今天的内容就到这里', startTime: 52, endTime: 58 },
-      { id: '4-2', text: '记得点赞关注不迷路', startTime: 58, endTime: 63 },
-      { id: '4-3', text: '我们下期再见！', startTime: 63, endTime: 68 },
+      { id: '4-1', text: '好了，今天的内容就到这里', startTime: 52, endTime: 58, thumbnailUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=120&h=68&fit=crop' },
+      { id: '4-2', text: '记得点赞关注不迷路哦', startTime: 58, endTime: 63, thumbnailUrl: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=120&h=68&fit=crop' },
+      { id: '4-3', text: '我们下期再见！', startTime: 63, endTime: 68, thumbnailUrl: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=120&h=68&fit=crop' },
     ],
     isExpanded: false,
   },
@@ -162,6 +161,7 @@ export default function SubtitlePage() {
   
   // 预览状态
   const [previewSegment, setPreviewSegment] = useState<VideoSegment | null>(null)
+  const [previewSubtitle, setPreviewSubtitle] = useState<SubtitleLine | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   // 字幕样式
@@ -193,9 +193,17 @@ export default function SubtitlePage() {
     handleConfirmRef.current()
   }, [])
 
-  // 打开预览
+  // 打开片段预览
   const openPreview = (segment: VideoSegment) => {
     setPreviewSegment(segment)
+    setPreviewSubtitle(null)
+    setIsPreviewOpen(true)
+  }
+
+  // 打开字幕子片段预览
+  const openSubtitlePreview = (segment: VideoSegment, subtitle: SubtitleLine) => {
+    setPreviewSegment(segment)
+    setPreviewSubtitle(subtitle)
     setIsPreviewOpen(true)
   }
 
@@ -287,27 +295,6 @@ export default function SubtitlePage() {
     setEditingText('')
   }
 
-  // 添加新字幕
-  const addSubtitle = (segmentId: string) => {
-    setSegments((prev) =>
-      prev.map((seg) => {
-        if (seg.id === segmentId) {
-          const lastSubtitle = seg.subtitles[seg.subtitles.length - 1]
-          const newStartTime = lastSubtitle ? lastSubtitle.endTime : seg.startTime
-          const newEndTime = Math.min(newStartTime + 4, seg.endTime)
-          const newSubtitle: SubtitleLine = {
-            id: `${segmentId}-${Date.now()}`,
-            text: '新字幕内容',
-            startTime: newStartTime,
-            endTime: newEndTime,
-          }
-          return { ...seg, subtitles: [...seg.subtitles, newSubtitle] }
-        }
-        return seg
-      })
-    )
-  }
-
   // 删除字幕
   const deleteSubtitle = (segmentId: string, subtitleId: string) => {
     setSegments((prev) =>
@@ -329,7 +316,7 @@ export default function SubtitlePage() {
             字幕推荐
           </h1>
           <p className="text-surface-400">
-            AI 为每个视频片段自动生成字幕，你可以编辑或添加新字幕
+            AI 按画面切换自动生成字幕，一个画面对应一条字幕
           </p>
         </div>
 
@@ -411,9 +398,9 @@ export default function SubtitlePage() {
                           >
                             {segment.score}分
                           </div>
-                          {/* 时长 */}
-                          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-xs font-mono text-white">
-                            {formatTime(segment.endTime - segment.startTime)}
+                          {/* 时间范围 */}
+                          <div className="absolute bottom-1 left-1 right-1 px-1 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-mono text-white text-center whitespace-nowrap">
+                            {formatTime(segment.startTime)}-{formatTime(segment.endTime)} {segment.endTime - segment.startTime}s
                           </div>
                         </div>
 
@@ -475,9 +462,9 @@ export default function SubtitlePage() {
                         >
                           <div className="border-t border-surface-700 bg-surface-800/30 p-4">
                             <div className="flex items-center gap-2 mb-3">
-                              <Type className="w-4 h-4 text-amber-400" />
+                              <Scissors className="w-4 h-4 text-amber-400" />
                               <span className="text-sm font-medium text-surface-200">
-                                字幕列表
+                                画面字幕（{segment.subtitles.length} 个画面）
                               </span>
                             </div>
 
@@ -486,12 +473,39 @@ export default function SubtitlePage() {
                               {segment.subtitles.map((subtitle) => (
                                 <div
                                   key={subtitle.id}
-                                  className="flex items-start gap-3 p-2.5 rounded-lg bg-surface-900/50 border border-surface-700 group"
+                                  className="flex items-center gap-3 p-2 rounded-lg bg-surface-900/50 border border-surface-700 group hover:border-surface-600 transition-colors"
                                 >
-                                  {/* 时间码 */}
-                                  <span className="text-xs font-mono text-surface-500 pt-1.5 w-24 flex-shrink-0">
-                                    {formatTime(subtitle.startTime)} - {formatTime(subtitle.endTime)}
-                                  </span>
+                                  {/* 画面缩略图 + 预览 */}
+                                  <div
+                                    className="relative w-28 h-16 rounded overflow-hidden bg-surface-800 flex-shrink-0 cursor-pointer group/preview"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openSubtitlePreview(segment, subtitle)
+                                    }}
+                                  >
+                                    {subtitle.thumbnailUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={subtitle.thumbnailUrl}
+                                        alt="画面"
+                                        className="w-full h-full object-cover transition-transform duration-200 group-hover/preview:scale-105"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full bg-surface-700 flex items-center justify-center">
+                                        <Scissors className="w-4 h-4 text-surface-500" />
+                                      </div>
+                                    )}
+                                    {/* 播放按钮覆盖层 */}
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity">
+                                      <div className="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center">
+                                        <Play className="w-3 h-3 text-surface-950 ml-0.5" />
+                                      </div>
+                                    </div>
+                                    {/* 时间范围 */}
+                                    <div className="absolute bottom-0.5 left-0.5 right-0.5 px-1 py-0.5 rounded bg-black/70 text-[10px] font-mono text-white text-center">
+                                      {formatTime(subtitle.startTime)}-{formatTime(subtitle.endTime)} {Math.round(subtitle.endTime - subtitle.startTime)}s
+                                    </div>
+                                  </div>
 
                                   {/* 字幕内容 */}
                                   <div className="flex-1 min-w-0">
@@ -501,7 +515,7 @@ export default function SubtitlePage() {
                                           type="text"
                                           value={editingText}
                                           onChange={(e) => setEditingText(e.target.value)}
-                                          className="flex-1 bg-surface-700 border border-amber-400/50 rounded px-2 py-1 text-surface-100 text-sm focus:outline-none focus:border-amber-400"
+                                          className="flex-1 bg-surface-700 border border-amber-400/50 rounded px-2 py-1.5 text-surface-100 text-sm focus:outline-none focus:border-amber-400"
                                           autoFocus
                                           onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
@@ -529,7 +543,7 @@ export default function SubtitlePage() {
 
                                   {/* 操作按钮 */}
                                   {editingSubtitleId !== subtitle.id && (
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                                       <Button
                                         variant="ghost"
                                         size="xs"
@@ -553,16 +567,6 @@ export default function SubtitlePage() {
                               ))}
                             </div>
 
-                            {/* 添加字幕按钮 */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              leftIcon={<Plus className="w-4 h-4" />}
-                              className="mt-3 w-full border border-dashed border-surface-600 hover:border-amber-400/50"
-                              onClick={() => addSubtitle(segment.id)}
-                            >
-                              添加字幕
-                            </Button>
                           </div>
                         </motion.div>
                       )}
@@ -708,12 +712,25 @@ export default function SubtitlePage() {
       {/* 媒体预览模态框 */}
       <MediaPreviewModal
         isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
+        onClose={() => {
+          setIsPreviewOpen(false)
+          setPreviewSubtitle(null)
+        }}
         type="video"
         src={previewSegment?.videoUrl || ''}
-        title={`片段 ${previewSegment?.id} - ${previewSegment?.description || ''}`}
+        title={
+          previewSubtitle
+            ? `字幕预览: "${previewSubtitle.text}"`
+            : `片段 ${previewSegment?.id} - ${previewSegment?.description || ''}`
+        }
         startTime={0}
-        endTime={previewSegment ? previewSegment.endTime - previewSegment.startTime : undefined}
+        endTime={
+          previewSubtitle
+            ? previewSubtitle.endTime - previewSubtitle.startTime
+            : previewSegment
+            ? previewSegment.endTime - previewSegment.startTime
+            : undefined
+        }
       />
     </div>
   )
