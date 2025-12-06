@@ -509,38 +509,67 @@ export default function SubtitlePage() {
                                   </div>
 
                                   {/* 字幕内容 */}
-                                  <div className="flex-1 min-w-0">
-                                    {editingSubtitleId === subtitle.id ? (
-                                      <div className="flex gap-2">
-                                        <input
-                                          type="text"
-                                          value={editingText}
-                                          onChange={(e) => setEditingText(e.target.value)}
-                                          className="flex-1 bg-surface-700 border border-amber-400/50 rounded px-2 py-1.5 text-surface-100 text-sm focus:outline-none focus:border-amber-400"
-                                          autoFocus
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              saveSubtitleEdit(segment.id, subtitle.id)
-                                            } else if (e.key === 'Escape') {
-                                              setEditingSubtitleId(null)
-                                            }
-                                          }}
-                                        />
-                                        <Button
-                                          variant="primary"
-                                          size="xs"
-                                          isIconOnly
-                                          onClick={() => saveSubtitleEdit(segment.id, subtitle.id)}
-                                        >
-                                          <Save className="w-3.5 h-3.5" />
-                                        </Button>
+                                  {(() => {
+                                    const duration = subtitle.endTime - subtitle.startTime
+                                    const minChars = Math.floor(duration * 2.5) // 慢速：2.5字/秒
+                                    const maxChars = Math.ceil(duration * 4.5)  // 快速：4.5字/秒
+                                    const currentChars = subtitle.text.length
+                                    const isOverflow = currentChars > maxChars
+                                    const isUnderflow = currentChars < minChars
+                                    const isWarning = isOverflow || isUnderflow
+                                    
+                                    return (
+                                      <div className="flex-1 min-w-0">
+                                        {editingSubtitleId === subtitle.id ? (
+                                          <div className="flex gap-2">
+                                            <input
+                                              type="text"
+                                              value={editingText}
+                                              onChange={(e) => setEditingText(e.target.value)}
+                                              className="flex-1 bg-surface-700 border border-amber-400/50 rounded px-2 py-1.5 text-surface-100 text-sm focus:outline-none focus:border-amber-400"
+                                              autoFocus
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  saveSubtitleEdit(segment.id, subtitle.id)
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingSubtitleId(null)
+                                                }
+                                              }}
+                                            />
+                                            <Button
+                                              variant="primary"
+                                              size="xs"
+                                              isIconOnly
+                                              onClick={() => saveSubtitleEdit(segment.id, subtitle.id)}
+                                            >
+                                              <Save className="w-3.5 h-3.5" />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div>
+                                            <p className="text-surface-200 text-sm leading-relaxed">
+                                              {subtitle.text}
+                                            </p>
+                                            {/* 字数统计 */}
+                                            <div className="flex items-center gap-2 mt-1">
+                                              <span className={`text-xs ${isWarning ? 'text-amber-400' : 'text-surface-500'}`}>
+                                                {currentChars}字
+                                              </span>
+                                              <span className="text-xs text-surface-600">
+                                                建议 {minChars}-{maxChars}字
+                                              </span>
+                                              {isOverflow && (
+                                                <span className="text-xs text-amber-400">字数偏多</span>
+                                              )}
+                                              {isUnderflow && (
+                                                <span className="text-xs text-amber-400">字数偏少</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <p className="text-surface-200 text-sm leading-relaxed">
-                                        {subtitle.text}
-                                      </p>
-                                    )}
-                                  </div>
+                                    )
+                                  })()}
 
                                   {/* 操作按钮 */}
                                   {editingSubtitleId !== subtitle.id && (
