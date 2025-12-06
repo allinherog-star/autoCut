@@ -164,8 +164,8 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   }
 
   const goToNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      markStepCompleted(currentStep)
+    // 只有当前步骤已完成才能进入下一步
+    if (currentStep < steps.length - 1 && completedSteps.includes(currentStep)) {
       const nextStep = currentStep + 1
       setCurrentStep(nextStep)
       router.push(steps[nextStep].path)
@@ -181,8 +181,12 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   }
 
   const goToStep = (index: number) => {
-    // 只能去已完成的步骤或当前步骤的下一步
-    if (index <= currentStep || completedSteps.includes(index - 1) || index === 0) {
+    // 只能去已完成的步骤，或者当前步骤已完成时可以去下一步
+    const canAccess = index < currentStep || // 可以返回之前的步骤
+                     (index === currentStep) || // 可以停留在当前步骤
+                     (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
+    
+    if (canAccess) {
       setCurrentStep(index)
       router.push(steps[index].path)
     }
@@ -195,7 +199,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     markStepCompleted,
     goToNextStep,
     goToPrevStep,
-    canGoNext: currentStep < steps.length - 1,
+    canGoNext: currentStep < steps.length - 1 && completedSteps.includes(currentStep),
     canGoPrev: currentStep > 0,
   }
 
@@ -253,8 +257,11 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
               {steps.map((step, index) => {
                 const isActive = index === currentStep
                 const isCompleted = completedSteps.includes(index)
+                // 只有当前步骤已完成时，才能进入下一步
                 const isAccessible =
-                  index <= currentStep || completedSteps.includes(index - 1) || index === 0
+                  index < currentStep || // 可以返回之前的步骤
+                  index === currentStep || // 当前步骤
+                  (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
 
                 return (
                   <button
@@ -277,11 +284,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
                         ${!isActive && !isCompleted ? 'bg-surface-700 text-surface-400' : ''}
                       `}
                     >
-                      {isCompleted ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <step.icon className="w-4 h-4" />
-                      )}
+                      <step.icon className="w-4 h-4" />
                     </div>
 
                     {/* 步骤信息 */}
@@ -301,16 +304,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
             </nav>
 
             {/* 底部导航按钮 */}
-            <div className="p-4 border-t border-surface-800 space-y-2">
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={goToNextStep}
-                disabled={currentStep >= steps.length - 1}
-                rightIcon={<ChevronRight className="w-4 h-4" />}
-              >
-                下一步
-              </Button>
+            <div className="p-4 border-t border-surface-800">
               <Button
                 variant="ghost"
                 fullWidth

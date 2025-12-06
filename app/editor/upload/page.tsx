@@ -16,8 +16,10 @@ import {
   Trash2,
   Sparkles,
   ChevronRight,
+  Eye,
 } from 'lucide-react'
 import { Button, Card, Badge, Progress } from '@/components/ui'
+import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -42,12 +44,16 @@ interface MediaFile {
 // ============================================
 
 export default function UploadPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep } = useEditor()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addMoreInputRef = useRef<HTMLInputElement>(null)
+  
+  // 预览状态
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   // 触发文件选择
   const triggerFileSelect = () => {
@@ -57,6 +63,24 @@ export default function UploadPage() {
   // 触发添加更多
   const triggerAddMore = () => {
     addMoreInputRef.current?.click()
+  }
+
+  // 打开预览
+  const openPreview = (file: MediaFile) => {
+    setPreviewFile(file)
+    setIsPreviewOpen(true)
+  }
+
+  // 关闭预览
+  const closePreview = () => {
+    setIsPreviewOpen(false)
+    setPreviewFile(null)
+  }
+
+  // 开始AI分析（完成当前步骤并进入下一步）
+  const handleStartAIAnalysis = () => {
+    markStepCompleted(currentStep)
+    goToNextStep()
   }
 
   // 处理文件选择
@@ -291,7 +315,10 @@ export default function UploadPage() {
                         </div>
 
                         {/* 缩略图 */}
-                        <div className="relative w-24 h-14 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0">
+                        <div 
+                          className="relative w-24 h-14 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 cursor-pointer group/thumb"
+                          onClick={() => openPreview(mediaFile)}
+                        >
                           {mediaFile.type === 'video' ? (
                             <video
                               src={mediaFile.thumbnailUrl}
@@ -305,6 +332,10 @@ export default function UploadPage() {
                               className="w-full h-full object-cover"
                             />
                           )}
+                          {/* 预览按钮覆盖层 */}
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                            <Play className="w-6 h-6 text-white" />
+                          </div>
                           {/* 类型标识 */}
                           <div className="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/60 flex items-center justify-center">
                             {mediaFile.type === 'video' ? (
@@ -350,6 +381,15 @@ export default function UploadPage() {
 
                         {/* 操作按钮 */}
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            isIconOnly
+                            onClick={() => openPreview(mediaFile)}
+                            className="text-surface-400 hover:text-amber-400"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                           {!mediaFile.isMain && (
                             <Button
                               variant="ghost"
@@ -424,7 +464,7 @@ export default function UploadPage() {
                   isLoading={isUploading}
                   loadingText="上传中..."
                   rightIcon={<ChevronRight className="w-5 h-5" />}
-                  onClick={goToNextStep}
+                  onClick={handleStartAIAnalysis}
                 >
                   开始 AI 分析
                 </Button>
@@ -433,6 +473,15 @@ export default function UploadPage() {
           </motion.div>
         )}
       </div>
+
+      {/* 媒体预览模态框 */}
+      <MediaPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        type={previewFile?.type || 'video'}
+        src={previewFile?.thumbnailUrl || ''}
+        title={previewFile?.name}
+      />
     </div>
   )
 }
