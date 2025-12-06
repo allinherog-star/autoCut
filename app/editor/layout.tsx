@@ -363,18 +363,6 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-            {/* 底部导航按钮 */}
-            <div className="p-4 border-t border-surface-800">
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={goToPrevStep}
-                disabled={currentStep === 0}
-                leftIcon={<ChevronLeft className="w-4 h-4" />}
-              >
-                上一步
-              </Button>
-            </div>
           </aside>
 
           {/* 主内容区域 */}
