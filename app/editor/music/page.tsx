@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Music,
@@ -20,7 +20,7 @@ import {
   Repeat,
   Shuffle,
 } from 'lucide-react'
-import { Button, Card, Badge, Progress, Input, Slider, Tabs, TabsList, TabsTrigger } from '@/components/ui'
+import { Button, Card, Badge, Input, Slider } from '@/components/ui'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -115,7 +115,7 @@ const genreCategories = ['全部', '电子', '流行', '影视', 'LoFi', '摇滚
 // ============================================
 
 export default function MusicPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [tracks, setTracks] = useState<MusicTrack[]>(mockTracks)
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -126,6 +126,42 @@ export default function MusicPage() {
   const [activeMood, setActiveMood] = useState('全部')
   const [activeGenre, setActiveGenre] = useState('全部')
   const [autoSync, setAutoSync] = useState(true)
+
+  // 确认音乐并进入下一步
+  const handleConfirmMusic = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    if (selectedTrack) {
+      setBottomBar({
+        show: true,
+        icon: <Music className="w-5 h-5 text-amber-400" />,
+        title: `已选择: ${selectedTrack.name}`,
+        description: autoSync 
+          ? `AI 将自动根据 ${selectedTrack.bpm} BPM 节奏进行音乐卡点`
+          : `${selectedTrack.artist} · ${formatTime(selectedTrack.duration)}`,
+        primaryButton: {
+          text: '确认音乐，继续下一步',
+          onClick: handleConfirmMusic,
+        },
+      })
+    } else {
+      setBottomBar({
+        show: true,
+        icon: <Music className="w-5 h-5 text-amber-400" />,
+        title: '请选择背景音乐',
+        description: 'AI 将根据音乐节奏自动进行卡点',
+        primaryButton: {
+          text: '确认音乐',
+          onClick: handleConfirmMusic,
+          disabled: true,
+        },
+      })
+    }
+  }, [selectedTrack, autoSync, setBottomBar, handleConfirmMusic])
 
   // 播放进度模拟
   useEffect(() => {
@@ -410,9 +446,8 @@ export default function MusicPage() {
             </div>
           </div>
 
-          {/* 音量和操作 */}
-          <div className="flex items-center gap-4 w-64 justify-end">
-            {/* 音量控制 */}
+          {/* 音量控制 */}
+          <div className="flex items-center gap-4 w-48 justify-end">
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -436,26 +471,8 @@ export default function MusicPage() {
                 className="w-24"
               />
             </div>
-
-            {/* 下一步 */}
-            <Button
-              size="md"
-              rightIcon={<ChevronRight className="w-4 h-4" />}
-              onClick={goToNextStep}
-              disabled={!selectedTrack}
-            >
-              确认音乐
-            </Button>
           </div>
         </div>
-
-        {/* 自动卡点提示 */}
-        {autoSync && selectedTrack && (
-          <div className="mt-3 flex items-center justify-center gap-2 text-sm text-surface-400">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            AI 将自动根据 {selectedTrack.bpm} BPM 节奏进行音乐卡点
-          </div>
-        )}
       </div>
     </div>
   )

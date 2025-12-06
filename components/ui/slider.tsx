@@ -99,7 +99,10 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
     },
     ref
   ) => {
-    const currentValue = value ?? defaultValue
+    // 用于显示的当前值
+    const displayValue = value ?? defaultValue
+    // thumb 数量基于 defaultValue（稳定）
+    const thumbCount = defaultValue.length
 
     return (
       <div ref={ref} className={cn('w-full', className)} {...props}>
@@ -111,9 +114,9 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
             )}
             {showValue && (
               <span className="text-sm font-mono text-surface-400">
-                {currentValue.length === 1
-                  ? formatValue(currentValue[0])
-                  : `${formatValue(currentValue[0])} - ${formatValue(currentValue[currentValue.length - 1])}`}
+                {displayValue.length === 1
+                  ? formatValue(displayValue[0])
+                  : `${formatValue(displayValue[0])} - ${formatValue(displayValue[displayValue.length - 1])}`}
               </span>
             )}
           </div>
@@ -121,7 +124,6 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
 
         {/* 滑块 */}
         <SliderPrimitive.Root
-          value={value}
           defaultValue={defaultValue}
           onValueChange={onValueChange}
           onValueCommit={onValueCommit}
@@ -156,7 +158,7 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
           </SliderPrimitive.Track>
 
           {/* 滑块手柄 */}
-          {currentValue.map((_, index) => (
+          {Array.from({ length: thumbCount }).map((_, index) => (
             <SliderPrimitive.Thumb
               key={index}
               className={cn(

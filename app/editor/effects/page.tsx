@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Zap,
@@ -14,7 +14,7 @@ import {
   Layers,
   Wand2,
 } from 'lucide-react'
-import { Button, Card, Badge, Tabs, TabsList, TabsTrigger, TabsContent, Switch } from '@/components/ui'
+import { Button, Card, Badge, Tabs, TabsList, TabsTrigger, Switch } from '@/components/ui'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -70,7 +70,7 @@ const filterEffects: EffectPreset[] = [
 // ============================================
 
 export default function EffectsPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [activeTab, setActiveTab] = useState('title')
   const [selectedEffects, setSelectedEffects] = useState<Record<string, string>>({
     title: 't1',
@@ -80,6 +80,29 @@ export default function EffectsPage() {
   })
   const [autoApply, setAutoApply] = useState(true)
   const [previewPlaying, setPreviewPlaying] = useState(false)
+
+  // 计算已选择的特效数量
+  const selectedCount = Object.values(selectedEffects).filter(Boolean).length
+
+  // 确认特效并进入下一步
+  const handleConfirmEffects = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    setBottomBar({
+      show: true,
+      icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+      title: `已选择 ${selectedCount} 种特效`,
+      description: '标题动画 · 字幕动效 · 转场特效 · 滤镜效果',
+      primaryButton: {
+        text: '应用特效，继续下一步',
+        onClick: handleConfirmEffects,
+      },
+    })
+  }, [selectedCount, setBottomBar, handleConfirmEffects])
 
   const getEffectsByTab = () => {
     switch (activeTab) {
@@ -228,32 +251,6 @@ export default function EffectsPage() {
           </div>
         </div>
       </Tabs>
-
-      {/* 底部操作 */}
-      <div className="p-6 border-t border-surface-800">
-        <Card variant="glass" className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="font-medium text-surface-100">已选择 4 种特效</p>
-                <p className="text-sm text-surface-400">
-                  标题动画 · 字幕动效 · 转场特效 · 滤镜效果
-                </p>
-              </div>
-            </div>
-            <Button
-              size="lg"
-              rightIcon={<ChevronRight className="w-5 h-5" />}
-              onClick={goToNextStep}
-            >
-              应用特效，继续下一步
-            </Button>
-          </div>
-        </Card>
-      </div>
     </div>
   )
 }

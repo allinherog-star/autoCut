@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp,
@@ -98,13 +98,43 @@ const hotTrends = [
 // ============================================
 
 export default function TitlePage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [isGenerating, setIsGenerating] = useState(true)
   const [progress, setProgress] = useState(0)
   const [titles, setTitles] = useState<TitleSuggestion[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [customTitle, setCustomTitle] = useState('')
   const [useCustom, setUseCustom] = useState(false)
+
+  const selectedTitle = titles.find((t) => t.id === selectedId)
+  const finalTitle = useCustom ? customTitle : selectedTitle?.text || ''
+
+  // 确认标题并进入下一步
+  const handleConfirmTitle = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    if (!isGenerating) {
+      setBottomBar({
+        show: true,
+        icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+        title: finalTitle ? '已选择标题' : '请选择一个标题',
+        description: finalTitle 
+          ? `"${finalTitle.length > 30 ? finalTitle.slice(0, 30) + '...' : finalTitle}"` 
+          : '选择或输入标题后继续',
+        primaryButton: {
+          text: '确认标题，继续下一步',
+          onClick: handleConfirmTitle,
+          disabled: !finalTitle,
+        },
+      })
+    } else {
+      hideBottomBar()
+    }
+  }, [isGenerating, finalTitle, setBottomBar, hideBottomBar, handleConfirmTitle])
 
   // 模拟生成过程
   useEffect(() => {
@@ -146,15 +176,12 @@ export default function TitlePage() {
     navigator.clipboard.writeText(text)
   }
 
-  const selectedTitle = titles.find((t) => t.id === selectedId)
-  const finalTitle = useCustom ? customTitle : selectedTitle?.text || ''
-
   return (
     <div className="h-full flex overflow-hidden">
       {/* 左侧标题列表 */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden border-r border-surface-800">
+      <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-800">
         {/* 页面标题 */}
-        <div className="mb-6">
+        <div className="flex-shrink-0 px-6 pt-6 pb-4">
           <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
             标题推荐
           </h1>
@@ -170,7 +197,7 @@ export default function TitlePage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mb-6"
+              className="flex-shrink-0 px-6 pb-4"
             >
               <Card variant="glass" className="p-4">
                 <div className="flex items-center gap-3 mb-3">
@@ -187,13 +214,8 @@ export default function TitlePage() {
         </AnimatePresence>
 
         {/* 标题列表 */}
-        <AnimatePresence>
-          {!isGenerating && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex-1 overflow-y-auto space-y-3"
-            >
+        {!isGenerating && (
+          <div className="flex-1 overflow-y-auto space-y-3 px-6 min-h-0">
               {titles.map((title, index) => (
                 <motion.div
                   key={title.id}
@@ -311,27 +333,7 @@ export default function TitlePage() {
               >
                 换一批标题
               </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 下一步按钮 */}
-        {!isGenerating && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 pt-6 border-t border-surface-800"
-          >
-            <Button
-              size="lg"
-              fullWidth
-              rightIcon={<ChevronRight className="w-5 h-5" />}
-              onClick={goToNextStep}
-              disabled={!finalTitle}
-            >
-              确认标题，继续下一步
-            </Button>
-          </motion.div>
+          </div>
         )}
       </div>
 

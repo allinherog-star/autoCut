@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Wand2,
@@ -21,7 +21,7 @@ import {
   AlertCircle,
   Video,
 } from 'lucide-react'
-import { Button, Card, Badge, Progress, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Button, Card, Badge, Progress, Tabs, TabsList, TabsTrigger } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
 
@@ -129,7 +129,7 @@ const mockSegments: VideoSegment[] = [
 // ============================================
 
 export default function UnderstandPage() {
-  const { goToNextStep, markStepCompleted, currentStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [isAnalyzing, setIsAnalyzing] = useState(true)
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [segments, setSegments] = useState<VideoSegment[]>([])
@@ -139,6 +139,8 @@ export default function UnderstandPage() {
   // 预览状态
   const [previewSegment, setPreviewSegment] = useState<VideoSegment | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+  const selectedCount = segments.filter((s) => s.isSelected).length
 
   // 打开预览
   const openPreview = (segment: VideoSegment) => {
@@ -197,13 +199,6 @@ export default function UnderstandPage() {
     )
   }
 
-  // 格式化时间
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${String(secs).padStart(2, '0')}`
-  }
-
   // 标签颜色映射
   const labelColorMap: Record<string, string> = {
     // 场景类型
@@ -250,17 +245,58 @@ export default function UnderstandPage() {
     return true
   })
 
-  const selectedCount = segments.filter((s) => s.isSelected).length
   const discardedCount = segments.filter((s) => s.isDiscarded).length
 
+  // 重新分析
+  const handleReanalyze = useCallback(() => {
+    setIsAnalyzing(true)
+    setAnalysisProgress(0)
+    setSegments([])
+  }, [])
+
+  // 格式化时间 (提前声明以供 useEffect 使用)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${String(secs).padStart(2, '0')}`
+  }
+
+  // 更新底部操作栏
+  useEffect(() => {
+    if (!isAnalyzing && segments.length > 0) {
+      const totalDuration = segments
+        .filter((s) => s.isSelected)
+        .reduce((acc, s) => acc + (s.endTime - s.startTime), 0)
+
+      setBottomBar({
+        show: true,
+        icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+        title: `已选择 ${selectedCount} 个精华片段`,
+        description: `预计时长 ${formatTime(totalDuration)}，下一步将为你生成字幕`,
+        primaryButton: {
+          text: '继续下一步',
+          onClick: handleGoToNextStep,
+          disabled: selectedCount === 0,
+        },
+        secondaryButton: {
+          text: '重新分析',
+          onClick: handleReanalyze,
+          icon: <RefreshCw className="w-4 h-4" />,
+        },
+      })
+    } else {
+      hideBottomBar()
+    }
+  }, [isAnalyzing, segments, selectedCount, setBottomBar, hideBottomBar, handleReanalyze])
+
   return (
-    <div className="h-full flex flex-col p-6 overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* 页面标题 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
+      <div className="flex-shrink-0 px-6 pt-4 pb-3">
+        <h1 className="text-xl font-display font-bold text-surface-100 mb-1">
           理解视频
         </h1>
-        <p className="text-surface-400">
+        <p className="text-surface-400 text-sm">
           AI 正在分析视频内容，自动识别并标记有价值的片段
         </p>
       </div>
@@ -272,7 +308,7 @@ export default function UnderstandPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-6"
+            className="flex-shrink-0 px-6 pb-4"
           >
             <Card variant="glass" className="p-6">
               <div className="flex items-center gap-4 mb-4">
@@ -324,30 +360,27 @@ export default function UnderstandPage() {
                 ))}
               </div>
             </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
 
       {/* 分析结果 */}
-      <AnimatePresence>
-        {!isAnalyzing && segments.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex-1 flex flex-col overflow-hidden"
-          >
+      {!isAnalyzing && segments.length > 0 && (
+        <div className="flex-1 flex flex-col min-h-0 px-6 overflow-hidden">
             {/* 统计信息和标签切换 - 一行显示 */}
-            <div className="flex items-center gap-4 mb-4">
-              <Badge variant="success" size="lg">
-                <Check className="w-3.5 h-3.5" />
-                分析完成
-              </Badge>
-              <span className="text-surface-400">
-                共识别 {segments.length} 个片段
-              </span>
+            <div className="flex-shrink-0 flex items-center justify-between mb-3">
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <Badge variant="success" size="lg">
+                  <Check className="w-3.5 h-3.5" />
+                  分析完成
+                </Badge>
+                <span className="text-surface-400">
+                  共识别 {segments.length} 个片段
+                </span>
+              </div>
               
-              {/* 标签切换 */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="ml-auto">
+              {/* 标签切换 - 右对齐 */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                   <TabsTrigger value="all">
                     全部片段 ({segments.length})
@@ -362,9 +395,9 @@ export default function UnderstandPage() {
               </Tabs>
             </div>
 
-            {/* 片段列表 - 填充完整宽度，留出底部操作栏空间 */}
-            <div className="flex-1 overflow-y-auto pr-2 pb-4">
-              <div className="space-y-4">
+            {/* 片段列表 - 可滚动区域 */}
+            <div className="flex-1 overflow-y-auto pr-2 min-h-0">
+              <div className="space-y-2 pb-4">
                 {filteredSegments.map((segment, index) => (
                   <motion.div
                     key={segment.id}
@@ -379,9 +412,9 @@ export default function UnderstandPage() {
                         ${segment.isDiscarded ? 'opacity-60' : ''}
                       `}
                     >
-                      <div className="relative p-4">
+                      <div className="relative p-3">
                         {/* 右上角标签 */}
-                        <div className="absolute top-3 right-3 flex flex-wrap gap-1.5 justify-end max-w-[200px]">
+                        <div className="absolute top-2.5 right-2.5 flex flex-wrap gap-1.5 justify-end max-w-[200px]">
                           {segment.labels.map((label, labelIndex) => (
                             <span 
                               key={label} 
@@ -396,10 +429,10 @@ export default function UnderstandPage() {
                           ))}
                         </div>
 
-                        <div className="flex gap-4">
+                        <div className="flex gap-3">
                           {/* 左侧缩略图 */}
                           <div 
-                            className="relative w-48 h-28 rounded-xl overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
+                            className="relative w-44 h-24 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
                             onClick={() => openPreview(segment)}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -434,8 +467,8 @@ export default function UnderstandPage() {
                           </div>
 
                           {/* 中间内容区 */}
-                          <div className="flex-1 min-w-0 py-1">
-                            <div className="flex items-center gap-3 mb-1">
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex items-center gap-3 mb-0.5">
                               <span className="text-sm font-mono text-surface-400">
                                 {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
                               </span>
@@ -446,13 +479,13 @@ export default function UnderstandPage() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-surface-100 font-medium text-sm line-clamp-2">
+                            <p className="text-surface-100 font-medium text-sm line-clamp-1">
                               {segment.description}
                             </p>
                           </div>
 
                           {/* 右侧：操作按钮 */}
-                          <div className="flex-shrink-0 flex items-center gap-2">
+                          <div className="flex-shrink-0 flex items-center gap-2 self-center">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -494,58 +527,6 @@ export default function UnderstandPage() {
                 ))}
               </div>
             </div>
-
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 底部操作区 - 固定在底部 */}
-      {!isAnalyzing && segments.length > 0 && (
-        <div className="flex-shrink-0 pt-4 border-t border-surface-800 bg-surface-950">
-          <Card variant="glass" className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="font-medium text-surface-100">
-                    已选择 {selectedCount} 个精华片段
-                  </p>
-                  <p className="text-sm text-surface-400">
-                    预计时长{' '}
-                    {formatTime(
-                      segments
-                        .filter((s) => s.isSelected)
-                        .reduce((acc, s) => acc + (s.endTime - s.startTime), 0)
-                    )}
-                    ，下一步将为你生成字幕
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  leftIcon={<RefreshCw className="w-4 h-4" />}
-                  onClick={() => {
-                    setIsAnalyzing(true)
-                    setAnalysisProgress(0)
-                    setSegments([])
-                  }}
-                >
-                  重新分析
-                </Button>
-                <Button
-                  size="lg"
-                  rightIcon={<ChevronRight className="w-5 h-5" />}
-                  onClick={handleGoToNextStep}
-                  disabled={selectedCount === 0}
-                >
-                  继续下一步
-                </Button>
-              </div>
-            </div>
-          </Card>
         </div>
       )}
 

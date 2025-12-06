@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Volume2,
@@ -38,7 +38,7 @@ interface SyncTask {
 // ============================================
 
 export default function SyncPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [tasks, setTasks] = useState<SyncTask[]>([
     {
       id: 'audio-video',
@@ -75,6 +75,50 @@ export default function SyncPage() {
   ])
   const [isRunning, setIsRunning] = useState(false)
   const [currentTask, setCurrentTask] = useState(0)
+
+  const allCompleted = tasks.every((t) => t.status === 'completed')
+  const completedCount = tasks.filter((t) => t.status === 'completed').length
+
+  // 确认同步并进入下一步
+  const handleConfirmSync = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    if (allCompleted) {
+      setBottomBar({
+        show: true,
+        icon: <CheckCircle2 className="w-5 h-5 text-success" />,
+        title: '音画同步完成！',
+        description: '所有轨道已完成校准，可以进入下一步精细调整',
+        primaryButton: {
+          text: '继续下一步',
+          onClick: handleConfirmSync,
+        },
+        secondaryButton: {
+          text: '重新同步',
+          onClick: runSync,
+          icon: <RefreshCw className="w-4 h-4" />,
+        },
+      })
+    } else if (isRunning) {
+      setBottomBar({
+        show: true,
+        icon: <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />,
+        title: `正在处理 ${completedCount + 1}/${tasks.length}`,
+        description: '音画同步进行中，请稍候...',
+        primaryButton: {
+          text: '继续下一步',
+          onClick: handleConfirmSync,
+          disabled: true,
+        },
+      })
+    } else {
+      hideBottomBar()
+    }
+  }, [allCompleted, isRunning, completedCount, tasks.length, setBottomBar, hideBottomBar, handleConfirmSync])
 
   // 运行同步任务
   const runSync = () => {
@@ -148,9 +192,6 @@ export default function SyncPage() {
         return '同步完成'
     }
   }
-
-  const allCompleted = tasks.every((t) => t.status === 'completed')
-  const completedCount = tasks.filter((t) => t.status === 'completed').length
 
   return (
     <div className="h-full flex flex-col p-6">
@@ -280,50 +321,6 @@ export default function SyncPage() {
           })}
         </div>
 
-        {/* 完成状态 */}
-        <AnimatePresence>
-          {allCompleted && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8"
-            >
-              <Card variant="glass" className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-success/20 flex items-center justify-center">
-                      <CheckCircle2 className="w-8 h-8 text-success" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-surface-100 mb-1">
-                        音画同步完成！
-                      </h3>
-                      <p className="text-surface-400">
-                        所有轨道已完成校准，可以进入下一步精细调整
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      leftIcon={<RefreshCw className="w-4 h-4" />}
-                      onClick={runSync}
-                    >
-                      重新同步
-                    </Button>
-                    <Button
-                      size="lg"
-                      rightIcon={<ChevronRight className="w-5 h-5" />}
-                      onClick={goToNextStep}
-                    >
-                      继续下一步
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* 同步统计 */}

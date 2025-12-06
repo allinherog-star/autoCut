@@ -62,7 +62,7 @@ const triggerVariants: Record<TabsVariant, string> = {
     'rounded-md',
     'text-surface-400',
     'hover:text-surface-200 hover:bg-surface-700',
-    'data-[state=active]:bg-surface-700 data-[state=active]:text-surface-100'
+    'data-[state=active]:bg-amber-400 data-[state=active]:text-surface-950 data-[state=active]:font-semibold'
   ),
   pills: cn(
     'rounded-full',
@@ -121,7 +121,7 @@ export const Tabs = forwardRef<HTMLDivElement, TabsProps>(
         value={value}
         defaultValue={defaultValue}
         onValueChange={onValueChange}
-        className={cn('w-full', className)}
+        className={cn(className)}
         data-variant={variant}
         data-size={size}
         {...props}

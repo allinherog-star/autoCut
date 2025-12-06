@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Type,
@@ -107,7 +107,7 @@ const hotKeywords = [
 // ============================================
 
 export default function SubtitlePage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [isGenerating, setIsGenerating] = useState(true)
   const [progress, setProgress] = useState(0)
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>([])
@@ -122,6 +122,43 @@ export default function SubtitlePage() {
   })
   const [autoKeywords, setAutoKeywords] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // 使用 ref 存储最新的回调函数，避免 useEffect 依赖循环
+  const handleConfirmRef = useRef(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  })
+  
+  // 更新 ref 中的函数
+  useEffect(() => {
+    handleConfirmRef.current = () => {
+      markStepCompleted(currentStep)
+      goToNextStep()
+    }
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 稳定的回调函数，始终调用 ref 中的最新函数
+  const handleConfirmSubtitle = useCallback(() => {
+    handleConfirmRef.current()
+  }, [])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    if (!isGenerating) {
+      setBottomBar({
+        show: true,
+        icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+        title: `已生成 ${subtitles.length} 条字幕`,
+        description: '确认字幕样式后，继续下一步设置标题',
+        primaryButton: {
+          text: '确认字幕，继续下一步',
+          onClick: handleConfirmSubtitle,
+        },
+      })
+    } else {
+      hideBottomBar()
+    }
+  }, [isGenerating, subtitles.length, setBottomBar, hideBottomBar, handleConfirmSubtitle])
 
   // 模拟生成过程
   useEffect(() => {
@@ -158,9 +195,9 @@ export default function SubtitlePage() {
   return (
     <div className="h-full flex overflow-hidden">
       {/* 左侧字幕列表 */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden border-r border-surface-800">
+      <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-800">
         {/* 页面标题 */}
-        <div className="mb-6">
+        <div className="flex-shrink-0 px-6 pt-6 pb-4">
           <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
             字幕推荐
           </h1>
@@ -176,7 +213,7 @@ export default function SubtitlePage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mb-6"
+              className="flex-shrink-0 px-6 pb-4"
             >
               <Card variant="glass" className="p-4">
                 <div className="flex items-center gap-3 mb-3">
@@ -193,13 +230,8 @@ export default function SubtitlePage() {
         </AnimatePresence>
 
         {/* 字幕列表 */}
-        <AnimatePresence>
-          {!isGenerating && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex-1 overflow-y-auto space-y-2"
-            >
+        {!isGenerating && (
+          <div className="flex-1 overflow-y-auto space-y-2 px-6 min-h-0">
               {subtitles.map((subtitle, index) => (
                 <motion.div
                   key={subtitle.id}
@@ -271,26 +303,7 @@ export default function SubtitlePage() {
                   </Card>
                 </motion.div>
               ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 下一步按钮 */}
-        {!isGenerating && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 pt-6 border-t border-surface-800"
-          >
-            <Button
-              size="lg"
-              fullWidth
-              rightIcon={<ChevronRight className="w-5 h-5" />}
-              onClick={goToNextStep}
-            >
-              确认字幕，继续下一步
-            </Button>
-          </motion.div>
+          </div>
         )}
       </div>
 

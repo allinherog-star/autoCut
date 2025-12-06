@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, createContext, useContext, ReactNode } from 'react'
+import { useState, createContext, useContext, ReactNode, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
@@ -17,11 +17,35 @@ import {
   ChevronRight,
   Check,
   Home,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Button, Progress } from '@/components/ui'
+import { Button, Progress, Card } from '@/components/ui'
 import type { EditingStep } from '@/lib/types'
+
+// ============================================
+// 底部操作栏配置类型
+// ============================================
+
+interface BottomBarConfig {
+  show: boolean
+  icon?: React.ReactNode
+  title?: string
+  description?: string
+  primaryButton?: {
+    text: string
+    onClick: () => void
+    disabled?: boolean
+    loading?: boolean
+    loadingText?: string
+  }
+  secondaryButton?: {
+    text: string
+    onClick: () => void
+    icon?: React.ReactNode
+  }
+}
 
 // ============================================
 // 步骤配置
@@ -130,6 +154,9 @@ interface EditorContextType {
   goToPrevStep: () => void
   canGoNext: boolean
   canGoPrev: boolean
+  // 底部操作栏
+  setBottomBar: (config: BottomBarConfig) => void
+  hideBottomBar: () => void
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -146,6 +173,11 @@ export function useEditor() {
 // 布局组件
 // ============================================
 
+// 默认底部栏配置
+const defaultBottomBarConfig: BottomBarConfig = {
+  show: false,
+}
+
 export default function EditorLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -154,33 +186,39 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   const currentStepIndex = steps.findIndex((step) => pathname?.startsWith(step.path))
   const [currentStep, setCurrentStep] = useState(currentStepIndex >= 0 ? currentStepIndex : 0)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  
+  // 底部操作栏状态
+  const [bottomBarConfig, setBottomBarConfigState] = useState<BottomBarConfig>(defaultBottomBarConfig)
 
   const progress = ((currentStep + 1) / steps.length) * 100
 
-  const markStepCompleted = (step: number) => {
-    if (!completedSteps.includes(step)) {
-      setCompletedSteps([...completedSteps, step])
-    }
-  }
+  const markStepCompleted = useCallback((step: number) => {
+    setCompletedSteps((prev) => {
+      if (!prev.includes(step)) {
+        return [...prev, step]
+      }
+      return prev
+    })
+  }, [])
 
-  const goToNextStep = () => {
+  const goToNextStep = useCallback(() => {
     // 只有当前步骤已完成才能进入下一步
     if (currentStep < steps.length - 1 && completedSteps.includes(currentStep)) {
       const nextStep = currentStep + 1
       setCurrentStep(nextStep)
       router.push(steps[nextStep].path)
     }
-  }
+  }, [currentStep, completedSteps, router])
 
-  const goToPrevStep = () => {
+  const goToPrevStep = useCallback(() => {
     if (currentStep > 0) {
       const prevStep = currentStep - 1
       setCurrentStep(prevStep)
       router.push(steps[prevStep].path)
     }
-  }
+  }, [currentStep, router])
 
-  const goToStep = (index: number) => {
+  const goToStep = useCallback((index: number) => {
     // 只能去已完成的步骤，或者当前步骤已完成时可以去下一步
     const canAccess = index < currentStep || // 可以返回之前的步骤
                      (index === currentStep) || // 可以停留在当前步骤
@@ -190,7 +228,21 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
       setCurrentStep(index)
       router.push(steps[index].path)
     }
-  }
+  }, [currentStep, completedSteps, router])
+
+  // 底部操作栏方法
+  const setBottomBar = useCallback((config: BottomBarConfig) => {
+    setBottomBarConfigState(config)
+  }, [])
+
+  const hideBottomBar = useCallback(() => {
+    setBottomBarConfigState(defaultBottomBarConfig)
+  }, [])
+
+  // 路由变化时重置底部栏
+  useEffect(() => {
+    setBottomBarConfigState(defaultBottomBarConfig)
+  }, [pathname])
 
   const contextValue: EditorContextType = {
     currentStep,
@@ -201,6 +253,8 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     goToPrevStep,
     canGoNext: currentStep < steps.length - 1 && completedSteps.includes(currentStep),
     canGoPrev: currentStep > 0,
+    setBottomBar,
+    hideBottomBar,
   }
 
   return (
@@ -250,7 +304,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="flex flex-1">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* 左侧步骤导航 */}
           <aside className="w-64 border-r border-surface-800 bg-surface-900/50 flex flex-col">
             <nav className="flex-1 py-4 overflow-y-auto">
@@ -318,7 +372,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
           </aside>
 
           {/* 主内容区域 */}
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden flex flex-col">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
@@ -326,10 +380,73 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className="h-full"
+                className="flex-1 min-h-0 overflow-hidden"
               >
                 {children}
               </motion.div>
+            </AnimatePresence>
+
+            {/* 共用底部操作栏 */}
+            <AnimatePresence>
+              {bottomBarConfig.show && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex-shrink-0 px-6 py-4 border-t border-surface-800 bg-surface-950"
+                >
+                  <Card variant="glass" className="p-4">
+                    <div className="flex items-center justify-between">
+                      {/* 左侧信息区 */}
+                      {(bottomBarConfig.icon || bottomBarConfig.title) && (
+                        <div className="flex items-center gap-4">
+                          {bottomBarConfig.icon && (
+                            <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
+                              {bottomBarConfig.icon}
+                            </div>
+                          )}
+                          {(bottomBarConfig.title || bottomBarConfig.description) && (
+                            <div>
+                              {bottomBarConfig.title && (
+                                <p className="font-medium text-surface-100">{bottomBarConfig.title}</p>
+                              )}
+                              {bottomBarConfig.description && (
+                                <p className="text-sm text-surface-400">{bottomBarConfig.description}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 右侧按钮区 */}
+                      <div className="flex items-center gap-3 ml-auto">
+                        {bottomBarConfig.secondaryButton && (
+                          <Button
+                            variant="ghost"
+                            leftIcon={bottomBarConfig.secondaryButton.icon}
+                            onClick={bottomBarConfig.secondaryButton.onClick}
+                          >
+                            {bottomBarConfig.secondaryButton.text}
+                          </Button>
+                        )}
+                        {bottomBarConfig.primaryButton && (
+                          <Button
+                            size="lg"
+                            rightIcon={<ChevronRight className="w-5 h-5" />}
+                            onClick={bottomBarConfig.primaryButton.onClick}
+                            disabled={bottomBarConfig.primaryButton.disabled}
+                            isLoading={bottomBarConfig.primaryButton.loading}
+                            loadingText={bottomBarConfig.primaryButton.loadingText}
+                          >
+                            {bottomBarConfig.primaryButton.text}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              )}
             </AnimatePresence>
           </main>
         </div>

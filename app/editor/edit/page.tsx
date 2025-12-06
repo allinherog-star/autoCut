@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Play,
@@ -30,7 +30,7 @@ import {
   Plus,
   Sparkles,
 } from 'lucide-react'
-import { Button, Card, Badge, Slider, Tabs, TabsList, TabsTrigger, Tooltip, TooltipProvider } from '@/components/ui'
+import { Button, Card, Badge, Slider, Tooltip, TooltipProvider } from '@/components/ui'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -138,7 +138,7 @@ const initialTracks: Track[] = [
 // ============================================
 
 export default function EditPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [tracks, setTracks] = useState<Track[]>(initialTracks)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(28)
@@ -149,6 +149,14 @@ export default function EditPage() {
   const [selectedTool, setSelectedTool] = useState<'select' | 'cut' | 'move'>('select')
   const timelineRef = useRef<HTMLDivElement>(null)
 
+  const totalClips = tracks.reduce((acc, t) => acc + t.clips.length, 0)
+
+  // 完成编辑并进入下一步
+  const handleFinishEdit = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
   // 格式化时间
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -156,6 +164,20 @@ export default function EditPage() {
     const ms = Math.floor((seconds % 1) * 100)
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(2, '0')}`
   }
+
+  // 更新底部操作栏
+  useEffect(() => {
+    setBottomBar({
+      show: true,
+      icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+      title: '剪辑就绪',
+      description: `总时长 ${formatTime(totalDuration)} · ${tracks.length} 轨道 · ${totalClips} 片段`,
+      primaryButton: {
+        text: '完成编辑，导出视频',
+        onClick: handleFinishEdit,
+      },
+    })
+  }, [totalDuration, tracks.length, totalClips, setBottomBar, handleFinishEdit])
 
   // 计算时间标尺
   const getTimeMarkers = () => {
@@ -478,22 +500,6 @@ export default function EditPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 底部操作栏 */}
-        <div className="h-14 border-t border-surface-800 flex items-center justify-between px-4 bg-surface-900">
-          <div className="flex items-center gap-4 text-sm text-surface-400">
-            <span>总时长: {formatTime(totalDuration)}</span>
-            <span>轨道: {tracks.length}</span>
-            <span>片段: {tracks.reduce((acc, t) => acc + t.clips.length, 0)}</span>
-          </div>
-          <Button
-            size="md"
-            rightIcon={<ChevronRight className="w-4 h-4" />}
-            onClick={goToNextStep}
-          >
-            完成编辑，导出视频
-          </Button>
         </div>
       </div>
     </TooltipProvider>

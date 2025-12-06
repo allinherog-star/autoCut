@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Heart,
@@ -137,13 +137,33 @@ const mockEmotionPoints: EmotionPoint[] = [
 // ============================================
 
 export default function EmotionPage() {
-  const { goToNextStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [emotionPoints, setEmotionPoints] = useState<EmotionPoint[]>(mockEmotionPoints)
   const [selectedPoint, setSelectedPoint] = useState<EmotionPoint | null>(null)
   const [autoEnhance, setAutoEnhance] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [visualEnabled, setVisualEnabled] = useState(true)
   const [globalIntensity, setGlobalIntensity] = useState(75)
+
+  // 确认情绪增强并进入下一步
+  const handleConfirmEmotion = useCallback(() => {
+    markStepCompleted(currentStep)
+    goToNextStep()
+  }, [markStepCompleted, currentStep, goToNextStep])
+
+  // 更新底部操作栏
+  useEffect(() => {
+    setBottomBar({
+      show: true,
+      icon: <Heart className="w-5 h-5 text-amber-400" />,
+      title: `已配置 ${emotionPoints.length} 个情绪节点`,
+      description: `整体强度 ${globalIntensity}%，音效${soundEnabled ? '开启' : '关闭'}，视效${visualEnabled ? '开启' : '关闭'}`,
+      primaryButton: {
+        text: '确认情绪增强，继续下一步',
+        onClick: handleConfirmEmotion,
+      },
+    })
+  }, [emotionPoints.length, globalIntensity, soundEnabled, visualEnabled, setBottomBar, handleConfirmEmotion])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -163,9 +183,9 @@ export default function EmotionPage() {
   return (
     <div className="h-full flex overflow-hidden">
       {/* 左侧情绪时间线 */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden border-r border-surface-800">
+      <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-800">
         {/* 页面标题 */}
-        <div className="mb-6">
+        <div className="flex-shrink-0 px-6 pt-6 pb-4">
           <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
             情绪增强
           </h1>
@@ -175,7 +195,7 @@ export default function EmotionPage() {
         </div>
 
         {/* 全局控制 */}
-        <Card className="p-4 mb-6">
+        <Card className="flex-shrink-0 mx-6 mb-4 p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Sparkles className="w-5 h-5 text-amber-400" />
@@ -213,7 +233,7 @@ export default function EmotionPage() {
         </Card>
 
         {/* 情绪节点列表 */}
-        <div className="flex-1 overflow-y-auto space-y-3">
+        <div className="flex-1 overflow-y-auto space-y-3 px-6 min-h-0">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-surface-100">
               识别到 {emotionPoints.length} 个情绪节点
@@ -312,18 +332,6 @@ export default function EmotionPage() {
               </motion.div>
             )
           })}
-        </div>
-
-        {/* 下一步 */}
-        <div className="mt-6 pt-6 border-t border-surface-800">
-          <Button
-            size="lg"
-            fullWidth
-            rightIcon={<ChevronRight className="w-5 h-5" />}
-            onClick={goToNextStep}
-          >
-            确认情绪增强，继续下一步
-          </Button>
         </div>
       </div>
 

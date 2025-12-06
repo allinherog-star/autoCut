@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import {
   Upload,
@@ -44,7 +44,7 @@ interface MediaFile {
 // ============================================
 
 export default function UploadPage() {
-  const { goToNextStep, markStepCompleted, currentStep } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -54,6 +54,9 @@ export default function UploadPage() {
   // 预览状态
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+  const hasFiles = mediaFiles.length > 0
+  const allUploaded = mediaFiles.every((f) => f.isUploaded)
 
   // 触发文件选择
   const triggerFileSelect = () => {
@@ -179,13 +182,31 @@ export default function UploadPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  const hasFiles = mediaFiles.length > 0
-  const allUploaded = mediaFiles.every((f) => f.isUploaded)
+  // 更新底部操作栏
+  useEffect(() => {
+    if (hasFiles) {
+      setBottomBar({
+        show: true,
+        icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+        title: '准备好了？',
+        description: `AI 将分析你的 ${mediaFiles.length} 个素材，智能提取精华内容`,
+        primaryButton: {
+          text: '开始 AI 分析',
+          onClick: handleStartAIAnalysis,
+          disabled: !allUploaded || isUploading,
+          loading: isUploading,
+          loadingText: '上传中...',
+        },
+      })
+    } else {
+      hideBottomBar()
+    }
+  }, [hasFiles, mediaFiles.length, allUploaded, isUploading])
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* 页面标题 */}
-      <div className="mb-6">
+      <div className="flex-shrink-0 px-6 pt-6 pb-4">
         <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">
           上传素材
         </h1>
@@ -194,8 +215,8 @@ export default function UploadPage() {
         </p>
       </div>
 
-      {/* 上传区域 */}
-      <div className="flex-1 flex flex-col gap-6">
+      {/* 上传区域 - 可滚动 */}
+      <div className="flex-1 flex flex-col gap-6 px-6 overflow-y-auto min-h-0">
         {/* 拖拽上传区 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -438,40 +459,6 @@ export default function UploadPage() {
           )}
         </AnimatePresence>
 
-        {/* 底部操作区 */}
-        {hasFiles && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-auto pt-6 border-t border-surface-800"
-          >
-            <Card variant="glass" className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-400/10 flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-surface-100">准备好了？</p>
-                    <p className="text-sm text-surface-400">
-                      AI 将分析你的 {mediaFiles.length} 个素材，智能提取精华内容
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="lg"
-                  disabled={!allUploaded || isUploading}
-                  isLoading={isUploading}
-                  loadingText="上传中..."
-                  rightIcon={<ChevronRight className="w-5 h-5" />}
-                  onClick={handleStartAIAnalysis}
-                >
-                  开始 AI 分析
-                </Button>
-              </div>
-            </Card>
-          </motion.div>
-        )}
       </div>
 
       {/* 媒体预览模态框 */}
