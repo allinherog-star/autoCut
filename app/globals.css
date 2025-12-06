@@ -1,3 +1,7 @@
+@import url('https://fonts.cdnfonts.com/css/satoshi');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 /**
  * AutoCut 设计系统 - 全局样式
  *
@@ -15,21 +19,6 @@
 /* ============================================
    🔤 字体导入
    ============================================ */
-
-/* Satoshi - 显示字体 */
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
-  font-weight: 300 900;
-  font-display: swap;
-  font-style: normal;
-}
-
-/* DM Sans - 正文字体 */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
-
-/* JetBrains Mono - 等宽字体 */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ============================================
    🎨 CSS 变量定义
