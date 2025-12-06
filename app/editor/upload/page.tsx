@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import {
   Upload,
@@ -46,6 +46,18 @@ export default function UploadPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const addMoreInputRef = useRef<HTMLInputElement>(null)
+
+  // 触发文件选择
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  // 触发添加更多
+  const triggerAddMore = () => {
+    addMoreInputRef.current?.click()
+  }
 
   // 处理文件选择
   const handleFileSelect = useCallback((files: FileList | null) => {
@@ -166,7 +178,18 @@ export default function UploadPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <label
+          {/* 隐藏的文件输入 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*,image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFileSelect(e.target.files)}
+          />
+
+          {/* 上传区域 */}
+          <div
             className={`
               relative block w-full border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
               transition-all duration-300
@@ -175,19 +198,12 @@ export default function UploadPage() {
                 : 'border-surface-600 hover:border-surface-500 hover:bg-surface-800/50'
               }
             `}
+            onClick={triggerFileSelect}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <input
-              type="file"
-              accept="video/*,image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFileSelect(e.target.files)}
-            />
-
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center pointer-events-none">
               <div
                 className={`
                   w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-colors duration-300
@@ -202,9 +218,10 @@ export default function UploadPage() {
               <p className="text-sm text-surface-500 mb-4">
                 支持 MP4, MOV, AVI, WebM, JPG, PNG 等格式
               </p>
-              <Button variant="outline" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+              <span className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md bg-transparent text-amber-400 border border-amber-400/50 hover:bg-amber-400/10 hover:border-amber-400 transition-all">
+                <Plus className="w-4 h-4" />
                 选择文件
-              </Button>
+              </span>
             </div>
 
             {/* 拖拽高亮效果 */}
@@ -218,7 +235,7 @@ export default function UploadPage() {
                 />
               )}
             </AnimatePresence>
-          </label>
+          </div>
         </motion.div>
 
         {/* 已上传文件列表 */}
@@ -359,24 +376,24 @@ export default function UploadPage() {
               </Reorder.Group>
 
               {/* 添加更多 */}
-              <label className="mt-4 block">
-                <input
-                  type="file"
-                  accept="video/*,image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                />
-                <Card
-                  isInteractive
-                  className="p-4 border-dashed cursor-pointer hover:border-amber-400/50"
-                >
-                  <div className="flex items-center justify-center gap-2 text-surface-400">
-                    <Plus className="w-5 h-5" />
-                    <span>添加更多素材</span>
-                  </div>
-                </Card>
-              </label>
+              <input
+                ref={addMoreInputRef}
+                type="file"
+                accept="video/*,image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files)}
+              />
+              <Card
+                isInteractive
+                className="mt-4 p-4 border-dashed cursor-pointer hover:border-amber-400/50"
+                onClick={triggerAddMore}
+              >
+                <div className="flex items-center justify-center gap-2 text-surface-400">
+                  <Plus className="w-5 h-5" />
+                  <span>添加更多素材</span>
+                </div>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
