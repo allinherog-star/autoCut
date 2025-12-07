@@ -145,38 +145,38 @@ export default function SyncPage() {
     )
 
     const interval = setInterval(() => {
-      setTasks((prev) =>
-        prev.map((t, i) => {
+      setTasks((prev) => {
+        let taskCompleted = false
+        const newTasks = prev.map((t, i) => {
           if (i !== currentTask) return t
           const newProgress = t.progress + Math.random() * 15
           if (newProgress >= 100) {
+            taskCompleted = true
             return {
               ...t,
-              status: 'completed',
+              status: 'completed' as const,
               progress: 100,
               details: getSyncDetails(t.id),
             }
           }
-          return { ...t, progress: newProgress }
+          return { ...t, progress: Math.min(newProgress, 100) }
         })
-      )
+        
+        // 如果任务完成，在下一个微任务中切换到下一个任务
+        if (taskCompleted) {
+          setTimeout(() => {
+            setCurrentTask((prev) => prev + 1)
+          }, 0)
+        }
+        
+        return newTasks
+      })
     }, 200)
-
-    // 检查任务完成
-    const checkInterval = setInterval(() => {
-      const current = tasks[currentTask]
-      if (current?.progress >= 100 || current?.status === 'completed') {
-        clearInterval(interval)
-        clearInterval(checkInterval)
-        setCurrentTask((prev) => prev + 1)
-      }
-    }, 100)
 
     return () => {
       clearInterval(interval)
-      clearInterval(checkInterval)
     }
-  }, [isRunning, currentTask, tasks])
+  }, [isRunning, currentTask, tasks.length])
 
   const getSyncDetails = (taskId: string): string => {
     switch (taskId) {

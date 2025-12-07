@@ -123,13 +123,14 @@ export default function ExportPage() {
     if (isExporting) {
       const interval = setInterval(() => {
         setExportProgress((prev) => {
-          if (prev >= 100) {
+          const newProgress = prev + Math.random() * 3
+          if (newProgress >= 100) {
             clearInterval(interval)
             setIsExporting(false)
             setIsExportComplete(true)
             return 100
           }
-          return prev + Math.random() * 3
+          return Math.min(newProgress, 100)
         })
       }, 150)
       return () => clearInterval(interval)

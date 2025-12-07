@@ -141,13 +141,14 @@ export default function TitlePage() {
     if (isGenerating) {
       const interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          const newProgress = prev + Math.random() * 15
+          if (newProgress >= 100) {
             clearInterval(interval)
             setIsGenerating(false)
             setTitles(mockTitles)
             return 100
           }
-          return prev + Math.random() * 15
+          return Math.min(newProgress, 100)
         })
       }, 150)
       return () => clearInterval(interval)

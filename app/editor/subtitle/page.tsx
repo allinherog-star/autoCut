@@ -1272,13 +1272,14 @@ export default function SubtitlePage() {
     if (isGenerating) {
       const interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          const newProgress = prev + Math.random() * 12
+          if (newProgress >= 100) {
             clearInterval(interval)
             setIsGenerating(false)
             setSegments(mockSegments)
             return 100
           }
-          return prev + Math.random() * 12
+          return Math.min(newProgress, 100)
         })
       }, 200)
       return () => clearInterval(interval)
