@@ -624,7 +624,7 @@ export class VideoComposer {
         })
         
         // 开始播放音频
-        audioElement.play()
+        audioElement.play().catch(() => {})
       } catch (e) {
         console.warn('[Composer] 音频处理失败，将输出无声视频:', e)
       }

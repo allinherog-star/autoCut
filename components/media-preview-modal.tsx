@@ -78,10 +78,15 @@ export function MediaPreviewModal({
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause()
+        setIsPlaying(false)
       } else {
-        videoRef.current.play()
+        const playPromise = videoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false))
+        }
       }
-      setIsPlaying(!isPlaying)
     }
   }
 
@@ -221,6 +226,9 @@ export function MediaPreviewModal({
                     onLoadedMetadata={handleLoadedMetadata}
                     onTimeUpdate={handleTimeUpdate}
                     onEnded={() => setIsPlaying(false)}
+                    onError={(e) => {
+                      console.error('[MediaPreview] 视频加载错误:', e)
+                    }}
                     onClick={togglePlay}
                   />
 

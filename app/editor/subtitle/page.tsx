@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic,
@@ -27,6 +27,7 @@ import {
   RotateCcw,
   Download,
   Loader2,
+  Maximize2,
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Slider } from '@/components/ui'
 import {
@@ -202,7 +203,7 @@ const devicePresets: Record<DevicePreset, DeviceConfig> = {
     aspectRatio: '9/16',
     width: 1080,
     height: 1920,
-    previewHeight: 'auto', // 手机竖屏使用自适应高度
+    previewHeight: '500px', // 模拟真实手机屏幕高度
     fontScale: 1.0,
   },
   pc: {
@@ -384,7 +385,19 @@ const SubtitleStylePreview = ({
   const [device, setDevice] = useState<DevicePreset>('pc')
   const previewRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(1)
+  const [isMaximized, setIsMaximized] = useState(false)
   const config = devicePresets[device]
+
+  // ESC 键关闭最大化弹窗
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMaximized) {
+        setIsMaximized(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMaximized])
 
   // 计算预览区域相对于真实分辨率的缩放比例
   useEffect(() => {
@@ -409,8 +422,37 @@ const SubtitleStylePreview = ({
   // 根据缩放比例调整字体大小
   const scaledFontSize = Math.round(subtitle.style.fontSize * previewScale)
   
-  // 创建用于预览的字幕项（转换为旧格式以兼容 VideoPreview）
-  const subtitleItem: SubtitleItem = {
+  // 生成样式的唯一标识，用于缓存控制
+  const styleKey = useMemo(() => {
+    const style = subtitle.style
+    return JSON.stringify({
+      fontSize: style.fontSize,
+      fontFamily: style.fontFamily,
+      fontWeight: style.fontWeight,
+      letterSpacing: style.letterSpacing,
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      position: style.position,
+      alignment: style.alignment,
+      hasOutline: style.hasOutline,
+      outlineColor: style.outlineColor,
+      outlineWidth: style.outlineWidth,
+      hasShadow: style.hasShadow,
+      shadowColor: style.shadowColor,
+      shadowBlur: style.shadowBlur,
+      shadowOffsetX: style.shadowOffsetX,
+      shadowOffsetY: style.shadowOffsetY,
+      decorationId: style.decorationId,
+      animationId: style.animationId,
+      colorType: style.colorType,
+      gradientColors: style.gradientColors,
+      gradientAngle: style.gradientAngle,
+      marginBottom: style.marginBottom,
+    })
+  }, [subtitle.style])
+  
+  // 缓存字幕项，只有样式或缩放比例变化时才重新创建
+  const subtitleItem: SubtitleItem = useMemo(() => ({
     id: subtitle.id,
     text: subtitle.text,
     startTime: subtitle.startTime,
@@ -441,7 +483,7 @@ const SubtitleStylePreview = ({
       backgroundPadding: subtitle.style.backgroundPadding,
       backgroundBorderRadius: subtitle.style.backgroundBorderRadius,
     } as SubtitleItem['style'],
-  }
+  }), [subtitle.id, subtitle.text, subtitle.startTime, subtitle.endTime, scaledFontSize, styleKey])
 
   // 应用预设样式
   const applyPreset = (presetId: string) => {
@@ -518,10 +560,10 @@ const SubtitleStylePreview = ({
           <div className="flex justify-center">
             <div 
               ref={previewRef}
-              className="relative overflow-hidden rounded-2xl shadow-2xl border-2 border-surface-600 bg-black"
+              className="relative overflow-hidden rounded-[2.5rem] shadow-2xl border-[3px] border-surface-500 bg-black group/video"
               style={{ 
                 aspectRatio: config.aspectRatio,
-                maxHeight: '480px', // 限制最大高度，避免过高
+                height: config.previewHeight,
               }}
             >
               <VideoPreview
@@ -536,12 +578,23 @@ const SubtitleStylePreview = ({
                 objectFit="contain"
                 className="w-full h-full"
               />
+              {/* 最大化按钮 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMaximized(true)
+                }}
+                className="absolute top-3 right-3 p-2 rounded-lg bg-black/60 backdrop-blur-sm text-white opacity-0 group-hover/video:opacity-100 transition-opacity hover:bg-black/80 z-20"
+                title="最大化预览"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
         ) : (
           <div 
             ref={previewRef}
-            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600"
+            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600 group/video"
             style={{
               aspectRatio: config.aspectRatio,
               width: '100%',
@@ -558,10 +611,104 @@ const SubtitleStylePreview = ({
               mode="native"
               className="w-full h-full"
             />
+            {/* 最大化按钮 */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsMaximized(true)
+              }}
+              className="absolute top-3 right-3 p-2 rounded-lg bg-black/60 backdrop-blur-sm text-white opacity-0 group-hover/video:opacity-100 transition-opacity hover:bg-black/80 z-20"
+              title="最大化预览"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           </div>
         )}
 
       </div>
+
+      {/* 最大化预览弹窗 */}
+      <AnimatePresence>
+        {isMaximized && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setIsMaximized(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 顶部信息栏 */}
+              <div className="absolute -top-12 left-0 right-0 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white">
+                  {device === 'phone' ? (
+                    <>
+                      <Smartphone className="w-4 h-4" />
+                      <span className="text-sm">手机竖屏 9:16</span>
+                    </>
+                  ) : (
+                    <>
+                      <Monitor className="w-4 h-4" />
+                      <span className="text-sm">PC横屏 16:9</span>
+                    </>
+                  )}
+                  <span className="text-xs text-surface-400 ml-2">{config.width}×{config.height}</span>
+                </div>
+                <button
+                  onClick={() => setIsMaximized(false)}
+                  className="px-3 py-1.5 rounded-lg bg-surface-800 text-white text-sm hover:bg-surface-700 transition-colors"
+                >
+                  ESC 关闭
+                </button>
+              </div>
+
+              {/* 视频预览 */}
+              <div 
+                className={`
+                  relative overflow-hidden shadow-2xl bg-black
+                  ${device === 'phone' 
+                    ? 'rounded-[2.5rem] border-[3px] border-surface-500' 
+                    : 'rounded-xl border-2 border-surface-600'
+                  }
+                `}
+                style={{
+                  aspectRatio: config.aspectRatio,
+                  height: device === 'phone' ? 'min(75vh, 650px)' : 'auto',
+                  width: device === 'phone' ? 'auto' : 'min(85vw, 1100px)',
+                }}
+              >
+                <VideoPreview
+                  videoUrl={segment.videoUrl}
+                  subtitles={[subtitleItem]}
+                  startTime={subtitle.startTime}
+                  endTime={subtitle.endTime}
+                  autoPlay={true}
+                  loop={true}
+                  showControls={true}
+                  mode="native"
+                  objectFit={device === 'phone' ? 'contain' : 'cover'}
+                  className="w-full h-full"
+                />
+              </div>
+
+              {/* 字幕文本 */}
+              <div className="absolute -bottom-14 left-0 right-0 text-center">
+                <p className="text-white text-lg">{subtitle.text}</p>
+                <p className="text-surface-400 text-sm mt-1">
+                  {formatTime(subtitle.startTime)} - {formatTime(subtitle.endTime)}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 右侧：样式控件 - 下拉选项形式 */}
       <div 
