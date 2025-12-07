@@ -51,7 +51,7 @@ export const PHONE_FONT_SIZES: FontSizeOption[] = [
   { value: 120, name: '巨大', description: '极致视觉冲击', category: 'xlarge' },
 ]
 
-// PC横屏标准字号 (基于 1920×1080 分辨率)
+// 电脑横屏标准字号 (基于 1920×1080 分辨率)
 export const PC_FONT_SIZES: FontSizeOption[] = [
   { value: 28, name: '极小', description: '适合长文本、多行字幕', category: 'small' },
   { value: 32, name: '小', description: '信息密集型内容', category: 'small' },

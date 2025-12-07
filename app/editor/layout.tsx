@@ -25,6 +25,40 @@ import { Button, Progress, Card } from '@/components/ui'
 import type { EditingStep } from '@/lib/types'
 
 // ============================================
+// 目标设备类型
+// ============================================
+
+export type TargetDevice = 'phone' | 'pc'
+
+export interface DeviceInfo {
+  id: TargetDevice
+  name: string
+  description: string
+  aspectRatio: string
+  width: number
+  height: number
+}
+
+export const DEVICE_CONFIGS: Record<TargetDevice, DeviceInfo> = {
+  phone: {
+    id: 'phone',
+    name: '手机竖屏',
+    description: '抖音/快手/小红书',
+    aspectRatio: '9/16',
+    width: 1080,
+    height: 1920,
+  },
+  pc: {
+    id: 'pc',
+    name: '电脑横屏',
+    description: 'B站/YouTube',
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+  },
+}
+
+// ============================================
 // 底部操作栏配置类型
 // ============================================
 
@@ -157,6 +191,10 @@ interface EditorContextType {
   // 底部操作栏
   setBottomBar: (config: BottomBarConfig) => void
   hideBottomBar: () => void
+  // 目标设备
+  targetDevice: TargetDevice
+  setTargetDevice: (device: TargetDevice) => void
+  deviceConfig: DeviceInfo
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -189,6 +227,10 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   
   // 底部操作栏状态
   const [bottomBarConfig, setBottomBarConfigState] = useState<BottomBarConfig>(defaultBottomBarConfig)
+  
+  // 目标设备状态（默认手机竖屏）
+  const [targetDevice, setTargetDevice] = useState<TargetDevice>('phone')
+  const deviceConfig = DEVICE_CONFIGS[targetDevice]
 
   const progress = ((currentStep + 1) / steps.length) * 100
 
@@ -262,6 +304,10 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     canGoPrev: currentStep > 0,
     setBottomBar,
     hideBottomBar,
+    // 目标设备
+    targetDevice,
+    setTargetDevice,
+    deviceConfig,
   }
 
   return (

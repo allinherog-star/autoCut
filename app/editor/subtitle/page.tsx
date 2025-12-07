@@ -36,7 +36,7 @@ import {
   type ProgressCallback,
 } from '@/lib/video-composer'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
-import { useEditor } from '../layout'
+import { useEditor, type TargetDevice } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
 import {
   type EnhancedSubtitleStyle,
@@ -186,39 +186,6 @@ const formatTime = (seconds: number) => {
 // ============================================
 // 设备预览配置
 // ============================================
-
-type DevicePreset = 'phone' | 'pc'
-
-interface DeviceConfig {
-  name: string
-  icon: typeof Smartphone
-  aspectRatio: string // CSS aspect-ratio
-  width: number // 真实分辨率宽度
-  height: number // 真实分辨率高度
-  description: string // 设备描述
-}
-
-// 真实设备分辨率配置
-// 手机以 iPhone 14 Pro Max 为参考 (1290×2796，但视频通常 1080×1920)
-// PC 以 1080p 为标准 (1920×1080)
-const devicePresets: Record<DevicePreset, DeviceConfig> = {
-  phone: {
-    name: '手机竖屏',
-    icon: Smartphone,
-    aspectRatio: '9/16',
-    width: 1080, // 短视频标准宽度
-    height: 1920, // 短视频标准高度
-    description: '1080×1920 抖音/快手/小红书',
-  },
-  pc: {
-    name: 'PC横屏',
-    icon: Monitor,
-    aspectRatio: '16/9',
-    width: 1920, // 1080p 标准宽度
-    height: 1080, // 1080p 标准高度
-    description: '1920×1080 B站/YouTube',
-  },
-}
 
 // 手机预览框高度 - 模拟真实手机屏幕
 // 基于 6.7 英寸手机屏幕比例，预览高度约 560px 能较好模拟真实观感
@@ -384,16 +351,19 @@ const SubtitleStylePreview = ({
   segment,
   subtitle,
   onStyleChange,
+  device,
+  deviceConfig,
 }: {
   segment: VideoSegment
   subtitle: SubtitleLine
   onStyleChange: (newStyle: Partial<SubtitleStyle>) => void
+  device: 'phone' | 'pc'
+  deviceConfig: { name: string; description: string; aspectRatio: string; width: number; height: number }
 }) => {
-  const [device, setDevice] = useState<DevicePreset>('pc')
   const previewRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(1)
   const [isMaximized, setIsMaximized] = useState(false)
-  const config = devicePresets[device]
+  const config = deviceConfig
 
   // ESC 键关闭最大化弹窗
   useEffect(() => {
@@ -536,38 +506,21 @@ const SubtitleStylePreview = ({
     <div className="flex gap-6" onClick={(e) => e.stopPropagation()}>
       {/* 左侧：预览区域 */}
       <div className="flex-[2] min-w-0">
-        {/* 设备切换 */}
-        <div className="flex items-center gap-3 mb-4" onClick={(e) => e.stopPropagation()}>
-          <span className="text-sm text-surface-300 font-medium">预览设备:</span>
-          <div className="flex gap-1 p-1 bg-surface-700 rounded-xl">
-            {(Object.keys(devicePresets) as DevicePreset[]).map((key) => {
-              const preset = devicePresets[key]
-              const Icon = preset.icon
-              const isActive = device === key
-              return (
-                <button
-                  key={key}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setDevice(key)
-                  }}
-                  className={`
-                    flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                    ${isActive 
-                      ? 'bg-amber-500 text-white shadow-lg' 
-                      : 'text-surface-400 hover:text-surface-200 hover:bg-surface-600'
-                    }
-                  `}
-                  title={preset.description}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{preset.name}</span>
-                  {isActive && (
-                    <span className="text-xs opacity-80 font-mono">{preset.width}×{preset.height}</span>
-                  )}
-                </button>
-              )
-            })}
+        {/* 当前设备信息 */}
+        <div className="flex items-center justify-between mb-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-700 rounded-lg">
+              {device === 'phone' ? (
+                <Smartphone className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Monitor className="w-4 h-4 text-amber-400" />
+              )}
+              <span className="text-sm font-medium text-surface-200">{config.name}</span>
+              <span className="text-xs text-surface-500">{config.width}×{config.height}</span>
+            </div>
+            <span className="text-xs text-surface-500">
+              在上传页面可修改目标设备
+            </span>
           </div>
           {/* 重置按钮 */}
           <button
@@ -575,7 +528,7 @@ const SubtitleStylePreview = ({
               e.stopPropagation()
               resetToDefault()
             }}
-            className="ml-auto flex items-center gap-1 text-xs text-surface-400 hover:text-amber-400 transition-colors"
+            className="flex items-center gap-1 text-xs text-surface-400 hover:text-amber-400 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>重置样式</span>
@@ -694,7 +647,7 @@ const SubtitleStylePreview = ({
                   ) : (
                     <>
                       <Monitor className="w-4 h-4" />
-                      <span className="text-sm font-medium">PC横屏</span>
+                      <span className="text-sm font-medium">电脑横屏</span>
                     </>
                   )}
                   <span className="px-2 py-0.5 rounded bg-surface-700 text-xs font-mono">{config.width}×{config.height}</span>
@@ -1126,7 +1079,7 @@ const SubtitleStylePreview = ({
 // ============================================
 
 export default function SubtitlePage() {
-  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar, targetDevice, deviceConfig } = useEditor()
   const [isGenerating, setIsGenerating] = useState(true)
   const [progress, setProgress] = useState(0)
   const [segments, setSegments] = useState<VideoSegment[]>([])
@@ -1773,6 +1726,8 @@ export default function SubtitlePage() {
                                           segment={segment}
                                           subtitle={subtitle}
                                           onStyleChange={(newStyle) => updateSubtitleStyle(segment.id, subtitle.id, newStyle)}
+                                          device={targetDevice}
+                                          deviceConfig={deviceConfig}
                                         />
                                       </div>
                                     </motion.div>

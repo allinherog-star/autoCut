@@ -17,10 +17,13 @@ import {
   Sparkles,
   ChevronRight,
   Eye,
+  Smartphone,
+  Monitor,
+  Check,
 } from 'lucide-react'
 import { Button, Card, Badge, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
-import { useEditor } from '../layout'
+import { useEditor, DEVICE_CONFIGS, type TargetDevice } from '../layout'
 
 // ============================================
 // 类型定义
@@ -44,7 +47,7 @@ interface MediaFile {
 // ============================================
 
 export default function UploadPage() {
-  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar, targetDevice, setTargetDevice, deviceConfig } = useEditor()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -217,11 +220,82 @@ export default function UploadPage() {
 
       {/* 上传区域 - 可滚动 */}
       <div className="flex-1 flex flex-col gap-6 px-6 overflow-y-auto min-h-0">
+        {/* 目标设备选择 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-surface-100 mb-1">
+                  选择目标平台
+                </h3>
+                <p className="text-sm text-surface-500">
+                  根据发布平台选择，后续预览和导出都会使用此设置
+                </p>
+              </div>
+              
+              {/* 设备选择按钮组 */}
+              <div className="flex gap-3">
+                {(Object.keys(DEVICE_CONFIGS) as TargetDevice[]).map((deviceId) => {
+                  const config = DEVICE_CONFIGS[deviceId]
+                  const isActive = targetDevice === deviceId
+                  const Icon = deviceId === 'phone' ? Smartphone : Monitor
+                  
+                  return (
+                    <button
+                      key={deviceId}
+                      onClick={() => setTargetDevice(deviceId)}
+                      className={`
+                        relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all min-w-[140px]
+                        ${isActive 
+                          ? 'border-amber-400 bg-amber-400/10' 
+                          : 'border-surface-700 bg-surface-800/50 hover:border-surface-600 hover:bg-surface-800'
+                        }
+                      `}
+                    >
+                      {/* 选中标记 */}
+                      {isActive && (
+                        <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-surface-950" />
+                        </div>
+                      )}
+                      
+                      {/* 设备图标 */}
+                      <div className={`
+                        w-12 h-12 rounded-xl flex items-center justify-center
+                        ${isActive ? 'bg-amber-400/20 text-amber-400' : 'bg-surface-700 text-surface-400'}
+                      `}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      
+                      {/* 设备信息 */}
+                      <div className="text-center">
+                        <p className={`text-sm font-medium ${isActive ? 'text-amber-400' : 'text-surface-200'}`}>
+                          {config.name}
+                        </p>
+                        <p className="text-xs text-surface-500 mt-0.5">
+                          {config.description}
+                        </p>
+                        <p className="text-xs text-surface-600 mt-1 font-mono">
+                          {config.width}×{config.height}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
         {/* 拖拽上传区 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
           {/* 隐藏的文件输入 */}
           <input
