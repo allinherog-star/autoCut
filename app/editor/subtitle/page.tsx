@@ -202,7 +202,7 @@ const devicePresets: Record<DevicePreset, DeviceConfig> = {
     aspectRatio: '9/16',
     width: 1080,
     height: 1920,
-    previewHeight: '380px', // 适中预览尺寸
+    previewHeight: 'auto', // 手机竖屏使用自适应高度
     fontScale: 1.0,
   },
   pc: {
@@ -211,7 +211,7 @@ const devicePresets: Record<DevicePreset, DeviceConfig> = {
     aspectRatio: '16/9',
     width: 1920,
     height: 1080,
-    previewHeight: '320px',
+    previewHeight: 'auto', // PC横屏使用自适应高度
     fontScale: 1.0,
   },
 }
@@ -521,7 +521,7 @@ const SubtitleStylePreview = ({
               className="relative overflow-hidden rounded-2xl shadow-2xl border-2 border-surface-600 bg-black"
               style={{ 
                 aspectRatio: config.aspectRatio,
-                height: config.previewHeight,
+                maxHeight: '480px', // 限制最大高度，避免过高
               }}
             >
               <VideoPreview
@@ -541,11 +541,10 @@ const SubtitleStylePreview = ({
         ) : (
           <div 
             ref={previewRef}
-            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600 mx-auto"
+            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600"
             style={{
               aspectRatio: config.aspectRatio,
-              height: config.previewHeight,
-              maxWidth: '100%',
+              width: '100%',
             }}
           >
             <VideoPreview
