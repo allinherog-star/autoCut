@@ -1357,7 +1357,23 @@ export default function SubtitlePage() {
                               {segment.subtitles.map((subtitle) => (
                                 <div
                                   key={subtitle.id}
-                                  className="rounded-lg bg-surface-900/50 border border-surface-700 group hover:border-surface-600 transition-colors"
+                                  className={`
+                                    rounded-lg bg-surface-900/50 border group transition-all cursor-pointer
+                                    ${styleEditingId === subtitle.id 
+                                      ? 'border-amber-400/50 bg-surface-800/50' 
+                                      : 'border-surface-700 hover:border-surface-500 hover:bg-surface-800/30'
+                                    }
+                                  `}
+                                  onClick={() => {
+                                    // 点击卡片空白区域时切换样式编辑面板
+                                    if (styleEditingId === subtitle.id) {
+                                      setStyleEditingId(null)
+                                      setStyleEditingSegmentId(null)
+                                    } else {
+                                      setStyleEditingId(subtitle.id)
+                                      setStyleEditingSegmentId(segment.id)
+                                    }
+                                  }}
                                 >
                                 <div className="flex items-center gap-3 p-2">
                                   {/* 画面缩略图 + 预览 */}
@@ -1405,7 +1421,7 @@ export default function SubtitlePage() {
                                     return (
                                       <div className="flex-1 min-w-0">
                                         {editingSubtitleId === subtitle.id ? (
-                                          <div className="flex gap-2">
+                                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                             <input
                                               type="text"
                                               value={editingText}
@@ -1424,7 +1440,10 @@ export default function SubtitlePage() {
                                               variant="primary"
                                               size="xs"
                                               isIconOnly
-                                              onClick={() => saveSubtitleEdit(segment.id, subtitle.id)}
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                saveSubtitleEdit(segment.id, subtitle.id)
+                                              }}
                                             >
                                               <Save className="w-3.5 h-3.5" />
                                             </Button>
@@ -1483,7 +1502,10 @@ export default function SubtitlePage() {
                                           variant="ghost"
                                           size="xs"
                                           isIconOnly
-                                          onClick={() => startEditSubtitle(subtitle.id, subtitle.text)}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            startEditSubtitle(subtitle.id, subtitle.text)
+                                          }}
                                         >
                                           <Edit3 className="w-3.5 h-3.5" />
                                         </Button>
@@ -1492,7 +1514,10 @@ export default function SubtitlePage() {
                                           size="xs"
                                           isIconOnly
                                           className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                                          onClick={() => deleteSubtitle(segment.id, subtitle.id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            deleteSubtitle(segment.id, subtitle.id)
+                                          }}
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </Button>
@@ -1578,9 +1603,14 @@ export default function SubtitlePage() {
               <Palette className="w-4 h-4 text-amber-400" />
               样式说明
             </h3>
-            <p className="text-xs text-surface-500 leading-relaxed">
-              点击每条字幕右侧的 <span className="text-amber-400">调色板按钮</span> 可单独设置该字幕的样式，包括字体大小、位置、对齐和描边效果。
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-surface-500 leading-relaxed">
+                <span className="text-amber-400">点击字幕卡片</span> 可直接打开样式编辑面板，设置字体、颜色、位置等样式。
+              </p>
+              <p className="text-xs text-surface-500 leading-relaxed">
+                <span className="text-surface-400">点击缩略图</span> 可预览该时间段的视频画面。
+              </p>
+            </div>
           </div>
 
           {/* 导出测试区域 */}
