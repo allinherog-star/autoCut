@@ -744,14 +744,14 @@ const SubtitleStylePreview = ({
             <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
               <Type className="w-4 h-4 text-amber-400" />
               <span>字体</span>
+              <span className="ml-auto text-amber-400 text-xs">{FONT_OPTIONS.find(f => f.family === subtitle.style.fontFamily)?.name || '思源黑体'}</span>
             </label>
             <StyleDropdown
               value={subtitle.style.fontFamily}
               options={FONT_OPTIONS.map(font => ({
                 id: font.family,
-                name: font.name,
-                preview: font.category === 'handwriting' ? '✍️' : font.category === 'display' ? '🎨' : font.category === 'serif' ? '📜' : '📝',
-                description: font.preview,
+                name: font.preview, // 预览文字作为主名称
+                description: font.name, // 字体名称作为次要描述
                 value: font.family,
               }))}
               onChange={(family) => onStyleChange({ fontFamily: family })}
@@ -763,13 +763,21 @@ const SubtitleStylePreview = ({
                     : 'hover:bg-surface-700 text-surface-200'
                   }
                 `}>
-                  <span className="text-base flex-shrink-0 w-6 text-center">{option.preview}</span>
+                  {/* 字体预览 - 用当前字体渲染 */}
+                  <span 
+                    className="text-base flex-shrink-0 w-12 text-center text-surface-300"
+                    style={{ fontFamily: `"${option.id}", sans-serif` }}
+                  >
+                    字幕
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm">{option.name}</div>
                     <div 
-                      className="text-xs text-surface-400"
+                      className="font-medium text-sm"
                       style={{ fontFamily: `"${option.id}", sans-serif` }}
                     >
+                      {option.name}
+                    </div>
+                    <div className="text-xs text-surface-500">
                       {option.description}
                     </div>
                   </div>
@@ -805,10 +813,9 @@ const SubtitleStylePreview = ({
                       .filter(s => s.category === cat.key)
                       .map(s => ({
                         id: s.value.toString(),
-                        name: s.name,
-                        description: s.description,
+                        name: s.description, // 描述作为主名称
+                        description: s.name, // 原名称作为次要描述
                         value: s.value,
-                        preview: s.category === 'small' ? 'A' : s.category === 'medium' ? 'Aa' : s.category === 'large' ? 'AA' : '大',
                       })),
                   }))
                   .filter(g => g.options.length > 0)
@@ -822,11 +829,12 @@ const SubtitleStylePreview = ({
                     : 'hover:bg-surface-700 text-surface-200'
                   }
                 `}>
+                  {/* 字号预览 - 实际大小示意 */}
                   <span 
-                    className="text-base flex-shrink-0 w-8 text-center font-bold"
-                    style={{ fontSize: Math.min(18, Math.max(12, (option.value as number) / 5)) }}
+                    className="flex-shrink-0 w-10 text-center font-medium text-surface-300"
+                    style={{ fontSize: Math.min(20, Math.max(11, (option.value as number) / 4.5)) }}
                   >
-                    {option.preview}
+                    字
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{option.name}</div>
@@ -842,15 +850,19 @@ const SubtitleStylePreview = ({
 
           {/* 字重 */}
           <div>
-            <label className="text-sm text-surface-300 mb-2 block">字重</label>
+            <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+              <span>字重</span>
+              <span className="text-amber-400 text-xs">
+                {({ 300: '细', 500: '标准', 700: '粗', 900: '特粗' } as Record<number, string>)[subtitle.style.fontWeight] || '标准'}
+              </span>
+            </label>
             <StyleDropdown
               value={subtitle.style.fontWeight.toString()}
               options={[
-                { id: '300', name: '细', preview: 'Aa', value: 300, description: '纤细轻盈' },
-                { id: '400', name: '常规', preview: 'Aa', value: 400, description: '日常阅读' },
-                { id: '500', name: '标准', preview: 'Aa', value: 500, description: '推荐・清晰易读' },
-                { id: '700', name: '粗', preview: 'Aa', value: 700, description: '醒目突出' },
-                { id: '900', name: '特粗', preview: 'Aa', value: 900, description: '强烈冲击' },
+                { id: '300', name: '纤细轻盈', value: 300, description: '细' },
+                { id: '500', name: '推荐・清晰易读', value: 500, description: '标准' },
+                { id: '700', name: '醒目突出', value: 700, description: '粗' },
+                { id: '900', name: '强烈冲击', value: 900, description: '特粗' },
               ]}
               onChange={(val) => onStyleChange({ fontWeight: Number(val) })}
               renderOption={(option, isSelected) => (
@@ -861,11 +873,12 @@ const SubtitleStylePreview = ({
                     : 'hover:bg-surface-700 text-surface-200'
                   }
                 `}>
+                  {/* 字重预览 - 实际粗细示意 */}
                   <span 
-                    className="text-lg flex-shrink-0 w-8 text-center"
+                    className="text-base flex-shrink-0 w-10 text-center text-surface-300"
                     style={{ fontWeight: option.value as number }}
                   >
-                    {option.preview}
+                    字幕
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{option.name}</div>
@@ -919,7 +932,12 @@ const SubtitleStylePreview = ({
 
           {/* 背景样式 */}
           <div>
-            <label className="text-sm text-surface-300 mb-2 block">背景样式</label>
+            <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+              <span>背景样式</span>
+              <span className="text-amber-400 text-xs">
+                {BACKGROUND_PRESETS.find(p => p.value === subtitle.style.backgroundColor)?.name || '无背景'}
+              </span>
+            </label>
             <StyleDropdown
               value={subtitle.style.backgroundColor}
               options={BACKGROUND_PRESETS.map(preset => ({
@@ -961,6 +979,9 @@ const SubtitleStylePreview = ({
             <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-amber-400" />
               <span>花字效果</span>
+              <span className="ml-auto text-amber-400 text-xs">
+                {DECORATION_EFFECTS.find(d => d.id === subtitle.style.decorationId)?.name || '无效果'}
+              </span>
             </label>
             <StyleDropdown
               value={subtitle.style.decorationId}
@@ -979,6 +1000,9 @@ const SubtitleStylePreview = ({
             <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-400" />
               <span>动画效果</span>
+              <span className="ml-auto text-amber-400 text-xs">
+                {ANIMATION_EFFECTS.find(a => a.id === subtitle.style.animationId)?.name || '无动画'}
+              </span>
             </label>
             <StyleDropdown
               value={subtitle.style.animationId}
@@ -995,7 +1019,12 @@ const SubtitleStylePreview = ({
           {/* 位置与对齐 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-surface-300 mb-2 block">垂直位置</label>
+              <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+                <span>垂直位置</span>
+                <span className="text-amber-400 text-xs">
+                  {({ top: '顶部', center: '居中', bottom: '底部' } as Record<string, string>)[subtitle.style.position] || '底部'}
+                </span>
+              </label>
               <StyleDropdown
                 value={subtitle.style.position}
                 options={[

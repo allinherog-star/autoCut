@@ -16,14 +16,14 @@ export interface FontConfig {
 }
 
 export const FONT_OPTIONS: FontConfig[] = [
-  { name: '思源黑体', family: 'Noto Sans SC', weight: [400, 500, 700, 900], preview: '大家好', category: 'sans' },
-  { name: '思源宋体', family: 'Noto Serif SC', weight: [400, 600, 700, 900], preview: '优雅字幕', category: 'serif' },
-  { name: '阿里巴巴普惠体', family: 'Alibaba PuHuiTi', weight: [400, 500, 700], preview: '清晰易读', category: 'sans' },
-  { name: '站酷高端黑', family: 'ZCOOL QingKe HuangYou', weight: [400], preview: '潮流字体', category: 'display' },
-  { name: '站酷快乐体', family: 'ZCOOL KuaiLe', weight: [400], preview: '快乐开心', category: 'display' },
-  { name: '霞鹜文楷', family: 'LXGW WenKai', weight: [400, 700], preview: '文艺气息', category: 'handwriting' },
-  { name: '得意黑', family: 'Smiley Sans', weight: [400], preview: '潮酷字体', category: 'display' },
-  { name: '演示悠然小楷', family: 'Yanshi Youran', weight: [400], preview: '书法韵味', category: 'handwriting' },
+  { name: '思源黑体', family: 'Noto Sans SC', weight: [400, 500, 700, 900], preview: '清晰百搭', category: 'sans' },
+  { name: '思源宋体', family: 'Noto Serif SC', weight: [400, 600, 700, 900], preview: '优雅古典', category: 'serif' },
+  { name: '阿里巴巴普惠体', family: 'Alibaba PuHuiTi', weight: [400, 500, 700], preview: '现代简约', category: 'sans' },
+  { name: '站酷高端黑', family: 'ZCOOL QingKe HuangYou', weight: [400], preview: '潮流个性', category: 'display' },
+  { name: '站酷快乐体', family: 'ZCOOL KuaiLe', weight: [400], preview: '活泼可爱', category: 'display' },
+  { name: '霞鹜文楷', family: 'LXGW WenKai', weight: [400, 700], preview: '文艺书香', category: 'handwriting' },
+  { name: '得意黑', family: 'Smiley Sans', weight: [400], preview: '潮酷有型', category: 'display' },
+  { name: '演示悠然小楷', family: 'Yanshi Youran', weight: [400], preview: '古风书法', category: 'handwriting' },
 ]
 
 // ============================================
