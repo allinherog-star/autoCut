@@ -59,6 +59,57 @@ export const DEVICE_CONFIGS: Record<TargetDevice, DeviceInfo> = {
 }
 
 // ============================================
+// 视频类型配置
+// ============================================
+
+export interface VideoTypeInfo {
+  id: string
+  name: string
+  icon: string
+  description: string
+  category: 'lifestyle' | 'knowledge' | 'entertainment' | 'commerce'
+}
+
+export const VIDEO_TYPES: VideoTypeInfo[] = [
+  // 日常记录类
+  { id: 'vlog', name: 'Vlog', icon: '📹', description: '记录日常生活', category: 'lifestyle' },
+  { id: 'travel', name: '旅游旅拍', icon: '✈️', description: '旅行攻略记录', category: 'lifestyle' },
+  { id: 'life-hack', name: '生活小妙招', icon: '💡', description: '实用生活技巧', category: 'lifestyle' },
+  
+  // 探店体验类
+  { id: 'food', name: '美食探店', icon: '🍜', description: '美食推荐分享', category: 'lifestyle' },
+  { id: 'hotel', name: '睡寝探店', icon: '🏨', description: '酒店民宿体验', category: 'lifestyle' },
+  
+  // 时尚生活类
+  { id: 'fashion', name: '时尚穿搭', icon: '👗', description: '穿搭分享推荐', category: 'lifestyle' },
+  { id: 'fitness', name: '健身减脂', icon: '💪', description: '健身教程分享', category: 'lifestyle' },
+  
+  // 知识教程类
+  { id: 'tutorial', name: '课程教程', icon: '📚', description: '技能教学课程', category: 'knowledge' },
+  { id: 'knowledge', name: '知识科普', icon: '🧠', description: '科普知识讲解', category: 'knowledge' },
+  { id: 'career', name: '职场攻略', icon: '💼', description: '职场经验分享', category: 'knowledge' },
+  { id: 'tools', name: '效率工具', icon: '⚡', description: '工具软件推荐', category: 'knowledge' },
+  
+  // 种草带货类
+  { id: 'recommend', name: '安利种草', icon: '🌱', description: '好物推荐分享', category: 'commerce' },
+  { id: 'review', name: '评测对比', icon: '⚖️', description: '产品评测对比', category: 'entertainment' },
+  { id: 'deals', name: '优惠带货', icon: '🛒', description: '优惠信息带货', category: 'commerce' },
+  
+  // 娱乐内容类
+  { id: 'movie', name: '影视解说', icon: '🎬', description: '影视作品解读', category: 'entertainment' },
+  { id: 'gaming', name: '游戏', icon: '🎮', description: '游戏实况攻略', category: 'entertainment' },
+  { id: 'live-clip', name: '直播切片', icon: '📺', description: '直播精彩片段', category: 'entertainment' },
+  { id: 'emotion', name: '情感咨询', icon: '💕', description: '情感故事分享', category: 'entertainment' },
+]
+
+export const VIDEO_TYPE_CATEGORIES = [
+  { id: 'lifestyle', name: '生活日常', icon: '🏠' },
+  { id: 'knowledge', name: '知识教程', icon: '📖' },
+  { id: 'entertainment', name: '娱乐休闲', icon: '🎯' },
+  { id: 'commerce', name: '种草带货', icon: '💰' },
+]
+
+// ============================================
 // 底部操作栏配置类型
 // ============================================
 
@@ -195,6 +246,10 @@ interface EditorContextType {
   targetDevice: TargetDevice
   setTargetDevice: (device: TargetDevice) => void
   deviceConfig: DeviceInfo
+  // 视频类型
+  videoType: string | null
+  setVideoType: (type: string | null) => void
+  videoTypeInfo: VideoTypeInfo | null
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -231,6 +286,10 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   // 目标设备状态（默认手机竖屏）
   const [targetDevice, setTargetDevice] = useState<TargetDevice>('phone')
   const deviceConfig = DEVICE_CONFIGS[targetDevice]
+  
+  // 视频类型状态
+  const [videoType, setVideoType] = useState<string | null>(null)
+  const videoTypeInfo = VIDEO_TYPES.find(t => t.id === videoType) || null
 
   const progress = ((currentStep + 1) / steps.length) * 100
 
@@ -308,6 +367,10 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     targetDevice,
     setTargetDevice,
     deviceConfig,
+    // 视频类型
+    videoType,
+    setVideoType,
+    videoTypeInfo,
   }
 
   return (

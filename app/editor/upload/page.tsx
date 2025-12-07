@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
-import { useEditor, DEVICE_CONFIGS, type TargetDevice } from '../layout'
+import { useEditor, DEVICE_CONFIGS, VIDEO_TYPES, type TargetDevice } from '../layout'
 
 // ============================================
 // 类型定义
@@ -47,7 +47,7 @@ interface MediaFile {
 // ============================================
 
 export default function UploadPage() {
-  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar, targetDevice, setTargetDevice, deviceConfig } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, setBottomBar, hideBottomBar, targetDevice, setTargetDevice, deviceConfig, videoType, setVideoType, videoTypeInfo } = useEditor()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -188,11 +188,12 @@ export default function UploadPage() {
   // 更新底部操作栏
   useEffect(() => {
     if (hasFiles) {
+      const typeDesc = videoTypeInfo ? `（${videoTypeInfo.name}）` : ''
       setBottomBar({
         show: true,
         icon: <Sparkles className="w-5 h-5 text-amber-400" />,
         title: '准备好了？',
-        description: `AI 将分析你的 ${mediaFiles.length} 个素材，智能提取精华内容`,
+        description: `AI 将分析你的 ${mediaFiles.length} 个${typeDesc}素材，智能提取精华内容`,
         primaryButton: {
           text: '开始 AI 分析',
           onClick: handleStartAIAnalysis,
@@ -204,7 +205,7 @@ export default function UploadPage() {
     } else {
       hideBottomBar()
     }
-  }, [hasFiles, mediaFiles.length, allUploaded, isUploading])
+  }, [hasFiles, mediaFiles.length, allUploaded, isUploading, videoTypeInfo])
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -291,11 +292,73 @@ export default function UploadPage() {
           </Card>
         </motion.div>
 
+        {/* 视频类型选择 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.05 }}
+        >
+          <Card className="p-5">
+            <div className="flex items-start gap-6 mb-5">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-surface-100 mb-1">
+                  选择视频类型
+                </h3>
+                <p className="text-sm text-surface-500">
+                  AI 将根据类型优化剪辑风格、字幕样式和推荐效果
+                </p>
+              </div>
+              {/* 已选类型显示 */}
+              {videoTypeInfo && (
+                <div className="flex items-center gap-2.5 px-4 py-2 bg-gradient-to-r from-amber-400/20 to-amber-500/10 rounded-xl border border-amber-400/40">
+                  <span className="text-xl">{videoTypeInfo.icon}</span>
+                  <span className="text-sm font-semibold text-amber-400">{videoTypeInfo.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 类型选择 - 平铺网格 */}
+            <div className="flex flex-wrap gap-2.5">
+              {VIDEO_TYPES.map((type) => {
+                const isSelected = videoType === type.id
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => setVideoType(isSelected ? null : type.id)}
+                    className={`
+                      group relative flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all duration-200
+                      ${isSelected
+                        ? 'border-amber-400 bg-gradient-to-br from-amber-400/15 to-amber-500/5 shadow-lg shadow-amber-400/10'
+                        : 'border-surface-700 bg-surface-800/60 hover:border-surface-500 hover:bg-surface-800 hover:shadow-md'
+                      }
+                    `}
+                  >
+                    {/* 选中标记 */}
+                    {isSelected && (
+                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow-lg">
+                        <Check className="w-3 h-3 text-surface-950" />
+                      </div>
+                    )}
+                    {/* 图标 */}
+                    <span className={`text-xl transition-transform duration-200 ${isSelected ? 'scale-110' : 'group-hover:scale-105'}`}>
+                      {type.icon}
+                    </span>
+                    {/* 名称 */}
+                    <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-amber-400' : 'text-surface-200 group-hover:text-surface-100'}`}>
+                      {type.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        </motion.div>
+
         {/* 拖拽上传区 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
         >
           {/* 隐藏的文件输入 */}
           <input
