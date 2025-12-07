@@ -549,9 +549,11 @@ function NativeVideoPreview({
       }
     }
 
-    const handleError = () => {
+    const handleError = (e: Event) => {
       if (!isMountedRef.current) return
-      console.error('[VideoPreview] 视频加载错误')
+      const videoEl = e.target as HTMLVideoElement
+      const error = videoEl?.error
+      console.error('[VideoPreview] 视频加载错误:', error?.message || '未知错误')
       setIsLoading(false)
       setHasError(true)
     }
