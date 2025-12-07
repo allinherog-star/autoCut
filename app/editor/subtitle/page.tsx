@@ -641,7 +641,7 @@ const SubtitleStylePreview = ({
                 </button>
               </div>
 
-              {/* 视频预览 - 使用缓存的字幕项 */}
+              {/* 视频预览 */}
               <div 
                 className={`
                   relative overflow-hidden shadow-2xl bg-black
@@ -657,14 +657,6 @@ const SubtitleStylePreview = ({
                 }}
               >
                 {cachedVideoPreview}
-              </div>
-
-              {/* 字幕文本 */}
-              <div className="absolute -bottom-14 left-0 right-0 text-center">
-                <p className="text-white text-lg">{subtitle.text}</p>
-                <p className="text-surface-400 text-sm mt-1">
-                  {formatTime(subtitle.startTime)} - {formatTime(subtitle.endTime)}
-                </p>
               </div>
             </motion.div>
           </motion.div>

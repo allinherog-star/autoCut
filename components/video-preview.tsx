@@ -72,6 +72,8 @@ export type { PlayerState }
 
 function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleItem; scale?: number }) {
   const style = subtitle.style
+  // 确保 scale 是有效值
+  const safeScale = scale > 0 ? scale : 1
   
   // 获取动画配置
   const decoration = DECORATION_EFFECTS.find(d => d.id === style.decorationId)
@@ -207,8 +209,8 @@ function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleIt
   // 构建 CSS 样式（应用缩放比例）
   const buildCssStyle = (): React.CSSProperties => {
     // 缩放后的字体大小
-    const scaledFontSize = Math.round(style.fontSize * scale)
-    const scaledLetterSpacing = style.letterSpacing ? Math.round(style.letterSpacing * scale) : undefined
+    const scaledFontSize = Math.round(style.fontSize * safeScale)
+    const scaledLetterSpacing = style.letterSpacing ? Math.round(style.letterSpacing * safeScale) : undefined
     
     const css: React.CSSProperties = {
       fontSize: `${scaledFontSize}px`,
@@ -234,21 +236,21 @@ function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleIt
     if (style.backgroundColor && style.backgroundColor !== 'transparent') {
       css.backgroundColor = style.backgroundColor
       if (style.backgroundPadding) {
-        const paddingY = Math.round(style.backgroundPadding.y * scale)
-        const paddingX = Math.round(style.backgroundPadding.x * scale)
+        const paddingY = Math.round(style.backgroundPadding.y * safeScale)
+        const paddingX = Math.round(style.backgroundPadding.x * safeScale)
         css.padding = `${paddingY}px ${paddingX}px`
       } else {
-        const defaultPadding = Math.round(6 * scale)
-        css.padding = `${defaultPadding}px ${Math.round(12 * scale)}px`
+        const defaultPadding = Math.round(6 * safeScale)
+        css.padding = `${defaultPadding}px ${Math.round(12 * safeScale)}px`
       }
       if (style.backgroundBorderRadius) {
-        css.borderRadius = `${Math.round(style.backgroundBorderRadius * scale)}px`
+        css.borderRadius = `${Math.round(style.backgroundBorderRadius * safeScale)}px`
       } else {
-        css.borderRadius = `${Math.round(4 * scale)}px`
+        css.borderRadius = `${Math.round(4 * safeScale)}px`
       }
     } else {
-      const defaultPadding = Math.round(6 * scale)
-      css.padding = `${defaultPadding}px ${Math.round(12 * scale)}px`
+      const defaultPadding = Math.round(6 * safeScale)
+      css.padding = `${defaultPadding}px ${Math.round(12 * safeScale)}px`
     }
 
     // 构建 text-shadow（缩放所有像素值）
@@ -256,7 +258,7 @@ function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleIt
     
     // 描边效果
     if (style.hasOutline && style.outlineWidth) {
-      const ow = Math.round(style.outlineWidth * scale)
+      const ow = Math.round(style.outlineWidth * safeScale)
       const oc = style.outlineColor || '#000000'
       shadows.push(
         `${-ow}px ${-ow}px 0 ${oc}`,
@@ -270,7 +272,7 @@ function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleIt
       )
     } else if (style.hasOutline) {
       // 默认描边
-      const ow = Math.round(2 * scale)
+      const ow = Math.round(2 * safeScale)
       shadows.push(
         `${-ow}px ${-ow}px 0 #000`,
         `${ow}px ${-ow}px 0 #000`,
@@ -281,19 +283,19 @@ function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleIt
 
     // 阴影效果
     if (style.hasShadow) {
-      const sx = Math.round((style.shadowOffsetX ?? 2) * scale)
-      const sy = Math.round((style.shadowOffsetY ?? 2) * scale)
-      const sb = Math.round((style.shadowBlur ?? 4) * scale)
+      const sx = Math.round((style.shadowOffsetX ?? 2) * safeScale)
+      const sy = Math.round((style.shadowOffsetY ?? 2) * safeScale)
+      const sb = Math.round((style.shadowBlur ?? 4) * safeScale)
       const sc = style.shadowColor || 'rgba(0,0,0,0.8)'
       shadows.push(`${sx}px ${sy}px ${sb}px ${sc}`)
     }
 
     // 花字效果（注意：花字效果的 textShadow 需要特殊处理）
-    if (decoration?.textShadow && scale !== 1) {
+    if (decoration?.textShadow && safeScale !== 1) {
       // 对花字效果的 textShadow 进行缩放
       const scaledDecorationShadow = decoration.textShadow.replace(
         /(-?\d+(?:\.\d+)?)(px)/g,
-        (match, num) => `${Math.round(parseFloat(num) * scale)}px`
+        (_, num) => `${Math.round(parseFloat(num) * safeScale)}px`
       )
       shadows.push(scaledDecorationShadow)
     } else if (decoration?.textShadow) {
@@ -485,24 +487,37 @@ function NativeVideoPreview({
     if (!container) return
 
     const updateScale = () => {
+      if (!isMountedRef.current) return
       const containerWidth = container.offsetWidth
-      const containerHeight = container.offsetHeight
       // 根据容器和目标分辨率计算缩放比例
       // 使用宽度比例，确保字幕在不同尺寸下保持一致的视觉效果
-      const scale = containerWidth / targetWidth
-      setContainerScale(scale)
+      if (containerWidth > 0 && targetWidth > 0) {
+        const scale = containerWidth / targetWidth
+        setContainerScale(scale)
+      }
     }
 
-    updateScale()
+    // 延迟执行以确保 DOM 已完全渲染
+    const timer = setTimeout(updateScale, 50)
     
     // 使用 ResizeObserver 监听容器尺寸变化
-    const resizeObserver = new ResizeObserver(updateScale)
-    resizeObserver.observe(container)
+    let resizeObserver: ResizeObserver | null = null
+    try {
+      resizeObserver = new ResizeObserver(() => {
+        // 使用 requestAnimationFrame 避免过于频繁的更新
+        requestAnimationFrame(updateScale)
+      })
+      resizeObserver.observe(container)
+    } catch (e) {
+      // ResizeObserver 不支持时的降级处理
+      console.warn('ResizeObserver not supported')
+    }
 
     return () => {
-      resizeObserver.disconnect()
+      clearTimeout(timer)
+      resizeObserver?.disconnect()
     }
-  }, [targetWidth, targetHeight])
+  }, [targetWidth])
 
   // 计算实际播放时长
   const clipDuration = endTime ? endTime - startTime : duration - startTime
