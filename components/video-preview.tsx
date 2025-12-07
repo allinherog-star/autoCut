@@ -70,7 +70,7 @@ export type { PlayerState }
 // 增强字幕叠加组件
 // ============================================
 
-function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
+function EnhancedSubtitleOverlay({ subtitle, scale = 1 }: { subtitle: SubtitleItem; scale?: number }) {
   const style = subtitle.style
   
   // 获取动画配置
@@ -204,13 +204,17 @@ function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
     }
   }
   
-  // 构建 CSS 样式
+  // 构建 CSS 样式（应用缩放比例）
   const buildCssStyle = (): React.CSSProperties => {
+    // 缩放后的字体大小
+    const scaledFontSize = Math.round(style.fontSize * scale)
+    const scaledLetterSpacing = style.letterSpacing ? Math.round(style.letterSpacing * scale) : undefined
+    
     const css: React.CSSProperties = {
-      fontSize: `${style.fontSize}px`,
+      fontSize: `${scaledFontSize}px`,
       fontFamily: style.fontFamily ? `"${style.fontFamily}", "Noto Sans SC", sans-serif` : undefined,
       fontWeight: style.fontWeight,
-      letterSpacing: style.letterSpacing ? `${style.letterSpacing}px` : undefined,
+      letterSpacing: scaledLetterSpacing ? `${scaledLetterSpacing}px` : undefined,
       lineHeight: 1.4,
       maxWidth: '90%',
     }
@@ -226,29 +230,33 @@ function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
       css.color = style.color
     }
 
-    // 背景
+    // 背景（缩放 padding 和 borderRadius）
     if (style.backgroundColor && style.backgroundColor !== 'transparent') {
       css.backgroundColor = style.backgroundColor
       if (style.backgroundPadding) {
-        css.padding = `${style.backgroundPadding.y}px ${style.backgroundPadding.x}px`
+        const paddingY = Math.round(style.backgroundPadding.y * scale)
+        const paddingX = Math.round(style.backgroundPadding.x * scale)
+        css.padding = `${paddingY}px ${paddingX}px`
       } else {
-        css.padding = '6px 12px'
+        const defaultPadding = Math.round(6 * scale)
+        css.padding = `${defaultPadding}px ${Math.round(12 * scale)}px`
       }
       if (style.backgroundBorderRadius) {
-        css.borderRadius = `${style.backgroundBorderRadius}px`
+        css.borderRadius = `${Math.round(style.backgroundBorderRadius * scale)}px`
       } else {
-        css.borderRadius = '4px'
+        css.borderRadius = `${Math.round(4 * scale)}px`
       }
     } else {
-      css.padding = '6px 12px'
+      const defaultPadding = Math.round(6 * scale)
+      css.padding = `${defaultPadding}px ${Math.round(12 * scale)}px`
     }
 
-    // 构建 text-shadow
+    // 构建 text-shadow（缩放所有像素值）
     const shadows: string[] = []
     
     // 描边效果
     if (style.hasOutline && style.outlineWidth) {
-      const ow = style.outlineWidth
+      const ow = Math.round(style.outlineWidth * scale)
       const oc = style.outlineColor || '#000000'
       shadows.push(
         `${-ow}px ${-ow}px 0 ${oc}`,
@@ -262,25 +270,33 @@ function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
       )
     } else if (style.hasOutline) {
       // 默认描边
+      const ow = Math.round(2 * scale)
       shadows.push(
-        '-2px -2px 0 #000',
-        '2px -2px 0 #000',
-        '-2px 2px 0 #000',
-        '2px 2px 0 #000'
+        `${-ow}px ${-ow}px 0 #000`,
+        `${ow}px ${-ow}px 0 #000`,
+        `${-ow}px ${ow}px 0 #000`,
+        `${ow}px ${ow}px 0 #000`
       )
     }
 
     // 阴影效果
     if (style.hasShadow) {
-      const sx = style.shadowOffsetX ?? 2
-      const sy = style.shadowOffsetY ?? 2
-      const sb = style.shadowBlur ?? 4
+      const sx = Math.round((style.shadowOffsetX ?? 2) * scale)
+      const sy = Math.round((style.shadowOffsetY ?? 2) * scale)
+      const sb = Math.round((style.shadowBlur ?? 4) * scale)
       const sc = style.shadowColor || 'rgba(0,0,0,0.8)'
       shadows.push(`${sx}px ${sy}px ${sb}px ${sc}`)
     }
 
-    // 花字效果
-    if (decoration?.textShadow) {
+    // 花字效果（注意：花字效果的 textShadow 需要特殊处理）
+    if (decoration?.textShadow && scale !== 1) {
+      // 对花字效果的 textShadow 进行缩放
+      const scaledDecorationShadow = decoration.textShadow.replace(
+        /(-?\d+(?:\.\d+)?)(px)/g,
+        (match, num) => `${Math.round(parseFloat(num) * scale)}px`
+      )
+      shadows.push(scaledDecorationShadow)
+    } else if (decoration?.textShadow) {
       shadows.push(decoration.textShadow)
     }
 
@@ -402,6 +418,10 @@ export interface VideoPreviewProps {
   mode?: 'webcodecs' | 'native' | 'auto'
   /** 视频填充模式：cover（裁剪填满）或 contain（完整显示） */
   objectFit?: 'cover' | 'contain'
+  /** 目标分辨率宽度（用于计算字幕缩放比例） */
+  targetWidth?: number
+  /** 目标分辨率高度（用于计算字幕缩放比例） */
+  targetHeight?: number
   /** 时间更新回调 */
   onTimeUpdate?: (time: number) => void
   /** 播放状态变化回调 */
@@ -432,6 +452,8 @@ function NativeVideoPreview({
   showControls = true,
   className = '',
   objectFit = 'cover',
+  targetWidth = 1080,
+  targetHeight = 1920,
   onTimeUpdate,
 }: Omit<VideoPreviewProps, 'mode'>) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -446,6 +468,8 @@ function NativeVideoPreview({
   const [currentSubtitle, setCurrentSubtitle] = useState<SubtitleItem | null>(null)
   // 循环计数器 - 用于在视频循环时重置字幕动画
   const [loopCount, setLoopCount] = useState(0)
+  // 容器尺寸缩放比例
+  const [containerScale, setContainerScale] = useState(1)
 
   // 组件卸载时设置标志
   useEffect(() => {
@@ -454,6 +478,31 @@ function NativeVideoPreview({
       isMountedRef.current = false
     }
   }, [])
+
+  // 监听容器尺寸变化，计算缩放比例
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateScale = () => {
+      const containerWidth = container.offsetWidth
+      const containerHeight = container.offsetHeight
+      // 根据容器和目标分辨率计算缩放比例
+      // 使用宽度比例，确保字幕在不同尺寸下保持一致的视觉效果
+      const scale = containerWidth / targetWidth
+      setContainerScale(scale)
+    }
+
+    updateScale()
+    
+    // 使用 ResizeObserver 监听容器尺寸变化
+    const resizeObserver = new ResizeObserver(updateScale)
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [targetWidth, targetHeight])
 
   // 计算实际播放时长
   const clipDuration = endTime ? endTime - startTime : duration - startTime
@@ -640,12 +689,13 @@ function NativeVideoPreview({
         preload="auto"
       />
 
-      {/* 字幕叠加 - 增强版渲染 */}
+      {/* 字幕叠加 - 增强版渲染（自动缩放） */}
       <AnimatePresence mode="wait">
         {currentSubtitle && (
           <EnhancedSubtitleOverlay 
-            key={`${currentSubtitle.id}-${currentSubtitle.style.animationId}-loop${loopCount}`} 
-            subtitle={currentSubtitle} 
+            key={`${currentSubtitle.id}-${currentSubtitle.style.animationId}-loop${loopCount}-scale${containerScale.toFixed(3)}`} 
+            subtitle={currentSubtitle}
+            scale={containerScale}
           />
         )}
       </AnimatePresence>

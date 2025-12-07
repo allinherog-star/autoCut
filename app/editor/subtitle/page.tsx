@@ -361,7 +361,6 @@ const SubtitleStylePreview = ({
   deviceConfig: { name: string; description: string; aspectRatio: string; width: number; height: number }
 }) => {
   const previewRef = useRef<HTMLDivElement>(null)
-  const [previewScale, setPreviewScale] = useState(1)
   const [isMaximized, setIsMaximized] = useState(false)
   const config = deviceConfig
 
@@ -376,29 +375,6 @@ const SubtitleStylePreview = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isMaximized])
 
-  // 计算预览区域相对于真实分辨率的缩放比例
-  useEffect(() => {
-    const updateScale = () => {
-      if (previewRef.current) {
-        const previewWidth = previewRef.current.offsetWidth
-        const scale = previewWidth / config.width
-        setPreviewScale(scale)
-      }
-    }
-
-    updateScale()
-    window.addEventListener('resize', updateScale)
-    const timer = setTimeout(updateScale, 100)
-    
-    return () => {
-      window.removeEventListener('resize', updateScale)
-      clearTimeout(timer)
-    }
-  }, [device, config.width])
-
-  // 根据缩放比例调整字体大小
-  const scaledFontSize = Math.round(subtitle.style.fontSize * previewScale)
-  
   // 生成样式的唯一标识，用于缓存控制
   const styleKey = useMemo(() => {
     const style = subtitle.style
@@ -428,14 +404,15 @@ const SubtitleStylePreview = ({
     })
   }, [subtitle.style])
   
-  // 缓存字幕项，只有样式或缩放比例变化时才重新创建
+  // 缓存字幕项，只有样式变化时才重新创建
+  // 注意：字体大小使用原始值，VideoPreview 组件会根据容器尺寸自动缩放
   const subtitleItem: SubtitleItem = useMemo(() => ({
     id: subtitle.id,
     text: subtitle.text,
     startTime: subtitle.startTime,
     endTime: subtitle.endTime,
     style: {
-      fontSize: scaledFontSize,
+      fontSize: subtitle.style.fontSize, // 使用原始字体大小
       color: subtitle.style.color,
       backgroundColor: subtitle.style.backgroundColor,
       position: subtitle.style.position,
@@ -460,9 +437,10 @@ const SubtitleStylePreview = ({
       backgroundPadding: subtitle.style.backgroundPadding,
       backgroundBorderRadius: subtitle.style.backgroundBorderRadius,
     } as SubtitleItem['style'],
-  }), [subtitle.id, subtitle.text, subtitle.startTime, subtitle.endTime, scaledFontSize, styleKey])
+  }), [subtitle.id, subtitle.text, subtitle.startTime, subtitle.endTime, styleKey])
 
   // 缓存视频预览组件 - 只有样式变化时才重新渲染
+  // 传递目标分辨率，让 VideoPreview 内部自动计算缩放比例
   const cachedVideoPreview = useMemo(() => (
     <VideoPreview
       videoUrl={segment.videoUrl}
@@ -474,9 +452,11 @@ const SubtitleStylePreview = ({
       showControls={true}
       mode="native"
       objectFit={device === 'phone' ? 'contain' : 'cover'}
+      targetWidth={config.width}
+      targetHeight={config.height}
       className="w-full h-full"
     />
-  ), [segment.videoUrl, subtitleItem, subtitle.startTime, subtitle.endTime, device])
+  ), [segment.videoUrl, subtitleItem, subtitle.startTime, subtitle.endTime, device, config.width, config.height])
 
   // 应用预设样式
   const applyPreset = (presetId: string) => {
