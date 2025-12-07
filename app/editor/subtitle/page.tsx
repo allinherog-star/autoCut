@@ -30,11 +30,10 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Slider } from '@/components/ui'
 import {
-  composeSimpleVideo,
-  type SubtitleItem as ComposerSubtitleItem,
-  type SubtitleStyle as ComposerSubtitleStyle,
+  quickCompose,
+  type AnimationEffect,
   type ProgressCallback,
-} from '@/lib/canvas-video-composer'
+} from '@/lib/video-composer'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
@@ -939,7 +938,7 @@ export default function SubtitlePage() {
 
   const totalSubtitles = segments.reduce((acc, seg) => acc + seg.subtitles.length, 0)
 
-  // 导出测试功能 - 使用 Canvas 合成第一个片段
+  // 导出测试功能 - 使用完整视频合成系统
   const handleExportTest = async () => {
     if (segments.length === 0) return
 
@@ -953,8 +952,7 @@ export default function SubtitlePage() {
       const segment = segments[0]
       
       // 转换字幕格式
-      const subtitleItems: ComposerSubtitleItem[] = segment.subtitles.map((sub) => ({
-        id: sub.id,
+      const subtitles = segment.subtitles.map((sub) => ({
         text: sub.text,
         startTime: sub.startTime,
         endTime: sub.endTime,
@@ -963,14 +961,13 @@ export default function SubtitlePage() {
           fontFamily: sub.style.fontFamily,
           fontWeight: sub.style.fontWeight,
           color: sub.style.color,
-          backgroundColor: sub.style.backgroundColor,
-          position: sub.style.position,
-          alignment: sub.style.alignment,
-          hasOutline: sub.style.hasOutline,
-          outlineColor: sub.style.outlineColor,
-          outlineWidth: sub.style.outlineWidth,
-          animationId: sub.style.animationId,
-        } as ComposerSubtitleStyle,
+          backgroundColor: sub.style.backgroundColor !== 'transparent' ? sub.style.backgroundColor : undefined,
+        },
+        animation: {
+          type: (sub.style.animationId || 'fade') as AnimationEffect['type'],
+          enterDuration: 0.3,
+          exitDuration: 0.2,
+        },
       }))
 
       // 进度回调
@@ -979,12 +976,17 @@ export default function SubtitlePage() {
         setExportMessage(message)
       }
 
-      // 使用 Canvas 合成器
-      const outputUrl = await composeSimpleVideo(
+      // 使用完整视频合成系统（支持音频）
+      const outputUrl = await quickCompose(
         segment.videoUrl,
-        subtitleItems,
-        segment.startTime,
-        segment.endTime,
+        subtitles,
+        {
+          startTime: segment.startTime,
+          endTime: segment.endTime,
+          width: 1280,
+          height: 720,
+          fps: 30,
+        },
         onProgress
       )
 
