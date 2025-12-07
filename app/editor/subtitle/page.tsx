@@ -26,7 +26,7 @@ import {
   Check,
   RotateCcw,
 } from 'lucide-react'
-import { Button, Card, Badge, Progress, Switch, Slider, Tabs } from '@/components/ui'
+import { Button, Card, Badge, Progress, Slider } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
@@ -210,71 +210,159 @@ const devicePresets: Record<DevicePreset, DeviceConfig> = {
 }
 
 // ============================================
-// 颜色选择器组件
+// 增强版下拉选择组件
 // ============================================
 
-const ColorPicker = ({
+interface DropdownOption {
+  id: string
+  name: string
+  preview?: string
+  description?: string
+  value?: string | number
+}
+
+interface DropdownGroup {
+  label: string
+  options: DropdownOption[]
+}
+
+const StyleDropdown = ({
   value,
+  options,
+  groups,
   onChange,
-  presets,
-  label,
+  placeholder = '请选择',
+  renderOption,
 }: {
   value: string
-  onChange: (color: string) => void
-  presets: typeof TEXT_COLOR_PRESETS
-  label: string
+  options?: DropdownOption[]
+  groups?: DropdownGroup[]
+  onChange: (value: string) => void
+  placeholder?: string
+  renderOption?: (option: DropdownOption, isSelected: boolean) => React.ReactNode
 }) => {
-  const [showCustom, setShowCustom] = useState(false)
-  
-  return (
-    <div>
-      <label className="text-sm text-surface-300 mb-3 block">{label}</label>
-      <div className="grid grid-cols-6 gap-2">
-        {presets.slice(0, 12).map((preset) => (
-          <button
-            key={preset.id}
-            onClick={() => onChange(preset.value)}
-            className={`
-              w-8 h-8 rounded-lg border-2 transition-all relative overflow-hidden
-              ${value === preset.value 
-                ? 'border-amber-400 scale-110 shadow-lg' 
-                : 'border-surface-600 hover:border-surface-500'
-              }
-            `}
-            title={preset.name}
-            style={{
-              background: preset.type === 'gradient' ? preset.value : preset.value,
-            }}
-          >
-            {value === preset.value && (
-              <Check className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-lg" />
-            )}
-          </button>
-        ))}
-      </div>
-      {/* 自定义颜色 */}
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          onClick={() => setShowCustom(!showCustom)}
-          className="text-xs text-surface-400 hover:text-surface-200 underline"
-        >
-          自定义颜色
-        </button>
-        {showCustom && (
-          <input
-            type="color"
-            value={value.startsWith('#') ? value : '#FFFFFF'}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-8 h-6 rounded cursor-pointer"
-          />
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // 获取当前选中项
+  const allOptions = groups ? groups.flatMap(g => g.options) : (options || [])
+  const selectedOption = allOptions.find(opt => (opt.value?.toString() || opt.id) === value)
+
+  // 默认选项渲染
+  const defaultRenderOption = (option: DropdownOption, isSelected: boolean) => (
+    <div className={`
+      flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all
+      ${isSelected 
+        ? 'bg-amber-500/20 text-amber-400' 
+        : 'hover:bg-surface-700 text-surface-200'
+      }
+    `}>
+      {option.preview && (
+        <span className="text-lg flex-shrink-0 w-6 text-center">{option.preview}</span>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm">{option.name}</div>
+        {option.description && (
+          <div className="text-xs text-surface-500 truncate">{option.description}</div>
         )}
       </div>
+      {isSelected && (
+        <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+      )}
+    </div>
+  )
+
+  const render = renderOption || defaultRenderOption
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      {/* 触发按钮 */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          w-full h-10 px-3 flex items-center justify-between gap-2
+          bg-surface-800 border rounded-lg text-sm transition-all
+          ${isOpen 
+            ? 'border-amber-400/50 ring-2 ring-amber-400/10' 
+            : 'border-surface-600 hover:border-surface-500'
+          }
+        `}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {selectedOption?.preview && (
+            <span className="text-base flex-shrink-0">{selectedOption.preview}</span>
+          )}
+          <span className={`truncate ${selectedOption ? 'text-surface-200' : 'text-surface-500'}`}>
+            {selectedOption?.name || placeholder}
+          </span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-surface-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* 下拉菜单 */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 w-full mt-1 py-1 bg-surface-800 border border-surface-600 rounded-xl shadow-xl max-h-[280px] overflow-y-auto"
+          >
+            {groups ? (
+              // 分组渲染
+              groups.map((group, idx) => (
+                <div key={group.label}>
+                  {idx > 0 && <div className="h-px bg-surface-700 my-1" />}
+                  <div className="px-3 py-1.5 text-xs font-medium text-surface-500">{group.label}</div>
+                  {group.options.map(option => (
+                    <div
+                      key={option.id}
+                      onClick={() => {
+                        onChange(option.value?.toString() || option.id)
+                        setIsOpen(false)
+                      }}
+                    >
+                      {render(option, (option.value?.toString() || option.id) === value)}
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              // 普通列表渲染
+              options?.map(option => (
+                <div
+                  key={option.id}
+                  onClick={() => {
+                    onChange(option.value?.toString() || option.id)
+                    setIsOpen(false)
+                  }}
+                >
+                  {render(option, (option.value?.toString() || option.id) === value)}
+                </div>
+              ))
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
 // ============================================
-// 字幕样式预览组件 - 增强版
+// 字幕样式预览组件 - 下拉选项版
 // ============================================
 
 const SubtitleStylePreview = ({
@@ -287,7 +375,6 @@ const SubtitleStylePreview = ({
   onStyleChange: (newStyle: Partial<SubtitleStyle>) => void
 }) => {
   const [device, setDevice] = useState<DevicePreset>('pc')
-  const [activeTab, setActiveTab] = useState<string>('presets')
   const previewRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(1)
   const config = devicePresets[device]
@@ -362,327 +449,15 @@ const SubtitleStylePreview = ({
     onStyleChange(DEFAULT_SUBTITLE_STYLE)
   }
 
-  // 样式标签页内容
-  const tabContent = {
-    presets: (
-      <div className="space-y-4">
-        {/* 预设分类 */}
-        {(['platform', 'mood', 'creative'] as const).map((category) => {
-          const categoryNames = {
-            platform: '📱 平台风格',
-            mood: '🎭 情绪氛围',
-            creative: '✨ 创意效果',
-          }
-          const presets = STYLE_PRESETS.filter(p => p.category === category)
-          
-          return (
-            <div key={category}>
-              <h4 className="text-xs text-surface-400 mb-2 font-medium">
-                {categoryNames[category]}
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                {presets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => applyPreset(preset.id)}
-                    className="group relative p-3 rounded-xl bg-surface-700/50 hover:bg-surface-700 border border-surface-600 hover:border-amber-400/50 transition-all text-left"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{preset.preview}</span>
-                      <span className="text-sm font-medium text-surface-200 group-hover:text-amber-400">
-                        {preset.name}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-surface-500 line-clamp-1">
-                      {preset.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    ),
-    font: (
-      <div className="space-y-5">
-        {/* 字体选择 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 block">字体</label>
-          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-            {FONT_OPTIONS.map((font) => (
-              <button
-                key={font.family}
-                onClick={() => onStyleChange({ fontFamily: font.family })}
-                className={`
-                  w-full p-3 rounded-lg border transition-all text-left
-                  ${subtitle.style.fontFamily === font.family
-                    ? 'border-amber-400 bg-amber-400/10'
-                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
-                  }
-                `}
-              >
-                <span 
-                  className="text-lg text-surface-200 block"
-                  style={{ fontFamily: `"${font.family}", sans-serif` }}
-                >
-                  {font.preview}
-                </span>
-                <span className="text-xs text-surface-500">{font.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 字重 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
-            <span>字重</span>
-            <span className="font-mono text-amber-400">{subtitle.style.fontWeight}</span>
-          </label>
-          <div className="flex gap-2">
-            {[300, 400, 500, 700, 900].map((weight) => (
-              <Button
-                key={weight}
-                variant={subtitle.style.fontWeight === weight ? 'primary' : 'secondary'}
-                size="xs"
-                className="flex-1"
-                onClick={() => onStyleChange({ fontWeight: weight })}
-              >
-                {weight === 300 && '细'}
-                {weight === 400 && '常规'}
-                {weight === 500 && '中'}
-                {weight === 700 && '粗'}
-                {weight === 900 && '黑'}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* 字号 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
-            <span>字号</span>
-            <span className="font-mono text-amber-400">{subtitle.style.fontSize}px</span>
-          </label>
-          <Slider
-            value={[subtitle.style.fontSize]}
-            min={device === 'phone' ? 48 : 36}
-            max={device === 'phone' ? 120 : 96}
-            step={4}
-            onValueChange={(v) => onStyleChange({ fontSize: v[0] })}
-          />
-        </div>
-
-        {/* 字间距 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
-            <span>字间距</span>
-            <span className="font-mono text-amber-400">{subtitle.style.letterSpacing}px</span>
-          </label>
-          <Slider
-            value={[subtitle.style.letterSpacing]}
-            min={0}
-            max={16}
-            step={1}
-            onValueChange={(v) => onStyleChange({ letterSpacing: v[0] })}
-          />
-        </div>
-      </div>
-    ),
-    color: (
-      <div className="space-y-5">
-        {/* 文字颜色 */}
-        <ColorPicker
-          value={subtitle.style.color}
-          onChange={(color) => onStyleChange({ color, colorType: 'solid' })}
-          presets={TEXT_COLOR_PRESETS}
-          label="文字颜色"
-        />
-
-        {/* 渐变开关 */}
-        <div className="flex items-center justify-between py-3 px-4 bg-surface-700/50 rounded-xl">
-          <label className="text-sm text-surface-200">使用渐变色</label>
-          <Switch
-            checked={subtitle.style.colorType === 'gradient'}
-            onCheckedChange={(checked) => onStyleChange({ 
-              colorType: checked ? 'gradient' : 'solid',
-              gradientColors: checked ? ['#FFD700', '#FF6B6B'] : undefined,
-              gradientAngle: 90,
-            })}
-          />
-        </div>
-
-        {subtitle.style.colorType === 'gradient' && (
-          <div>
-            <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
-              <span>渐变角度</span>
-              <span className="font-mono text-amber-400">{subtitle.style.gradientAngle || 90}°</span>
-            </label>
-            <Slider
-              value={[subtitle.style.gradientAngle || 90]}
-              min={0}
-              max={360}
-              step={15}
-              onValueChange={(v) => onStyleChange({ gradientAngle: v[0] })}
-            />
-          </div>
-        )}
-
-        {/* 背景 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 block">背景样式</label>
-          <div className="grid grid-cols-3 gap-2">
-            {BACKGROUND_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => onStyleChange({ backgroundColor: preset.value })}
-                className={`
-                  p-2 rounded-lg border text-xs transition-all
-                  ${subtitle.style.backgroundColor === preset.value
-                    ? 'border-amber-400 bg-amber-400/10 text-amber-400'
-                    : 'border-surface-600 hover:border-surface-500 text-surface-400'
-                  }
-                `}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-    effects: (
-      <div className="space-y-5">
-        {/* 花字效果 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-amber-400" />
-            <span>花字效果</span>
-          </label>
-          <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-2">
-            {DECORATION_EFFECTS.map((effect) => (
-              <button
-                key={effect.id}
-                onClick={() => onStyleChange({ decorationId: effect.id })}
-                className={`
-                  p-2 rounded-lg border transition-all text-left
-                  ${subtitle.style.decorationId === effect.id
-                    ? 'border-amber-400 bg-amber-400/10'
-                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{effect.preview}</span>
-                  <span className="text-xs text-surface-200">{effect.name}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 动画效果 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span>动画效果</span>
-          </label>
-          <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-2">
-            {ANIMATION_EFFECTS.map((animation) => (
-              <button
-                key={animation.id}
-                onClick={() => onStyleChange({ animationId: animation.id })}
-                className={`
-                  p-2 rounded-lg border transition-all text-left
-                  ${subtitle.style.animationId === animation.id
-                    ? 'border-amber-400 bg-amber-400/10'
-                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{animation.preview}</span>
-                  <span className="text-xs text-surface-200">{animation.name}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-    position: (
-      <div className="space-y-5">
-        {/* 垂直位置 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 block">垂直位置</label>
-          <div className="flex gap-2">
-            {(['top', 'center', 'bottom'] as const).map((pos) => (
-              <Button
-                key={pos}
-                variant={subtitle.style.position === pos ? 'primary' : 'secondary'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onStyleChange({ position: pos })}
-              >
-                {pos === 'top' && '顶部'}
-                {pos === 'center' && '居中'}
-                {pos === 'bottom' && '底部'}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* 水平对齐 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 block">水平对齐</label>
-          <div className="flex gap-2">
-            <Button
-              variant={subtitle.style.alignment === 'left' ? 'primary' : 'secondary'}
-              size="sm"
-              isIconOnly
-              className="flex-1"
-              onClick={() => onStyleChange({ alignment: 'left' })}
-            >
-              <AlignLeft className="w-5 h-5" />
-            </Button>
-            <Button
-              variant={subtitle.style.alignment === 'center' ? 'primary' : 'secondary'}
-              size="sm"
-              isIconOnly
-              className="flex-1"
-              onClick={() => onStyleChange({ alignment: 'center' })}
-            >
-              <AlignCenter className="w-5 h-5" />
-            </Button>
-            <Button
-              variant={subtitle.style.alignment === 'right' ? 'primary' : 'secondary'}
-              size="sm"
-              isIconOnly
-              className="flex-1"
-              onClick={() => onStyleChange({ alignment: 'right' })}
-            >
-              <AlignRight className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* 边距 */}
-        <div>
-          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
-            <span>底部边距</span>
-            <span className="font-mono text-amber-400">{subtitle.style.marginBottom}%</span>
-          </label>
-          <Slider
-            value={[subtitle.style.marginBottom]}
-            min={2}
-            max={25}
-            step={1}
-            onValueChange={(v) => onStyleChange({ marginBottom: v[0] })}
-          />
-        </div>
-      </div>
-    ),
+  // 获取当前预设名称
+  const getCurrentPresetName = () => {
+    const preset = STYLE_PRESETS.find(p => {
+      // 简单匹配：比较主要样式属性
+      return p.style.decorationId === subtitle.style.decorationId &&
+             p.style.fontFamily === subtitle.style.fontFamily &&
+             p.style.color === subtitle.style.color
+    })
+    return preset?.name || '选择预设样式'
   }
 
   return (
@@ -789,41 +564,336 @@ const SubtitleStylePreview = ({
 
       </div>
 
-      {/* 右侧：样式控件 */}
+      {/* 右侧：样式控件 - 下拉选项形式 */}
       <div className="flex-1 min-w-[280px] max-w-[320px] bg-surface-900 rounded-xl border border-surface-700 overflow-hidden">
-        {/* 标签页导航 */}
-        <div className="flex border-b border-surface-700 bg-surface-800/50">
-          {[
-            { id: 'presets', icon: Sparkles, label: '预设' },
-            { id: 'font', icon: Type, label: '字体' },
-            { id: 'color', icon: Palette, label: '颜色' },
-            { id: 'effects', icon: Wand2, label: '效果' },
-            { id: 'position', icon: AlignCenter, label: '位置' },
-          ].map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  flex-1 py-2.5 px-1 text-center transition-all border-b-2
-                  ${isActive 
-                    ? 'border-amber-400 text-amber-400 bg-surface-800' 
-                    : 'border-transparent text-surface-500 hover:text-surface-300'
-                  }
-                `}
-              >
-                <Icon className="w-4 h-4 mx-auto mb-0.5" />
-                <span className="text-[10px]">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
+        <div className="p-4 space-y-4 max-h-[520px] overflow-y-auto">
+          {/* 样式预设 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>样式预设</span>
+            </label>
+            <StyleDropdown
+              value=""
+              placeholder={getCurrentPresetName()}
+              groups={[
+                {
+                  label: '📱 平台风格',
+                  options: STYLE_PRESETS.filter(p => p.category === 'platform').map(preset => ({
+                    id: preset.id,
+                    name: preset.name,
+                    preview: preset.preview,
+                    description: preset.description,
+                  })),
+                },
+                {
+                  label: '🎭 情绪氛围',
+                  options: STYLE_PRESETS.filter(p => p.category === 'mood').map(preset => ({
+                    id: preset.id,
+                    name: preset.name,
+                    preview: preset.preview,
+                    description: preset.description,
+                  })),
+                },
+                {
+                  label: '✨ 创意效果',
+                  options: STYLE_PRESETS.filter(p => p.category === 'creative').map(preset => ({
+                    id: preset.id,
+                    name: preset.name,
+                    preview: preset.preview,
+                    description: preset.description,
+                  })),
+                },
+              ]}
+              onChange={(presetId) => applyPreset(presetId)}
+            />
+          </div>
 
-        {/* 标签页内容 */}
-        <div className="p-4 max-h-[450px] overflow-y-auto">
-          {tabContent[activeTab as keyof typeof tabContent]}
+          {/* 字体选择 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Type className="w-4 h-4 text-amber-400" />
+              <span>字体</span>
+            </label>
+            <StyleDropdown
+              value={subtitle.style.fontFamily}
+              options={FONT_OPTIONS.map(font => ({
+                id: font.family,
+                name: font.name,
+                preview: font.category === 'handwriting' ? '✍️' : font.category === 'display' ? '🎨' : font.category === 'serif' ? '📜' : '📝',
+                description: font.preview,
+                value: font.family,
+              }))}
+              onChange={(family) => onStyleChange({ fontFamily: family })}
+              renderOption={(option, isSelected) => (
+                <div className={`
+                  flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all
+                  ${isSelected 
+                    ? 'bg-amber-500/20 text-amber-400' 
+                    : 'hover:bg-surface-700 text-surface-200'
+                  }
+                `}>
+                  <span className="text-base flex-shrink-0 w-6 text-center">{option.preview}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{option.name}</div>
+                    <div 
+                      className="text-xs text-surface-400"
+                      style={{ fontFamily: `"${option.id}", sans-serif` }}
+                    >
+                      {option.description}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
+          {/* 字重 + 字号 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-surface-300 mb-2 block">字重</label>
+              <StyleDropdown
+                value={subtitle.style.fontWeight.toString()}
+                options={[
+                  { id: '300', name: '细体', preview: 'Aa', value: 300, description: 'Light' },
+                  { id: '400', name: '常规', preview: 'Aa', value: 400, description: 'Regular' },
+                  { id: '500', name: '中等', preview: 'Aa', value: 500, description: 'Medium' },
+                  { id: '700', name: '粗体', preview: 'Aa', value: 700, description: 'Bold' },
+                  { id: '900', name: '黑体', preview: 'Aa', value: 900, description: 'Black' },
+                ]}
+                onChange={(val) => onStyleChange({ fontWeight: Number(val) })}
+                renderOption={(option, isSelected) => (
+                  <div className={`
+                    flex items-center gap-3 px-3 py-2 cursor-pointer rounded-lg transition-all
+                    ${isSelected 
+                      ? 'bg-amber-500/20 text-amber-400' 
+                      : 'hover:bg-surface-700 text-surface-200'
+                    }
+                  `}>
+                    <span 
+                      className="text-base flex-shrink-0 w-7 text-center"
+                      style={{ fontWeight: option.value as number }}
+                    >
+                      {option.preview}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{option.name}</div>
+                    </div>
+                    {isSelected && (
+                      <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                  </div>
+                )}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+                <span>字号</span>
+                <span className="font-mono text-amber-400 text-xs">{subtitle.style.fontSize}px</span>
+              </label>
+              <Slider
+                value={[subtitle.style.fontSize]}
+                min={device === 'phone' ? 48 : 36}
+                max={device === 'phone' ? 120 : 96}
+                step={4}
+                onValueChange={(v) => onStyleChange({ fontSize: v[0] })}
+              />
+            </div>
+          </div>
+
+          {/* 文字颜色 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-amber-400" />
+              <span>文字颜色</span>
+            </label>
+            <div className="flex gap-2">
+              <div className="flex-1 grid grid-cols-7 gap-1.5">
+                {TEXT_COLOR_PRESETS.slice(0, 7).map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => onStyleChange({ color: preset.value, colorType: 'solid' })}
+                    className={`
+                      w-7 h-7 rounded-md border-2 transition-all relative
+                      ${subtitle.style.color === preset.value 
+                        ? 'border-amber-400 scale-110' 
+                        : 'border-surface-600 hover:border-surface-500'
+                      }
+                    `}
+                    title={preset.name}
+                    style={{ background: preset.type === 'gradient' ? preset.value : preset.value }}
+                  >
+                    {subtitle.style.color === preset.value && (
+                      <Check className="w-3 h-3 text-white absolute inset-0 m-auto drop-shadow-lg" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="color"
+                value={subtitle.style.color.startsWith('#') ? subtitle.style.color : '#FFFFFF'}
+                onChange={(e) => onStyleChange({ color: e.target.value, colorType: 'solid' })}
+                className="w-7 h-7 rounded-md cursor-pointer border-2 border-surface-600 hover:border-surface-500"
+                title="自定义颜色"
+              />
+            </div>
+          </div>
+
+          {/* 背景样式 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 block">背景样式</label>
+            <StyleDropdown
+              value={subtitle.style.backgroundColor}
+              options={BACKGROUND_PRESETS.map(preset => ({
+                id: preset.id,
+                name: preset.name,
+                preview: preset.id === 'transparent' ? '🚫' : preset.id === 'blur' ? '🌫️' : '⬛',
+                value: preset.value,
+              }))}
+              onChange={(val) => onStyleChange({ backgroundColor: val })}
+              renderOption={(option, isSelected) => (
+                <div className={`
+                  flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all
+                  ${isSelected 
+                    ? 'bg-amber-500/20 text-amber-400' 
+                    : 'hover:bg-surface-700 text-surface-200'
+                  }
+                `}>
+                  <div 
+                    className="w-6 h-6 rounded border border-surface-500 flex-shrink-0"
+                    style={{ 
+                      background: option.value === 'transparent' 
+                        ? 'repeating-conic-gradient(#444 0% 25%, #333 0% 50%) 50% / 8px 8px'
+                        : option.value as string 
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{option.name}</div>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
+          {/* 花字效果 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-amber-400" />
+              <span>花字效果</span>
+            </label>
+            <StyleDropdown
+              value={subtitle.style.decorationId}
+              options={DECORATION_EFFECTS.map(effect => ({
+                id: effect.id,
+                name: effect.name,
+                preview: effect.preview,
+                description: effect.description,
+              }))}
+              onChange={(val) => onStyleChange({ decorationId: val })}
+            />
+          </div>
+
+          {/* 动画效果 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span>动画效果</span>
+            </label>
+            <StyleDropdown
+              value={subtitle.style.animationId}
+              options={ANIMATION_EFFECTS.map(animation => ({
+                id: animation.id,
+                name: animation.name,
+                preview: animation.preview,
+                description: animation.description,
+              }))}
+              onChange={(val) => onStyleChange({ animationId: val })}
+            />
+          </div>
+
+          {/* 位置与对齐 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-surface-300 mb-2 block">垂直位置</label>
+              <StyleDropdown
+                value={subtitle.style.position}
+                options={[
+                  { id: 'top', name: '顶部', preview: '⬆️' },
+                  { id: 'center', name: '居中', preview: '⏺️' },
+                  { id: 'bottom', name: '底部', preview: '⬇️' },
+                ]}
+                onChange={(val) => onStyleChange({ position: val as 'top' | 'center' | 'bottom' })}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-surface-300 mb-2 block">水平对齐</label>
+              <div className="flex gap-1 h-10">
+                <Button
+                  variant={subtitle.style.alignment === 'left' ? 'primary' : 'secondary'}
+                  size="sm"
+                  isIconOnly
+                  className="flex-1 h-full"
+                  onClick={() => onStyleChange({ alignment: 'left' })}
+                >
+                  <AlignLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={subtitle.style.alignment === 'center' ? 'primary' : 'secondary'}
+                  size="sm"
+                  isIconOnly
+                  className="flex-1 h-full"
+                  onClick={() => onStyleChange({ alignment: 'center' })}
+                >
+                  <AlignCenter className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={subtitle.style.alignment === 'right' ? 'primary' : 'secondary'}
+                  size="sm"
+                  isIconOnly
+                  className="flex-1 h-full"
+                  onClick={() => onStyleChange({ alignment: 'right' })}
+                >
+                  <AlignRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* 边距调整 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+              <span>底部边距</span>
+              <span className="font-mono text-amber-400 text-xs">{subtitle.style.marginBottom}%</span>
+            </label>
+            <Slider
+              value={[subtitle.style.marginBottom]}
+              min={2}
+              max={25}
+              step={1}
+              onValueChange={(v) => onStyleChange({ marginBottom: v[0] })}
+            />
+          </div>
+
+          {/* 字间距 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
+              <span>字间距</span>
+              <span className="font-mono text-amber-400 text-xs">{subtitle.style.letterSpacing}px</span>
+            </label>
+            <Slider
+              value={[subtitle.style.letterSpacing]}
+              min={0}
+              max={16}
+              step={1}
+              onValueChange={(v) => onStyleChange({ letterSpacing: v[0] })}
+            />
+          </div>
         </div>
       </div>
     </div>

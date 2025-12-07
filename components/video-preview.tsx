@@ -438,6 +438,8 @@ function NativeVideoPreview({
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [currentSubtitle, setCurrentSubtitle] = useState<SubtitleItem | null>(null)
+  // 循环计数器 - 用于在视频循环时重置字幕动画
+  const [loopCount, setLoopCount] = useState(0)
 
   // 组件卸载时设置标志
   useEffect(() => {
@@ -463,6 +465,8 @@ function NativeVideoPreview({
     if (endTime && time >= endTime) {
       if (loop) {
         video.currentTime = startTime
+        // 增加循环计数器，确保字幕动画重新播放
+        setLoopCount(prev => prev + 1)
         // 安全地尝试播放
         const playPromise = video.play()
         if (playPromise !== undefined) {
@@ -526,6 +530,8 @@ function NativeVideoPreview({
       if (!isMountedRef.current) return
       if (loop) {
         video.currentTime = startTime
+        // 增加循环计数器，确保字幕动画重新播放
+        setLoopCount(prev => prev + 1)
         const playPromise = video.play()
         if (playPromise !== undefined) {
           playPromise.catch(() => {
@@ -596,6 +602,8 @@ function NativeVideoPreview({
     if (!video) return
     video.currentTime = startTime
     setCurrentTime(startTime)
+    // 增加循环计数器，确保字幕动画重新播放
+    setLoopCount(prev => prev + 1)
   }
 
   // 进度条点击
@@ -628,7 +636,7 @@ function NativeVideoPreview({
       <AnimatePresence mode="wait">
         {currentSubtitle && (
           <EnhancedSubtitleOverlay 
-            key={`${currentSubtitle.id}-${currentSubtitle.style.animationId}`} 
+            key={`${currentSubtitle.id}-${currentSubtitle.style.animationId}-loop${loopCount}`} 
             subtitle={currentSubtitle} 
           />
         )}
