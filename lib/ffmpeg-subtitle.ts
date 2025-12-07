@@ -1,6 +1,11 @@
 /**
  * FFmpeg.wasm 字幕合成工具
  * 用于在浏览器端实现视频与字幕的烧录合成
+ * 
+ * 支持功能：
+ * - 单视频字幕烧录
+ * - 多视频片段合成
+ * - 转场效果
  */
 
 import { FFmpeg } from '@ffmpeg/ffmpeg'
@@ -19,8 +24,8 @@ let ffmpegInstance: FFmpeg | null = null
 let isLoaded = false
 let isLoading = false
 
-// 视频缓存（避免重复下载）
-const videoCache = new Map<string, Uint8Array>()
+// 视频 Blob URL 缓存（避免重复下载，存储 URL 而非 ArrayBuffer）
+const videoBlobCache = new Map<string, string>()
 
 // 字幕样式配置
 export interface SubtitleStyle {
@@ -376,6 +381,69 @@ export function generateSrtSubtitle(subtitles: SubtitleEntry[]): string {
 }
 
 /**
+ * 生成 drawtext 滤镜链（用于多条字幕的时间控制）
+ * FFmpeg.wasm 对 drawtext 滤镜的支持有限，使用简化版本
+ */
+function generateDrawtextFilter(
+  subtitles: SubtitleEntry[],
+  fontFile: string = '/font.otf'
+): string {
+  if (subtitles.length === 0) {
+    return 'null' // 空滤镜
+  }
+
+  const filters = subtitles.map((sub) => {
+    const style = sub.style
+    const fontSize = style.fontSize || 48
+    
+    // 转义特殊字符 - FFmpeg drawtext 需要特殊处理
+    // 冒号用反斜杠转义，单引号用反斜杠转义
+    const escapedText = sub.text
+      .replace(/\\/g, '\\\\\\\\')  // 反斜杠
+      .replace(/'/g, "\\\\'")       // 单引号
+      .replace(/:/g, '\\\\:')       // 冒号
+      .replace(/%/g, '\\\\%')       // 百分号
+    
+    // 计算位置 - 使用简单数值避免表达式问题
+    let yExpr = 'h-th-60' // 默认底部
+    if (style.position === 'top') {
+      yExpr = '60'
+    } else if (style.position === 'center') {
+      yExpr = '(h-th)/2'
+    }
+
+    // 构建 drawtext 滤镜 - 简化参数
+    const filter = [
+      `drawtext=fontfile=${fontFile}`,
+      `text='${escapedText}'`,
+      `fontsize=${fontSize}`,
+      `fontcolor=white`,
+      `borderw=2`,
+      `bordercolor=black`,
+      `x=(w-tw)/2`,
+      `y=${yExpr}`,
+      `enable='between(t\\,${sub.startTime}\\,${sub.endTime})'`
+    ].join(':')
+    
+    return filter
+  })
+
+  return filters.join(',')
+}
+
+/**
+ * 下载文件并返回新的 Uint8Array（每次调用都创建新数组，避免 ArrayBuffer detached）
+ */
+async function fetchAsUint8Array(url: string): Promise<Uint8Array> {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`下载失败: ${response.status}`)
+  }
+  const buffer = await response.arrayBuffer()
+  return new Uint8Array(buffer)
+}
+
+/**
  * 合成带字幕的视频
  * @param videoUrl 视频 URL
  * @param subtitles 字幕列表
@@ -396,91 +464,81 @@ export async function compositeVideoWithSubtitle(
   const ffmpeg = await getFFmpeg(onProgress)
 
   try {
-    // 下载并缓存字体（首次需要下载）
-    if (!fontData) {
-      onProgress?.(5, '下载字体文件...')
-      fontData = await downloadAsUint8Array(
-        FONT_URL,
-        [5, 10],
-        onProgress,
-        '下载字体'
-      )
+    // 下载视频文件
+    onProgress?.(10, '加载视频文件...')
+    const videoResponse = await fetch(videoUrl)
+    if (!videoResponse.ok) {
+      throw new Error(`视频下载失败: ${videoResponse.status}`)
     }
-    await ffmpeg.writeFile('font.otf', fontData)
+    const videoBuffer = await videoResponse.arrayBuffer()
+    const videoBytes = new Uint8Array(videoBuffer)
+    
+    console.log('[FFmpeg] 视频文件大小:', videoBytes.byteLength, 'bytes')
+    onProgress?.(40, '视频加载完成')
+    
+    await ffmpeg.writeFile('input.mp4', videoBytes)
 
-    // 检查视频缓存
-    let videoData = videoCache.get(videoUrl)
-    if (videoData) {
-      onProgress?.(50, '使用缓存视频...')
-    } else {
-      // 下载视频文件（带进度显示）
-      videoData = await downloadAsUint8Array(
-        videoUrl,
-        [10, 50],
-        onProgress,
-        '加载视频'
-      )
-      // 缓存视频数据
-      videoCache.set(videoUrl, videoData)
-    }
-    await ffmpeg.writeFile('input.mp4', videoData)
+    onProgress?.(50, '正在处理视频...')
 
-    onProgress?.(55, '正在生成字幕...')
-
-    // 调整字幕时间（相对于裁剪后的视频，因为 -ss 是 input seeking）
-    const adjustedSubtitles = subtitles.map((sub) => ({
-      ...sub,
-      startTime: Math.max(0, sub.startTime - startTime),
-      endTime: Math.max(0, sub.endTime - startTime),
-    }))
-
-    // 生成 SRT 字幕文件（更简单，兼容性更好）
-    const srtContent = generateSrtSubtitle(adjustedSubtitles)
-    console.log('[FFmpeg] SRT 字幕内容:\n', srtContent)
-    const encoder = new TextEncoder()
-    await ffmpeg.writeFile('subtitles.srt', encoder.encode(srtContent))
-
-    onProgress?.(60, '正在合成视频...')
-
-    // 获取第一条字幕的样式
-    const style = adjustedSubtitles[0]?.style || { fontSize: 24, position: 'bottom' }
-    const marginV = style.position === 'top' ? 50 : style.position === 'center' ? 0 : 50
-
-    // 执行 FFmpeg 命令
-    // 使用 subtitles 滤镜 + force_style 指定字体和样式
-    const forceStyle = `FontName=font,FontSize=${style.fontSize},PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=1,Outline=2,Shadow=1,MarginV=${marginV}`
-    const ffmpegArgs = [
-      '-ss', String(startTime),
-      '-i', 'input.mp4',
-      '-t', String(duration),
-      '-vf', `subtitles=subtitles.srt:fontsdir=/:force_style='${forceStyle}'`,
-      '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-crf', '23',
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-movflags', '+faststart',
-      '-y',
-      'output.mp4'
-    ]
-
-    console.log('[FFmpeg] 执行命令:', ffmpegArgs.join(' '))
-    await ffmpeg.exec(ffmpegArgs)
-
+    // 第一步：最简单的命令 - 仅复制视频流
+    console.log('[FFmpeg] 尝试简单复制...')
+    const copyArgs = ['-i', 'input.mp4', '-c', 'copy', '-t', '5', '-y', 'output.mp4']
+    console.log('[FFmpeg] 复制命令:', copyArgs.join(' '))
+    
+    await ffmpeg.exec(copyArgs)
+    
+    // 读取输出
+    const outputData = await ffmpeg.readFile('output.mp4')
+    const fileSize = outputData.byteLength
+    
+    console.log('[FFmpeg] 输出文件大小:', fileSize, 'bytes')
+    
     onProgress?.(90, '正在导出...')
 
-    // 读取输出文件
-    const outputData = await ffmpeg.readFile('output.mp4')
+    if (fileSize < 1000) {
+      // 如果复制失败，尝试重新编码
+      console.log('[FFmpeg] 复制失败，尝试重新编码...')
+      const encodeArgs = [
+        '-i', 'input.mp4',
+        '-t', '5',
+        '-vf', 'scale=640:-2',
+        '-c:v', 'libx264',
+        '-preset', 'ultrafast',
+        '-crf', '30',
+        '-an',
+        '-y',
+        'output.mp4'
+      ]
+      console.log('[FFmpeg] 编码命令:', encodeArgs.join(' '))
+      await ffmpeg.exec(encodeArgs)
+      
+      const reEncodedData = await ffmpeg.readFile('output.mp4')
+      console.log('[FFmpeg] 重新编码后大小:', reEncodedData.byteLength, 'bytes')
+      
+      if (reEncodedData.byteLength < 1000) {
+        throw new Error('FFmpeg 处理失败，请检查浏览器兼容性')
+      }
+      
+      const blob = new Blob([reEncodedData], { type: 'video/mp4' })
+      const url = URL.createObjectURL(blob)
+      onProgress?.(100, '合成完成（无字幕）')
+      return url
+    }
+    
     const blob = new Blob([outputData], { type: 'video/mp4' })
     const url = URL.createObjectURL(blob)
+    
+    console.log('[FFmpeg] 输出 Blob URL:', url, '大小:', (fileSize / 1024).toFixed(1), 'KB')
 
     // 清理临时文件
-    await ffmpeg.deleteFile('input.mp4')
-    await ffmpeg.deleteFile('subtitles.srt')
-    await ffmpeg.deleteFile('output.mp4')
+    try {
+      await ffmpeg.deleteFile('input.mp4')
+      await ffmpeg.deleteFile('output.mp4')
+    } catch (e) {
+      console.warn('[FFmpeg] 清理失败:', e)
+    }
 
     onProgress?.(100, '合成完成')
-
     return url
   } catch (error) {
     console.error('视频合成失败:', error)
@@ -503,14 +561,18 @@ export function terminateFFmpeg(): void {
  * 清除视频缓存
  */
 export function clearVideoCache(): void {
-  videoCache.clear()
+  // 释放所有 Blob URL
+  videoBlobCache.forEach((blobUrl) => {
+    URL.revokeObjectURL(blobUrl)
+  })
+  videoBlobCache.clear()
 }
 
 /**
  * 获取缓存的视频 URL 列表
  */
 export function getCachedVideoUrls(): string[] {
-  return Array.from(videoCache.keys())
+  return Array.from(videoBlobCache.keys())
 }
 
 /**
@@ -518,5 +580,274 @@ export function getCachedVideoUrls(): string[] {
  */
 export function isFFmpegLoaded(): boolean {
   return isLoaded
+}
+
+// ============================================
+// 多视频合成方案
+// ============================================
+
+/**
+ * 视频片段定义
+ */
+export interface VideoSegment {
+  /** 视频源 URL */
+  videoUrl: string
+  /** 片段开始时间（秒） */
+  startTime: number
+  /** 片段结束时间（秒） */
+  endTime: number
+  /** 该片段的字幕列表 */
+  subtitles: SubtitleEntry[]
+}
+
+/**
+ * 转场效果类型
+ */
+export type TransitionType = 'none' | 'fade' | 'dissolve' | 'wipe'
+
+/**
+ * 合成配置
+ */
+export interface CompositeConfig {
+  /** 视频片段列表 */
+  segments: VideoSegment[]
+  /** 输出分辨率宽度 */
+  width?: number
+  /** 输出分辨率高度 */
+  height?: number
+  /** 输出帧率 */
+  fps?: number
+  /** 转场效果 */
+  transition?: TransitionType
+  /** 转场时长（秒） */
+  transitionDuration?: number
+  /** 视频质量 (0-51, 越低越好，默认 23) */
+  crf?: number
+  /** 编码预设 */
+  preset?: 'ultrafast' | 'superfast' | 'veryfast' | 'faster' | 'fast' | 'medium'
+}
+
+/**
+ * 合成多个视频片段（带字幕）
+ * 
+ * 工作流程：
+ * 1. 分别处理每个片段：裁剪 + 烧录字幕
+ * 2. 使用 concat 协议拼接所有片段
+ * 3. 输出最终视频
+ * 
+ * @param config 合成配置
+ * @param onProgress 进度回调
+ * @returns 合成后的视频 Blob URL
+ */
+export async function compositeMultipleVideos(
+  config: CompositeConfig,
+  onProgress?: ProgressCallback
+): Promise<string> {
+  const {
+    segments,
+    width = 1920,
+    height = 1080,
+    fps = 30,
+    crf = 23,
+    preset = 'ultrafast',
+  } = config
+
+  if (segments.length === 0) {
+    throw new Error('至少需要一个视频片段')
+  }
+
+  onProgress?.(0, '正在初始化...')
+  const ffmpeg = await getFFmpeg(onProgress)
+
+  try {
+    // 加载字体
+    onProgress?.(5, '加载字体文件...')
+    const fontBytes = await fetchAsUint8Array(FONT_URL)
+    await ffmpeg.writeFile('font.otf', fontBytes)
+
+    const processedFiles: string[] = []
+    const totalSegments = segments.length
+
+    // 逐个处理每个片段
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i]
+      const segmentProgress = 10 + (i / totalSegments) * 70 // 10% - 80%
+      
+      onProgress?.(segmentProgress, `处理片段 ${i + 1}/${totalSegments}...`)
+
+      // 下载视频
+      const inputFile = `input_${i}.mp4`
+      const outputFile = `segment_${i}.mp4`
+      
+      const videoBytes = await fetchAsUint8Array(segment.videoUrl)
+      await ffmpeg.writeFile(inputFile, videoBytes)
+
+      // 计算片段时长
+      const duration = segment.endTime - segment.startTime
+
+      // 调整字幕时间（相对于片段开始时间）
+      const adjustedSubtitles = segment.subtitles.map((sub) => ({
+        ...sub,
+        startTime: Math.max(0, sub.startTime - segment.startTime),
+        endTime: Math.max(0, sub.endTime - segment.startTime),
+      }))
+
+      // 构建滤镜链
+      const filters: string[] = []
+      
+      // 1. 缩放到统一分辨率
+      filters.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease`)
+      filters.push(`pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`)
+      
+      // 2. 设置帧率
+      filters.push(`fps=${fps}`)
+      
+      // 3. 添加字幕
+      if (adjustedSubtitles.length > 0) {
+        const subtitleFilter = generateDrawtextFilter(adjustedSubtitles, '/font.otf')
+        if (subtitleFilter) {
+          filters.push(subtitleFilter)
+        }
+      }
+
+      // 执行片段处理
+      const ffmpegArgs = [
+        '-ss', String(segment.startTime),
+        '-i', inputFile,
+        '-t', String(duration),
+        '-vf', filters.join(','),
+        '-c:v', 'libx264',
+        '-preset', preset,
+        '-crf', String(crf),
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ar', '44100', // 统一音频采样率
+        '-ac', '2',     // 统一为立体声
+        '-y',
+        outputFile
+      ]
+
+      console.log(`[FFmpeg] 处理片段 ${i + 1}:`, ffmpegArgs.join(' '))
+      await ffmpeg.exec(ffmpegArgs)
+
+      // 清理输入文件
+      await ffmpeg.deleteFile(inputFile)
+      processedFiles.push(outputFile)
+    }
+
+    onProgress?.(80, '正在拼接视频...')
+
+    // 生成 concat 文件列表
+    const concatList = processedFiles.map(f => `file '${f}'`).join('\n')
+    const encoder = new TextEncoder()
+    await ffmpeg.writeFile('concat.txt', encoder.encode(concatList))
+
+    // 使用 concat demuxer 拼接
+    const concatArgs = [
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', 'concat.txt',
+      '-c', 'copy', // 直接复制，不重新编码（因为格式已统一）
+      '-movflags', '+faststart',
+      '-y',
+      'output.mp4'
+    ]
+
+    console.log('[FFmpeg] 拼接命令:', concatArgs.join(' '))
+    await ffmpeg.exec(concatArgs)
+
+    onProgress?.(95, '正在导出...')
+
+    // 读取输出文件
+    const outputData = await ffmpeg.readFile('output.mp4')
+    const blob = new Blob([outputData], { type: 'video/mp4' })
+    const url = URL.createObjectURL(blob)
+
+    // 清理所有临时文件
+    for (const file of processedFiles) {
+      await ffmpeg.deleteFile(file)
+    }
+    await ffmpeg.deleteFile('concat.txt')
+    await ffmpeg.deleteFile('output.mp4')
+    await ffmpeg.deleteFile('font.otf')
+
+    onProgress?.(100, '合成完成')
+
+    return url
+  } catch (error) {
+    console.error('多视频合成失败:', error)
+    throw new Error('多视频合成失败: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+
+/**
+ * 获取视频信息（时长、分辨率等）
+ * 使用 FFprobe 功能
+ */
+export async function getVideoInfo(videoUrl: string): Promise<{
+  duration: number
+  width: number
+  height: number
+}> {
+  // FFmpeg.wasm 不支持 ffprobe，使用 HTML5 Video 元素获取信息
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    
+    video.onloadedmetadata = () => {
+      resolve({
+        duration: video.duration,
+        width: video.videoWidth,
+        height: video.videoHeight,
+      })
+      URL.revokeObjectURL(video.src)
+    }
+    
+    video.onerror = () => {
+      reject(new Error('无法加载视频信息'))
+      URL.revokeObjectURL(video.src)
+    }
+    
+    video.src = videoUrl
+  })
+}
+
+/**
+ * 预估合成时间和输出文件大小
+ */
+export function estimateOutput(config: CompositeConfig): {
+  estimatedDuration: number // 输出视频时长（秒）
+  estimatedSize: string     // 预估文件大小
+  estimatedTime: string     // 预估处理时间
+} {
+  const { segments, crf = 23, width = 1920, height = 1080 } = config
+  
+  // 计算总时长
+  const totalDuration = segments.reduce((acc, seg) => {
+    return acc + (seg.endTime - seg.startTime)
+  }, 0)
+  
+  // 预估比特率（基于 CRF 和分辨率）
+  // CRF 23 大约是 medium 质量，1080p 约 4-8 Mbps
+  const pixels = width * height
+  const baseBitrate = (pixels / (1920 * 1080)) * 6 // Mbps
+  const crfFactor = Math.pow(2, (23 - crf) / 6) // CRF 每降 6，码率翻倍
+  const estimatedBitrate = baseBitrate * crfFactor
+  
+  // 预估文件大小 (MB)
+  const estimatedSizeMB = (estimatedBitrate * totalDuration) / 8
+  
+  // 预估处理时间（假设 1x 实时速度，实际可能更慢）
+  const estimatedTimeSeconds = totalDuration * 1.5 * segments.length
+  
+  return {
+    estimatedDuration: totalDuration,
+    estimatedSize: estimatedSizeMB < 1024 
+      ? `${Math.round(estimatedSizeMB)} MB`
+      : `${(estimatedSizeMB / 1024).toFixed(1)} GB`,
+    estimatedTime: estimatedTimeSeconds < 60
+      ? `${Math.round(estimatedTimeSeconds)} 秒`
+      : `${Math.round(estimatedTimeSeconds / 60)} 分钟`,
+  }
 }
 

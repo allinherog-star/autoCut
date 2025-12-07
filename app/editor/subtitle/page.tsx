@@ -25,8 +25,16 @@ import {
   Zap,
   Check,
   RotateCcw,
+  Download,
+  Loader2,
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Slider } from '@/components/ui'
+import {
+  composeSimpleVideo,
+  type SubtitleItem as ComposerSubtitleItem,
+  type SubtitleStyle as ComposerSubtitleStyle,
+  type ProgressCallback,
+} from '@/lib/canvas-video-composer'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
@@ -85,16 +93,16 @@ const mockSegments: VideoSegment[] = [
   {
     id: '1',
     startTime: 0,
-    endTime: 12,
+    endTime: 10,
     thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=200&fit=crop',
     videoUrl: SAMPLE_VIDEO_URL,
     description: '主角出场，微笑面对镜头，情绪积极',
     labels: ['开场', '人物', '特写'],
     score: 92,
     subtitles: [
-      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 4, thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
-      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 4, endTime: 8, thumbnailUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
-      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 8, endTime: 12, thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '1-1', text: '大家好，欢迎来到今天的视频', startTime: 0, endTime: 3, thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '1-2', text: '今天我们要聊一个非常有趣的话题', startTime: 3, endTime: 6, thumbnailUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
+      { id: '1-3', text: '准备好了吗？让我们开始吧！', startTime: 6, endTime: 10, thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=68&fit=crop', style: { ...defaultSubtitleStyle } },
     ],
     isExpanded: true,
   },
@@ -921,7 +929,98 @@ export default function SubtitlePage() {
   const [styleEditingId, setStyleEditingId] = useState<string | null>(null)
   const [styleEditingSegmentId, setStyleEditingSegmentId] = useState<string | null>(null)
 
+  // 导出测试状态
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const [exportMessage, setExportMessage] = useState('')
+  const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [exportFileSize, setExportFileSize] = useState<string>('')
+
   const totalSubtitles = segments.reduce((acc, seg) => acc + seg.subtitles.length, 0)
+
+  // 导出测试功能 - 使用 Canvas 合成第一个片段
+  const handleExportTest = async () => {
+    if (segments.length === 0) return
+
+    setIsExporting(true)
+    setExportProgress(0)
+    setExportMessage('准备导出...')
+    setExportedVideoUrl(null)
+    setExportError(null)
+
+    try {
+      const segment = segments[0]
+      
+      // 转换字幕格式
+      const subtitleItems: ComposerSubtitleItem[] = segment.subtitles.map((sub) => ({
+        id: sub.id,
+        text: sub.text,
+        startTime: sub.startTime,
+        endTime: sub.endTime,
+        style: {
+          fontSize: sub.style.fontSize,
+          fontFamily: sub.style.fontFamily,
+          fontWeight: sub.style.fontWeight,
+          color: sub.style.color,
+          backgroundColor: sub.style.backgroundColor,
+          position: sub.style.position,
+          alignment: sub.style.alignment,
+          hasOutline: sub.style.hasOutline,
+          outlineColor: sub.style.outlineColor,
+          outlineWidth: sub.style.outlineWidth,
+          animationId: sub.style.animationId,
+        } as ComposerSubtitleStyle,
+      }))
+
+      // 进度回调
+      const onProgress: ProgressCallback = (progress, message) => {
+        setExportProgress(progress)
+        setExportMessage(message)
+      }
+
+      // 使用 Canvas 合成器
+      const outputUrl = await composeSimpleVideo(
+        segment.videoUrl,
+        subtitleItems,
+        segment.startTime,
+        segment.endTime,
+        onProgress
+      )
+
+      // 获取文件大小
+      try {
+        const response = await fetch(outputUrl)
+        const blob = await response.blob()
+        const sizeMB = (blob.size / 1024 / 1024).toFixed(2)
+        setExportFileSize(`${sizeMB} MB`)
+        console.log('[Export] 导出文件大小:', sizeMB, 'MB')
+      } catch (e) {
+        console.warn('[Export] 无法获取文件大小:', e)
+      }
+
+      setExportedVideoUrl(outputUrl)
+      setExportMessage('导出完成！')
+      setExportProgress(100)
+    } catch (error) {
+      console.error('导出失败:', error)
+      setExportError(error instanceof Error ? error.message : '导出失败')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // 下载导出的视频
+  const handleDownload = () => {
+    if (!exportedVideoUrl) return
+
+    const a = document.createElement('a')
+    a.href = exportedVideoUrl
+    a.download = `subtitle-test-${Date.now()}.mp4`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   // 使用 ref 存储最新的回调函数
   const handleConfirmRef = useRef(() => {
@@ -1456,6 +1555,127 @@ export default function SubtitlePage() {
               点击每条字幕右侧的 <span className="text-amber-400">调色板按钮</span> 可单独设置该字幕的样式，包括字体大小、位置、对齐和描边效果。
             </p>
           </div>
+
+          {/* 导出测试区域 */}
+          {!isGenerating && segments.length > 0 && (
+            <div className="pt-4 border-t border-surface-700">
+              <h3 className="text-sm font-medium text-surface-200 mb-3 flex items-center gap-2">
+                <Download className="w-4 h-4 text-amber-400" />
+                导出测试
+              </h3>
+              
+              {/* 导出按钮 */}
+              {!isExporting && !exportedVideoUrl && (
+                <div>
+                  <p className="text-xs text-surface-500 mb-3">
+                    测试第一个片段的字幕合成导出效果
+                  </p>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth
+                    leftIcon={<Download className="w-4 h-4" />}
+                    onClick={handleExportTest}
+                    disabled={isExporting}
+                  >
+                    测试导出
+                  </Button>
+                </div>
+              )}
+
+              {/* 导出进度 */}
+              {isExporting && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                    <span className="text-sm text-surface-300">{exportMessage}</span>
+                  </div>
+                  <Progress value={exportProgress} variant="primary" size="sm" />
+                  <p className="text-xs text-surface-500 text-center">
+                    {Math.round(exportProgress)}%
+                  </p>
+                </div>
+              )}
+
+              {/* 导出错误 */}
+              {exportError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-400 mb-2">导出失败</p>
+                  <p className="text-xs text-surface-500">{exportError}</p>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="mt-2"
+                    onClick={() => {
+                      setExportError(null)
+                      setExportProgress(0)
+                    }}
+                  >
+                    重试
+                  </Button>
+                </div>
+              )}
+
+              {/* 导出成功 */}
+              {exportedVideoUrl && !isExporting && !exportError && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <p className="text-sm text-emerald-400 mb-2">🎉 导出成功！</p>
+                    <p className="text-xs text-surface-400">
+                      字幕已成功合成到视频中
+                    </p>
+                    {exportFileSize && (
+                      <p className="text-xs text-surface-500 mt-1">
+                        文件大小: {exportFileSize}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 预览导出的视频 */}
+                  <div className="rounded-lg overflow-hidden bg-surface-800">
+                    <video
+                      src={exportedVideoUrl}
+                      controls
+                      className="w-full aspect-video"
+                      autoPlay
+                      loop
+                      playsInline
+                      onError={(e) => {
+                        console.error('[Video] 播放错误:', e)
+                      }}
+                      onLoadedData={() => {
+                        console.log('[Video] 视频加载完成')
+                      }}
+                    />
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="flex-1"
+                      leftIcon={<Download className="w-4 h-4" />}
+                      onClick={handleDownload}
+                    >
+                      下载视频
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setExportedVideoUrl(null)
+                        setExportProgress(0)
+                        setExportMessage('')
+                      }}
+                    >
+                      重新导出
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
