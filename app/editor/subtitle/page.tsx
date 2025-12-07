@@ -536,13 +536,6 @@ const SubtitleStylePreview = ({
                 objectFit="contain"
                 className="w-full h-full"
               />
-              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-xs text-white font-medium z-30 pointer-events-none flex items-center gap-1.5">
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>手机竖屏 9:16</span>
-              </div>
-              <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-[10px] text-white/80 font-mono z-30 pointer-events-none">
-                {config.width}×{config.height}
-              </div>
             </div>
           </div>
         ) : (
@@ -566,13 +559,6 @@ const SubtitleStylePreview = ({
               mode="native"
               className="w-full h-full"
             />
-            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-xs text-white font-medium z-30 pointer-events-none flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5" />
-              <span>PC横屏 16:9</span>
-            </div>
-            <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-[10px] text-white/80 font-mono z-30 pointer-events-none">
-              {config.width}×{config.height}
-            </div>
           </div>
         )}
 

@@ -302,12 +302,14 @@ function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
   const getPositionClass = () => {
     const posClasses = []
     
+    // 垂直位置
     switch (style.position) {
       case 'top':
         posClasses.push('top-4')
         break
       case 'center':
-        posClasses.push('top-1/2 -translate-y-1/2')
+        // 使用 inset-y-0 配合 items-center 实现垂直居中
+        posClasses.push('inset-y-0 items-center')
         break
       case 'bottom':
       default:
@@ -315,6 +317,7 @@ function EnhancedSubtitleOverlay({ subtitle }: { subtitle: SubtitleItem }) {
         break
     }
     
+    // 水平对齐
     switch (style.alignment) {
       case 'left':
         posClasses.push('justify-start')
