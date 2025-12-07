@@ -846,29 +846,30 @@ const SubtitleStylePreview = ({
             <StyleDropdown
               value={subtitle.style.fontWeight.toString()}
               options={[
-                { id: '300', name: '细体', preview: 'Aa', value: 300, description: 'Light' },
-                { id: '400', name: '常规', preview: 'Aa', value: 400, description: 'Regular' },
-                { id: '500', name: '中等', preview: 'Aa', value: 500, description: 'Medium' },
-                { id: '700', name: '粗体', preview: 'Aa', value: 700, description: 'Bold' },
-                { id: '900', name: '黑体', preview: 'Aa', value: 900, description: 'Black' },
+                { id: '300', name: '细', preview: 'Aa', value: 300, description: '纤细轻盈' },
+                { id: '400', name: '常规', preview: 'Aa', value: 400, description: '日常阅读' },
+                { id: '500', name: '标准', preview: 'Aa', value: 500, description: '推荐・清晰易读' },
+                { id: '700', name: '粗', preview: 'Aa', value: 700, description: '醒目突出' },
+                { id: '900', name: '特粗', preview: 'Aa', value: 900, description: '强烈冲击' },
               ]}
               onChange={(val) => onStyleChange({ fontWeight: Number(val) })}
               renderOption={(option, isSelected) => (
                 <div className={`
-                  flex items-center gap-3 px-3 py-2 cursor-pointer rounded-lg transition-all
+                  flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all
                   ${isSelected 
                     ? 'bg-amber-500/20 text-amber-400' 
                     : 'hover:bg-surface-700 text-surface-200'
                   }
                 `}>
                   <span 
-                    className="text-base flex-shrink-0 w-7 text-center"
+                    className="text-lg flex-shrink-0 w-8 text-center"
                     style={{ fontWeight: option.value as number }}
                   >
                     {option.preview}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{option.name}</div>
+                    <div className="text-xs text-surface-500">{option.description}</div>
                   </div>
                   {isSelected && (
                     <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
