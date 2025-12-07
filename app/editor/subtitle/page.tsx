@@ -18,32 +18,39 @@ import {
   Palette,
   Save,
   Scissors,
+  Smartphone,
+  Monitor,
+  Type,
+  Wand2,
+  Zap,
+  Check,
+  RotateCcw,
 } from 'lucide-react'
-import { Button, Card, Badge, Progress, Switch, Slider } from '@/components/ui'
+import { Button, Card, Badge, Progress, Switch, Slider, Tabs } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor } from '../layout'
+import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
+import {
+  type EnhancedSubtitleStyle,
+  DEFAULT_SUBTITLE_STYLE,
+  FONT_OPTIONS,
+  TEXT_COLOR_PRESETS,
+  BACKGROUND_PRESETS,
+  DECORATION_EFFECTS,
+  ANIMATION_EFFECTS,
+  STYLE_PRESETS,
+  mergeStyles,
+} from '@/lib/subtitle-styles'
 
 // ============================================
 // 类型定义
 // ============================================
 
-interface SubtitleStyle {
-  fontSize: number
-  color: string
-  backgroundColor: string
-  position: 'top' | 'center' | 'bottom'
-  alignment: 'left' | 'center' | 'right'
-  hasOutline: boolean
-}
+// 使用增强版字幕样式
+type SubtitleStyle = EnhancedSubtitleStyle
 
-const defaultSubtitleStyle: SubtitleStyle = {
-  fontSize: 24,
-  color: '#FFFFFF',
-  backgroundColor: 'rgba(0,0,0,0.6)',
-  position: 'bottom',
-  alignment: 'center',
-  hasOutline: true,
-}
+// 默认样式
+const defaultSubtitleStyle: SubtitleStyle = DEFAULT_SUBTITLE_STYLE
 
 interface SubtitleLine {
   id: string
@@ -71,7 +78,8 @@ interface VideoSegment {
 // 模拟数据
 // ============================================
 
-const SAMPLE_VIDEO_URL = 'https://www.w3schools.com/html/mov_bbb.mp4'
+// 使用本地小视频进行测试（770KB）
+const SAMPLE_VIDEO_URL = '/test-video.mp4'
 
 const mockSegments: VideoSegment[] = [
   {
@@ -155,6 +163,671 @@ const labelColorMap: Record<string, string> = {
   '精彩': 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
   '总结': 'bg-teal-500/20 text-teal-400 border border-teal-500/30',
   '回顾': 'bg-violet-500/20 text-violet-400 border border-violet-500/30',
+}
+
+// 时间格式化
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.max(0, Math.round(seconds % 60))
+  return `${mins}:${String(secs).padStart(2, '0')}`
+}
+
+// ============================================
+// 设备预览配置
+// ============================================
+
+type DevicePreset = 'phone' | 'pc'
+
+interface DeviceConfig {
+  name: string
+  icon: typeof Smartphone
+  aspectRatio: string // CSS aspect-ratio
+  width: number // 真实分辨率宽度
+  height: number // 真实分辨率高度
+  previewHeight: string // 预览框高度（使用固定高度确保舒适观看）
+  fontScale: number // 字体缩放比例（相对于 PC）
+}
+
+const devicePresets: Record<DevicePreset, DeviceConfig> = {
+  phone: {
+    name: '手机竖屏',
+    icon: Smartphone,
+    aspectRatio: '9/16',
+    width: 1080,
+    height: 1920,
+    previewHeight: '380px', // 适中预览尺寸
+    fontScale: 1.0,
+  },
+  pc: {
+    name: 'PC横屏',
+    icon: Monitor,
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+    previewHeight: '320px',
+    fontScale: 1.0,
+  },
+}
+
+// ============================================
+// 颜色选择器组件
+// ============================================
+
+const ColorPicker = ({
+  value,
+  onChange,
+  presets,
+  label,
+}: {
+  value: string
+  onChange: (color: string) => void
+  presets: typeof TEXT_COLOR_PRESETS
+  label: string
+}) => {
+  const [showCustom, setShowCustom] = useState(false)
+  
+  return (
+    <div>
+      <label className="text-sm text-surface-300 mb-3 block">{label}</label>
+      <div className="grid grid-cols-6 gap-2">
+        {presets.slice(0, 12).map((preset) => (
+          <button
+            key={preset.id}
+            onClick={() => onChange(preset.value)}
+            className={`
+              w-8 h-8 rounded-lg border-2 transition-all relative overflow-hidden
+              ${value === preset.value 
+                ? 'border-amber-400 scale-110 shadow-lg' 
+                : 'border-surface-600 hover:border-surface-500'
+              }
+            `}
+            title={preset.name}
+            style={{
+              background: preset.type === 'gradient' ? preset.value : preset.value,
+            }}
+          >
+            {value === preset.value && (
+              <Check className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-lg" />
+            )}
+          </button>
+        ))}
+      </div>
+      {/* 自定义颜色 */}
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={() => setShowCustom(!showCustom)}
+          className="text-xs text-surface-400 hover:text-surface-200 underline"
+        >
+          自定义颜色
+        </button>
+        {showCustom && (
+          <input
+            type="color"
+            value={value.startsWith('#') ? value : '#FFFFFF'}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-8 h-6 rounded cursor-pointer"
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// 字幕样式预览组件 - 增强版
+// ============================================
+
+const SubtitleStylePreview = ({
+  segment,
+  subtitle,
+  onStyleChange,
+}: {
+  segment: VideoSegment
+  subtitle: SubtitleLine
+  onStyleChange: (newStyle: Partial<SubtitleStyle>) => void
+}) => {
+  const [device, setDevice] = useState<DevicePreset>('pc')
+  const [activeTab, setActiveTab] = useState<string>('presets')
+  const previewRef = useRef<HTMLDivElement>(null)
+  const [previewScale, setPreviewScale] = useState(1)
+  const config = devicePresets[device]
+
+  // 计算预览区域相对于真实分辨率的缩放比例
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewRef.current) {
+        const previewWidth = previewRef.current.offsetWidth
+        const scale = previewWidth / config.width
+        setPreviewScale(scale)
+      }
+    }
+
+    updateScale()
+    window.addEventListener('resize', updateScale)
+    const timer = setTimeout(updateScale, 100)
+    
+    return () => {
+      window.removeEventListener('resize', updateScale)
+      clearTimeout(timer)
+    }
+  }, [device, config.width])
+
+  // 根据缩放比例调整字体大小
+  const scaledFontSize = Math.round(subtitle.style.fontSize * previewScale)
+  
+  // 创建用于预览的字幕项（转换为旧格式以兼容 VideoPreview）
+  const subtitleItem: SubtitleItem = {
+    id: subtitle.id,
+    text: subtitle.text,
+    startTime: subtitle.startTime,
+    endTime: subtitle.endTime,
+    style: {
+      fontSize: scaledFontSize,
+      color: subtitle.style.color,
+      backgroundColor: subtitle.style.backgroundColor,
+      position: subtitle.style.position,
+      alignment: subtitle.style.alignment,
+      hasOutline: subtitle.style.hasOutline,
+      // 扩展样式属性
+      fontFamily: subtitle.style.fontFamily,
+      fontWeight: subtitle.style.fontWeight,
+      letterSpacing: subtitle.style.letterSpacing,
+      outlineColor: subtitle.style.outlineColor,
+      outlineWidth: subtitle.style.outlineWidth,
+      hasShadow: subtitle.style.hasShadow,
+      shadowColor: subtitle.style.shadowColor,
+      shadowBlur: subtitle.style.shadowBlur,
+      shadowOffsetX: subtitle.style.shadowOffsetX,
+      shadowOffsetY: subtitle.style.shadowOffsetY,
+      decorationId: subtitle.style.decorationId,
+      animationId: subtitle.style.animationId,
+      colorType: subtitle.style.colorType,
+      gradientColors: subtitle.style.gradientColors,
+      gradientAngle: subtitle.style.gradientAngle,
+      backgroundPadding: subtitle.style.backgroundPadding,
+      backgroundBorderRadius: subtitle.style.backgroundBorderRadius,
+    } as SubtitleItem['style'],
+  }
+
+  // 应用预设样式
+  const applyPreset = (presetId: string) => {
+    const preset = STYLE_PRESETS.find(p => p.id === presetId)
+    if (preset) {
+      onStyleChange(mergeStyles(DEFAULT_SUBTITLE_STYLE, preset.style))
+    }
+  }
+
+  // 重置为默认样式
+  const resetToDefault = () => {
+    onStyleChange(DEFAULT_SUBTITLE_STYLE)
+  }
+
+  // 样式标签页内容
+  const tabContent = {
+    presets: (
+      <div className="space-y-4">
+        {/* 预设分类 */}
+        {(['platform', 'mood', 'creative'] as const).map((category) => {
+          const categoryNames = {
+            platform: '📱 平台风格',
+            mood: '🎭 情绪氛围',
+            creative: '✨ 创意效果',
+          }
+          const presets = STYLE_PRESETS.filter(p => p.category === category)
+          
+          return (
+            <div key={category}>
+              <h4 className="text-xs text-surface-400 mb-2 font-medium">
+                {categoryNames[category]}
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {presets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => applyPreset(preset.id)}
+                    className="group relative p-3 rounded-xl bg-surface-700/50 hover:bg-surface-700 border border-surface-600 hover:border-amber-400/50 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">{preset.preview}</span>
+                      <span className="text-sm font-medium text-surface-200 group-hover:text-amber-400">
+                        {preset.name}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-surface-500 line-clamp-1">
+                      {preset.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    ),
+    font: (
+      <div className="space-y-5">
+        {/* 字体选择 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 block">字体</label>
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+            {FONT_OPTIONS.map((font) => (
+              <button
+                key={font.family}
+                onClick={() => onStyleChange({ fontFamily: font.family })}
+                className={`
+                  w-full p-3 rounded-lg border transition-all text-left
+                  ${subtitle.style.fontFamily === font.family
+                    ? 'border-amber-400 bg-amber-400/10'
+                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
+                  }
+                `}
+              >
+                <span 
+                  className="text-lg text-surface-200 block"
+                  style={{ fontFamily: `"${font.family}", sans-serif` }}
+                >
+                  {font.preview}
+                </span>
+                <span className="text-xs text-surface-500">{font.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 字重 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
+            <span>字重</span>
+            <span className="font-mono text-amber-400">{subtitle.style.fontWeight}</span>
+          </label>
+          <div className="flex gap-2">
+            {[300, 400, 500, 700, 900].map((weight) => (
+              <Button
+                key={weight}
+                variant={subtitle.style.fontWeight === weight ? 'primary' : 'secondary'}
+                size="xs"
+                className="flex-1"
+                onClick={() => onStyleChange({ fontWeight: weight })}
+              >
+                {weight === 300 && '细'}
+                {weight === 400 && '常规'}
+                {weight === 500 && '中'}
+                {weight === 700 && '粗'}
+                {weight === 900 && '黑'}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* 字号 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
+            <span>字号</span>
+            <span className="font-mono text-amber-400">{subtitle.style.fontSize}px</span>
+          </label>
+          <Slider
+            value={[subtitle.style.fontSize]}
+            min={device === 'phone' ? 48 : 36}
+            max={device === 'phone' ? 120 : 96}
+            step={4}
+            onValueChange={(v) => onStyleChange({ fontSize: v[0] })}
+          />
+        </div>
+
+        {/* 字间距 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
+            <span>字间距</span>
+            <span className="font-mono text-amber-400">{subtitle.style.letterSpacing}px</span>
+          </label>
+          <Slider
+            value={[subtitle.style.letterSpacing]}
+            min={0}
+            max={16}
+            step={1}
+            onValueChange={(v) => onStyleChange({ letterSpacing: v[0] })}
+          />
+        </div>
+      </div>
+    ),
+    color: (
+      <div className="space-y-5">
+        {/* 文字颜色 */}
+        <ColorPicker
+          value={subtitle.style.color}
+          onChange={(color) => onStyleChange({ color, colorType: 'solid' })}
+          presets={TEXT_COLOR_PRESETS}
+          label="文字颜色"
+        />
+
+        {/* 渐变开关 */}
+        <div className="flex items-center justify-between py-3 px-4 bg-surface-700/50 rounded-xl">
+          <label className="text-sm text-surface-200">使用渐变色</label>
+          <Switch
+            checked={subtitle.style.colorType === 'gradient'}
+            onCheckedChange={(checked) => onStyleChange({ 
+              colorType: checked ? 'gradient' : 'solid',
+              gradientColors: checked ? ['#FFD700', '#FF6B6B'] : undefined,
+              gradientAngle: 90,
+            })}
+          />
+        </div>
+
+        {subtitle.style.colorType === 'gradient' && (
+          <div>
+            <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
+              <span>渐变角度</span>
+              <span className="font-mono text-amber-400">{subtitle.style.gradientAngle || 90}°</span>
+            </label>
+            <Slider
+              value={[subtitle.style.gradientAngle || 90]}
+              min={0}
+              max={360}
+              step={15}
+              onValueChange={(v) => onStyleChange({ gradientAngle: v[0] })}
+            />
+          </div>
+        )}
+
+        {/* 背景 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 block">背景样式</label>
+          <div className="grid grid-cols-3 gap-2">
+            {BACKGROUND_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => onStyleChange({ backgroundColor: preset.value })}
+                className={`
+                  p-2 rounded-lg border text-xs transition-all
+                  ${subtitle.style.backgroundColor === preset.value
+                    ? 'border-amber-400 bg-amber-400/10 text-amber-400'
+                    : 'border-surface-600 hover:border-surface-500 text-surface-400'
+                  }
+                `}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ),
+    effects: (
+      <div className="space-y-5">
+        {/* 花字效果 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center gap-2">
+            <Wand2 className="w-4 h-4 text-amber-400" />
+            <span>花字效果</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-2">
+            {DECORATION_EFFECTS.map((effect) => (
+              <button
+                key={effect.id}
+                onClick={() => onStyleChange({ decorationId: effect.id })}
+                className={`
+                  p-2 rounded-lg border transition-all text-left
+                  ${subtitle.style.decorationId === effect.id
+                    ? 'border-amber-400 bg-amber-400/10'
+                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{effect.preview}</span>
+                  <span className="text-xs text-surface-200">{effect.name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 动画效果 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>动画效果</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-2">
+            {ANIMATION_EFFECTS.map((animation) => (
+              <button
+                key={animation.id}
+                onClick={() => onStyleChange({ animationId: animation.id })}
+                className={`
+                  p-2 rounded-lg border transition-all text-left
+                  ${subtitle.style.animationId === animation.id
+                    ? 'border-amber-400 bg-amber-400/10'
+                    : 'border-surface-600 hover:border-surface-500 bg-surface-700/30'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{animation.preview}</span>
+                  <span className="text-xs text-surface-200">{animation.name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ),
+    position: (
+      <div className="space-y-5">
+        {/* 垂直位置 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 block">垂直位置</label>
+          <div className="flex gap-2">
+            {(['top', 'center', 'bottom'] as const).map((pos) => (
+              <Button
+                key={pos}
+                variant={subtitle.style.position === pos ? 'primary' : 'secondary'}
+                size="sm"
+                className="flex-1"
+                onClick={() => onStyleChange({ position: pos })}
+              >
+                {pos === 'top' && '顶部'}
+                {pos === 'center' && '居中'}
+                {pos === 'bottom' && '底部'}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* 水平对齐 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 block">水平对齐</label>
+          <div className="flex gap-2">
+            <Button
+              variant={subtitle.style.alignment === 'left' ? 'primary' : 'secondary'}
+              size="sm"
+              isIconOnly
+              className="flex-1"
+              onClick={() => onStyleChange({ alignment: 'left' })}
+            >
+              <AlignLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              variant={subtitle.style.alignment === 'center' ? 'primary' : 'secondary'}
+              size="sm"
+              isIconOnly
+              className="flex-1"
+              onClick={() => onStyleChange({ alignment: 'center' })}
+            >
+              <AlignCenter className="w-5 h-5" />
+            </Button>
+            <Button
+              variant={subtitle.style.alignment === 'right' ? 'primary' : 'secondary'}
+              size="sm"
+              isIconOnly
+              className="flex-1"
+              onClick={() => onStyleChange({ alignment: 'right' })}
+            >
+              <AlignRight className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* 边距 */}
+        <div>
+          <label className="text-sm text-surface-300 mb-3 flex items-center justify-between">
+            <span>底部边距</span>
+            <span className="font-mono text-amber-400">{subtitle.style.marginBottom}%</span>
+          </label>
+          <Slider
+            value={[subtitle.style.marginBottom]}
+            min={2}
+            max={25}
+            step={1}
+            onValueChange={(v) => onStyleChange({ marginBottom: v[0] })}
+          />
+        </div>
+      </div>
+    ),
+  }
+
+  return (
+    <div className="flex gap-6">
+      {/* 左侧：预览区域 */}
+      <div className="flex-[2] min-w-0">
+        {/* 设备切换 */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-surface-300 font-medium">预览设备:</span>
+          <div className="flex gap-1 p-1 bg-surface-700 rounded-xl">
+            {(Object.keys(devicePresets) as DevicePreset[]).map((key) => {
+              const preset = devicePresets[key]
+              const Icon = preset.icon
+              const isActive = device === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => setDevice(key)}
+                  className={`
+                    flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    ${isActive 
+                      ? 'bg-amber-500 text-white shadow-lg' 
+                      : 'text-surface-400 hover:text-surface-200 hover:bg-surface-600'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{preset.name}</span>
+                </button>
+              )
+            })}
+          </div>
+          {/* 重置按钮 */}
+          <button
+            onClick={resetToDefault}
+            className="ml-auto flex items-center gap-1 text-xs text-surface-400 hover:text-amber-400 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>重置样式</span>
+          </button>
+        </div>
+
+        {/* 预览区域 */}
+        {device === 'phone' ? (
+          <div className="flex justify-center">
+            <div 
+              ref={previewRef}
+              className="relative overflow-hidden rounded-2xl shadow-2xl border-2 border-surface-600"
+              style={{ 
+                aspectRatio: config.aspectRatio,
+                height: config.previewHeight,
+              }}
+            >
+              <VideoPreview
+                videoUrl={segment.videoUrl}
+                subtitles={[subtitleItem]}
+                startTime={subtitle.startTime}
+                endTime={subtitle.endTime}
+                autoPlay={true}
+                loop={true}
+                showControls={true}
+                mode="native"
+                className="w-full h-full"
+              />
+              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-xs text-white font-medium z-30 pointer-events-none flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>手机竖屏 9:16</span>
+              </div>
+              <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-[10px] text-white/80 font-mono z-30 pointer-events-none">
+                {config.width}×{config.height}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div 
+            ref={previewRef}
+            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600 mx-auto"
+            style={{
+              aspectRatio: config.aspectRatio,
+              height: config.previewHeight,
+              maxWidth: '100%',
+            }}
+          >
+            <VideoPreview
+              videoUrl={segment.videoUrl}
+              subtitles={[subtitleItem]}
+              startTime={subtitle.startTime}
+              endTime={subtitle.endTime}
+              autoPlay={true}
+              loop={true}
+              showControls={true}
+              mode="native"
+              className="w-full h-full"
+            />
+            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-xs text-white font-medium z-30 pointer-events-none flex items-center gap-1.5">
+              <Monitor className="w-3.5 h-3.5" />
+              <span>PC横屏 16:9</span>
+            </div>
+            <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-[10px] text-white/80 font-mono z-30 pointer-events-none">
+              {config.width}×{config.height}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* 右侧：样式控件 */}
+      <div className="flex-1 min-w-[280px] max-w-[320px] bg-surface-900 rounded-xl border border-surface-700 overflow-hidden">
+        {/* 标签页导航 */}
+        <div className="flex border-b border-surface-700 bg-surface-800/50">
+          {[
+            { id: 'presets', icon: Sparkles, label: '预设' },
+            { id: 'font', icon: Type, label: '字体' },
+            { id: 'color', icon: Palette, label: '颜色' },
+            { id: 'effects', icon: Wand2, label: '效果' },
+            { id: 'position', icon: AlignCenter, label: '位置' },
+          ].map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  flex-1 py-2.5 px-1 text-center transition-all border-b-2
+                  ${isActive 
+                    ? 'border-amber-400 text-amber-400 bg-surface-800' 
+                    : 'border-transparent text-surface-500 hover:text-surface-300'
+                  }
+                `}
+              >
+                <Icon className="w-4 h-4 mx-auto mb-0.5" />
+                <span className="text-[10px]">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 标签页内容 */}
+        <div className="p-4 max-h-[450px] overflow-y-auto">
+          {tabContent[activeTab as keyof typeof tabContent]}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ============================================
@@ -246,13 +919,6 @@ export default function SubtitlePage() {
       return () => clearInterval(interval)
     }
   }, [isGenerating])
-
-  // 格式化时间
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${String(secs).padStart(2, '0')}`
-  }
 
   // 获取标签颜色
   const getLabelColor = (label: string, index: number) => {
@@ -639,7 +1305,7 @@ export default function SubtitlePage() {
                                   )}
                                 </div>
 
-                                {/* 字幕样式编辑面板 */}
+                                {/* 字幕样式编辑面板 - 左右布局 */}
                                 <AnimatePresence>
                                   {styleEditingId === subtitle.id && (
                                     <motion.div
@@ -649,112 +1315,30 @@ export default function SubtitlePage() {
                                       transition={{ duration: 0.2 }}
                                       className="overflow-hidden"
                                     >
-                                      <div className="mt-2 p-3 rounded-lg bg-surface-800 border border-surface-700">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <span className="text-xs font-medium text-surface-300">字幕样式</span>
+                                      <div className="mt-3 p-4 rounded-xl bg-surface-800 border border-surface-700">
+                                        <div className="flex items-center justify-between mb-4">
+                                          <div className="flex items-center gap-2">
+                                            <Palette className="w-4 h-4 text-amber-400" />
+                                            <span className="text-sm font-medium text-surface-200">字幕样式编辑</span>
+                                          </div>
                                           <Button
-                                            variant="ghost"
+                                            variant="primary"
                                             size="xs"
                                             onClick={() => {
                                               setStyleEditingId(null)
                                               setStyleEditingSegmentId(null)
                                             }}
                                           >
-                                            完成
+                                            完成编辑
                                           </Button>
                                         </div>
 
-                                        {/* 预览 */}
-                                        <div className="mb-3 p-3 rounded bg-surface-900 flex items-center justify-center min-h-[60px]">
-                                          <span
-                                            className={`px-2 py-1 rounded ${subtitle.style.hasOutline ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : ''}`}
-                                            style={{
-                                              fontSize: `${subtitle.style.fontSize * 0.5}px`,
-                                              color: subtitle.style.color,
-                                              backgroundColor: subtitle.style.backgroundColor,
-                                              textAlign: subtitle.style.alignment,
-                                            }}
-                                          >
-                                            {subtitle.text.slice(0, 15)}{subtitle.text.length > 15 ? '...' : ''}
-                                          </span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                          {/* 字体大小 */}
-                                          <div>
-                                            <label className="text-xs text-surface-400 mb-1.5 block">
-                                              字体大小: {subtitle.style.fontSize}px
-                                            </label>
-                                            <Slider
-                                              value={[subtitle.style.fontSize]}
-                                              min={16}
-                                              max={48}
-                                              step={2}
-                                              onValueChange={(v) => updateSubtitleStyle(segment.id, subtitle.id, { fontSize: v[0] })}
-                                            />
-                                          </div>
-
-                                          {/* 位置 */}
-                                          <div>
-                                            <label className="text-xs text-surface-400 mb-1.5 block">位置</label>
-                                            <div className="flex gap-1">
-                                              {(['top', 'center', 'bottom'] as const).map((pos) => (
-                                                <Button
-                                                  key={pos}
-                                                  variant={subtitle.style.position === pos ? 'primary' : 'secondary'}
-                                                  size="xs"
-                                                  onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { position: pos })}
-                                                >
-                                                  {pos === 'top' && '顶部'}
-                                                  {pos === 'center' && '居中'}
-                                                  {pos === 'bottom' && '底部'}
-                                                </Button>
-                                              ))}
-                                            </div>
-                                          </div>
-
-                                          {/* 对齐 */}
-                                          <div>
-                                            <label className="text-xs text-surface-400 mb-1.5 block">对齐</label>
-                                            <div className="flex gap-1">
-                                              <Button
-                                                variant={subtitle.style.alignment === 'left' ? 'primary' : 'secondary'}
-                                                size="xs"
-                                                isIconOnly
-                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'left' })}
-                                              >
-                                                <AlignLeft className="w-3.5 h-3.5" />
-                                              </Button>
-                                              <Button
-                                                variant={subtitle.style.alignment === 'center' ? 'primary' : 'secondary'}
-                                                size="xs"
-                                                isIconOnly
-                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'center' })}
-                                              >
-                                                <AlignCenter className="w-3.5 h-3.5" />
-                                              </Button>
-                                              <Button
-                                                variant={subtitle.style.alignment === 'right' ? 'primary' : 'secondary'}
-                                                size="xs"
-                                                isIconOnly
-                                                onClick={() => updateSubtitleStyle(segment.id, subtitle.id, { alignment: 'right' })}
-                                              >
-                                                <AlignRight className="w-3.5 h-3.5" />
-                                              </Button>
-                                            </div>
-                                          </div>
-
-                                          {/* 描边 */}
-                                          <div className="flex items-center justify-between">
-                                            <label className="text-xs text-surface-400">文字描边</label>
-                                            <Switch
-                                              checked={subtitle.style.hasOutline}
-                                              onCheckedChange={(checked) =>
-                                                updateSubtitleStyle(segment.id, subtitle.id, { hasOutline: checked })
-                                              }
-                                            />
-                                          </div>
-                                        </div>
+                                        {/* 左右布局的预览 + 控件 */}
+                                        <SubtitleStylePreview
+                                          segment={segment}
+                                          subtitle={subtitle}
+                                          onStyleChange={(newStyle) => updateSubtitleStyle(segment.id, subtitle.id, newStyle)}
+                                        />
                                       </div>
                                     </motion.div>
                                   )}
