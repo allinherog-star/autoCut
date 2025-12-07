@@ -951,24 +951,48 @@ export default function SubtitlePage() {
     try {
       const segment = segments[0]
       
-      // 转换字幕格式
-      const subtitles = segment.subtitles.map((sub) => ({
-        text: sub.text,
-        startTime: sub.startTime,
-        endTime: sub.endTime,
-        style: {
-          fontSize: sub.style.fontSize,
-          fontFamily: sub.style.fontFamily,
-          fontWeight: sub.style.fontWeight,
-          color: sub.style.color,
-          backgroundColor: sub.style.backgroundColor !== 'transparent' ? sub.style.backgroundColor : undefined,
-        },
-        animation: {
-          type: (sub.style.animationId || 'fade') as AnimationEffect['type'],
-          enterDuration: 0.3,
-          exitDuration: 0.2,
-        },
-      }))
+      // 转换字幕格式 - 传递完整样式
+      const subtitles = segment.subtitles.map((sub) => {
+        const style = sub.style
+        return {
+          text: sub.text,
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+          style: {
+            // 字体
+            fontSize: style.fontSize,
+            fontFamily: style.fontFamily,
+            fontWeight: style.fontWeight,
+            letterSpacing: style.letterSpacing,
+            // 颜色
+            color: style.color,
+            backgroundColor: style.backgroundColor !== 'transparent' ? style.backgroundColor : undefined,
+            backgroundPadding: style.backgroundPadding?.x,
+            backgroundRadius: style.backgroundBorderRadius,
+            // 位置
+            position: style.position,
+            alignment: style.alignment,
+            marginBottom: style.marginBottom,
+            // 描边
+            hasOutline: style.hasOutline,
+            outlineColor: style.outlineColor,
+            outlineWidth: style.outlineWidth,
+            // 阴影
+            hasShadow: style.hasShadow,
+            shadowColor: style.shadowColor,
+            shadowBlur: style.shadowBlur,
+            shadowOffsetX: style.shadowOffsetX,
+            shadowOffsetY: style.shadowOffsetY,
+          },
+          animation: {
+            type: (style.animationId || 'fade') as AnimationEffect['type'],
+            enterDuration: 0.3,
+            exitDuration: 0.2,
+          },
+        }
+      })
+
+      console.log('[Export] 字幕配置:', subtitles)
 
       // 进度回调
       const onProgress: ProgressCallback = (progress, message) => {
@@ -986,6 +1010,7 @@ export default function SubtitlePage() {
           width: 1280,
           height: 720,
           fps: 30,
+          keepAudio: true,
         },
         onProgress
       )

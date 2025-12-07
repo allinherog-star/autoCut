@@ -118,10 +118,14 @@ export interface TextStyle {
   backgroundPadding?: number
   /** 背景圆角 */
   backgroundRadius?: number
-  /** 对齐方式 */
+  /** 水平对齐方式 */
   textAlign?: 'left' | 'center' | 'right'
   /** 垂直位置 */
   verticalAlign?: 'top' | 'middle' | 'bottom'
+  /** 底部边距百分比 (0-100) */
+  marginBottom?: number
+  /** 字间距 */
+  letterSpacing?: number
   /** 描边 */
   stroke?: {
     color: string

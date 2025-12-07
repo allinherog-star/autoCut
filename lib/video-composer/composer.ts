@@ -460,11 +460,17 @@ export class VideoComposer {
     ctx.font = `${fontWeight} ${style.fontSize}px "${fontFamily}"`
     ctx.textAlign = style.textAlign ?? 'center'
     ctx.textBaseline = 'middle'
+    
+    // 设置字间距
+    if (style.letterSpacing) {
+      (ctx as any).letterSpacing = `${style.letterSpacing}px`
+    }
 
     // 计算位置
     let x = width / 2
     let y = height - 80
 
+    // 优先使用显式位置
     if (asset.position) {
       x = typeof asset.position.x === 'string'
         ? (parseFloat(asset.position.x) / 100) * width
@@ -473,17 +479,35 @@ export class VideoComposer {
         ? (parseFloat(asset.position.y) / 100) * height
         : asset.position.y
     } else {
-      // 使用 verticalAlign
+      // 使用 verticalAlign 和 marginBottom 计算位置
+      const marginBottom = style.marginBottom ?? 8 // 默认 8%
+      const marginPx = (marginBottom / 100) * height
+      
       switch (style.verticalAlign) {
         case 'top':
-          y = 80
+          y = marginPx + style.fontSize / 2
           break
         case 'middle':
           y = height / 2
           break
         case 'bottom':
         default:
-          y = height - 80
+          y = height - marginPx - style.fontSize / 2
+          break
+      }
+      
+      // 水平对齐
+      switch (style.textAlign) {
+        case 'left':
+          x = 40
+          break
+        case 'right':
+          x = width - 40
+          break
+        case 'center':
+        default:
+          x = width / 2
+          break
       }
     }
 
@@ -695,28 +719,67 @@ export class VideoComposer {
 // 简化 API
 // ============================================
 
+/** 字幕输入参数 */
+export interface SubtitleInput {
+  text: string
+  startTime: number
+  endTime: number
+  style?: {
+    fontSize?: number
+    fontFamily?: string
+    fontWeight?: number
+    color?: string
+    backgroundColor?: string
+    /** 垂直位置: top/middle/bottom */
+    position?: 'top' | 'center' | 'bottom'
+    /** 水平对齐: left/center/right */
+    alignment?: 'left' | 'center' | 'right'
+    /** 底部边距百分比 */
+    marginBottom?: number
+    /** 字间距 */
+    letterSpacing?: number
+    /** 是否有描边 */
+    hasOutline?: boolean
+    /** 描边颜色 */
+    outlineColor?: string
+    /** 描边宽度 */
+    outlineWidth?: number
+    /** 是否有阴影 */
+    hasShadow?: boolean
+    /** 阴影颜色 */
+    shadowColor?: string
+    /** 阴影模糊 */
+    shadowBlur?: number
+    /** 阴影偏移 */
+    shadowOffsetX?: number
+    shadowOffsetY?: number
+    /** 背景内边距 */
+    backgroundPadding?: number
+    /** 背景圆角 */
+    backgroundRadius?: number
+  }
+  animation?: AnimationEffect
+}
+
 /**
  * 快速合成：单视频 + 字幕
+ * 支持完整的样式参数传递
  */
 export async function quickCompose(
   videoUrl: string,
-  subtitles: Array<{
-    text: string
-    startTime: number
-    endTime: number
-    style?: Partial<import('./types').TextStyle>
-    animation?: AnimationEffect
-  }>,
+  subtitles: SubtitleInput[],
   options?: {
     startTime?: number
     endTime?: number
     width?: number
     height?: number
     fps?: number
+    /** 是否保留原声 */
+    keepAudio?: boolean
   },
   onProgress?: ProgressCallback
 ): Promise<string> {
-  const { startTime = 0, endTime, width = 1280, height = 720, fps = 30 } = options ?? {}
+  const { startTime = 0, endTime, width = 1280, height = 720, fps = 30, keepAudio = true } = options ?? {}
 
   // 创建项目
   const project: ComposerProject = {
@@ -740,40 +803,74 @@ export async function quickCompose(
     clipStart: startTime,
     clipEnd: endTime ?? startTime + videoDuration,
     volume: 1,
-    muted: false,
+    muted: !keepAudio,
   }
   project.assets.push(videoAsset)
 
   // 添加字幕素材
   subtitles.forEach((sub, index) => {
+    const s = sub.style ?? {}
+    
+    // 构建完整的文字样式
+    const textStyle: import('./types').TextStyle = {
+      fontSize: s.fontSize ?? 48,
+      fontFamily: s.fontFamily ?? 'Noto Sans SC',
+      fontWeight: s.fontWeight ?? 500,
+      color: s.color ?? '#FFFFFF',
+      backgroundColor: s.backgroundColor,
+      backgroundPadding: s.backgroundPadding ?? 12,
+      backgroundRadius: s.backgroundRadius ?? 6,
+      textAlign: s.alignment ?? 'center',
+      verticalAlign: s.position === 'top' ? 'top' : s.position === 'center' ? 'middle' : 'bottom',
+      marginBottom: s.marginBottom ?? 8,
+      letterSpacing: s.letterSpacing ?? 0,
+    }
+    
+    // 添加描边
+    if (s.hasOutline !== false) {
+      textStyle.stroke = {
+        color: s.outlineColor ?? '#000000',
+        width: s.outlineWidth ?? 2,
+      }
+    }
+    
+    // 添加阴影
+    if (s.hasShadow) {
+      textStyle.shadow = {
+        color: s.shadowColor ?? 'rgba(0,0,0,0.8)',
+        blur: s.shadowBlur ?? 4,
+        offsetX: s.shadowOffsetX ?? 2,
+        offsetY: s.shadowOffsetY ?? 2,
+      }
+    }
+
     const textAsset: TextAsset = {
       id: `subtitle-${index}`,
       type: 'text',
       content: sub.text,
       timelineStart: sub.startTime - startTime,
       duration: sub.endTime - sub.startTime,
-      style: {
-        fontSize: sub.style?.fontSize ?? 48,
-        fontFamily: sub.style?.fontFamily ?? 'Noto Sans SC',
-        fontWeight: sub.style?.fontWeight ?? 500,
-        color: sub.style?.color ?? '#FFFFFF',
-        backgroundColor: sub.style?.backgroundColor,
-        textAlign: 'center',
-        verticalAlign: 'bottom',
-        stroke: {
-          color: '#000000',
-          width: 2,
-        },
-      },
-      animation: sub.animation ?? { type: 'fade' },
+      style: textStyle,
+      animation: sub.animation ?? { type: 'fade', enterDuration: 0.3, exitDuration: 0.2 },
     }
     project.assets.push(textAsset)
+  })
+
+  console.log('[Composer] 项目配置:', {
+    duration: videoDuration,
+    subtitles: subtitles.length,
+    keepAudio,
   })
 
   // 渲染
   const composer = new VideoComposer(project)
   try {
     const result = await composer.render(onProgress)
+    console.log('[Composer] 渲染完成:', {
+      size: (result.size / 1024 / 1024).toFixed(2) + ' MB',
+      duration: result.duration.toFixed(2) + 's',
+      format: result.format,
+    })
     return URL.createObjectURL(result.blob)
   } finally {
     composer.destroy()
