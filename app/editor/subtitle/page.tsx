@@ -468,11 +468,11 @@ const SubtitleStylePreview = ({
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6" onClick={(e) => e.stopPropagation()}>
       {/* 左侧：预览区域 */}
       <div className="flex-[2] min-w-0">
         {/* 设备切换 */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4" onClick={(e) => e.stopPropagation()}>
           <span className="text-sm text-surface-300 font-medium">预览设备:</span>
           <div className="flex gap-1 p-1 bg-surface-700 rounded-xl">
             {(Object.keys(devicePresets) as DevicePreset[]).map((key) => {
@@ -482,7 +482,10 @@ const SubtitleStylePreview = ({
               return (
                 <button
                   key={key}
-                  onClick={() => setDevice(key)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDevice(key)
+                  }}
                   className={`
                     flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
                     ${isActive 
@@ -499,7 +502,10 @@ const SubtitleStylePreview = ({
           </div>
           {/* 重置按钮 */}
           <button
-            onClick={resetToDefault}
+            onClick={(e) => {
+              e.stopPropagation()
+              resetToDefault()
+            }}
             className="ml-auto flex items-center gap-1 text-xs text-surface-400 hover:text-amber-400 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -512,7 +518,7 @@ const SubtitleStylePreview = ({
           <div className="flex justify-center">
             <div 
               ref={previewRef}
-              className="relative overflow-hidden rounded-2xl shadow-2xl border-2 border-surface-600"
+              className="relative overflow-hidden rounded-2xl shadow-2xl border-2 border-surface-600 bg-black"
               style={{ 
                 aspectRatio: config.aspectRatio,
                 height: config.previewHeight,
@@ -527,6 +533,7 @@ const SubtitleStylePreview = ({
                 loop={true}
                 showControls={true}
                 mode="native"
+                objectFit="contain"
                 className="w-full h-full"
               />
               <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-xs text-white font-medium z-30 pointer-events-none flex items-center gap-1.5">
@@ -572,7 +579,10 @@ const SubtitleStylePreview = ({
       </div>
 
       {/* 右侧：样式控件 - 下拉选项形式 */}
-      <div className="flex-1 min-w-[280px] max-w-[320px] bg-surface-900 rounded-xl border border-surface-700 overflow-hidden">
+      <div 
+        className="flex-1 min-w-[280px] max-w-[320px] bg-surface-900 rounded-xl border border-surface-700 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 space-y-4 max-h-[520px] overflow-y-auto">
           {/* 样式预设 */}
           <div>

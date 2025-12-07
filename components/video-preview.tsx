@@ -397,6 +397,8 @@ export interface VideoPreviewProps {
   className?: string
   /** 预览模式：webcodecs（高性能）或 native（兼容） */
   mode?: 'webcodecs' | 'native' | 'auto'
+  /** 视频填充模式：cover（裁剪填满）或 contain（完整显示） */
+  objectFit?: 'cover' | 'contain'
   /** 时间更新回调 */
   onTimeUpdate?: (time: number) => void
   /** 播放状态变化回调 */
@@ -426,6 +428,7 @@ function NativeVideoPreview({
   loop = true,
   showControls = true,
   className = '',
+  objectFit = 'cover',
   onTimeUpdate,
 }: Omit<VideoPreviewProps, 'mode'>) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -626,7 +629,7 @@ function NativeVideoPreview({
       <video
         ref={videoRef}
         src={videoUrl}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`}
         muted={isMuted}
         playsInline
         preload="auto"
