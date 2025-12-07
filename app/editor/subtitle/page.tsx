@@ -47,6 +47,9 @@ import {
   DECORATION_EFFECTS,
   ANIMATION_EFFECTS,
   STYLE_PRESETS,
+  PHONE_FONT_SIZES,
+  PC_FONT_SIZES,
+  getFontSizeName,
   mergeStyles,
 } from '@/lib/subtitle-styles'
 
@@ -192,30 +195,34 @@ interface DeviceConfig {
   aspectRatio: string // CSS aspect-ratio
   width: number // 真实分辨率宽度
   height: number // 真实分辨率高度
-  previewHeight: string // 预览框高度（使用固定高度确保舒适观看）
-  fontScale: number // 字体缩放比例（相对于 PC）
+  description: string // 设备描述
 }
 
+// 真实设备分辨率配置
+// 手机以 iPhone 14 Pro Max 为参考 (1290×2796，但视频通常 1080×1920)
+// PC 以 1080p 为标准 (1920×1080)
 const devicePresets: Record<DevicePreset, DeviceConfig> = {
   phone: {
     name: '手机竖屏',
     icon: Smartphone,
     aspectRatio: '9/16',
-    width: 1080,
-    height: 1920,
-    previewHeight: '500px', // 模拟真实手机屏幕高度
-    fontScale: 1.0,
+    width: 1080, // 短视频标准宽度
+    height: 1920, // 短视频标准高度
+    description: '1080×1920 抖音/快手/小红书',
   },
   pc: {
     name: 'PC横屏',
     icon: Monitor,
     aspectRatio: '16/9',
-    width: 1920,
-    height: 1080,
-    previewHeight: 'auto', // PC横屏使用自适应高度
-    fontScale: 1.0,
+    width: 1920, // 1080p 标准宽度
+    height: 1080, // 1080p 标准高度
+    description: '1920×1080 B站/YouTube',
   },
 }
+
+// 手机预览框高度 - 模拟真实手机屏幕
+// 基于 6.7 英寸手机屏幕比例，预览高度约 560px 能较好模拟真实观感
+const PHONE_PREVIEW_HEIGHT = 560
 
 // ============================================
 // 增强版下拉选择组件
@@ -551,9 +558,13 @@ const SubtitleStylePreview = ({
                       : 'text-surface-400 hover:text-surface-200 hover:bg-surface-600'
                     }
                   `}
+                  title={preset.description}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{preset.name}</span>
+                  {isActive && (
+                    <span className="text-xs opacity-80 font-mono">{preset.width}×{preset.height}</span>
+                  )}
                 </button>
               )
             })}
@@ -571,15 +582,61 @@ const SubtitleStylePreview = ({
           </button>
         </div>
 
-        {/* 预览区域 - 使用缓存的视频组件 */}
+        {/* 预览区域 - 模拟真实设备 */}
         {device === 'phone' ? (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center">
+            {/* 手机模拟器边框 */}
+            <div 
+              className="relative bg-surface-950 rounded-[3rem] p-2 shadow-2xl"
+              style={{ 
+                // 手机边框尺寸，预览高度固定以确保比例一致
+                height: `${PHONE_PREVIEW_HEIGHT + 16}px`,
+              }}
+            >
+              {/* 顶部刘海 */}
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-10" />
+              
+              {/* 屏幕区域 */}
+              <div 
+                ref={previewRef}
+                className="relative overflow-hidden rounded-[2.25rem] bg-black group/video"
+                style={{ 
+                  aspectRatio: config.aspectRatio,
+                  height: `${PHONE_PREVIEW_HEIGHT}px`,
+                }}
+              >
+                {cachedVideoPreview}
+                {/* 最大化按钮 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsMaximized(true)
+                  }}
+                  className="absolute top-3 right-3 p-2 rounded-lg bg-black/60 backdrop-blur-sm text-white opacity-0 group-hover/video:opacity-100 transition-opacity hover:bg-black/80 z-20"
+                  title="最大化预览"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            {/* 分辨率标注 */}
+            <div className="mt-3 flex items-center gap-2 text-xs text-surface-500">
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>{config.width}×{config.height}</span>
+              <span className="text-surface-600">|</span>
+              <span className="text-surface-400">所见即所得</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {/* PC 显示器边框 */}
             <div 
               ref={previewRef}
-              className="relative overflow-hidden rounded-[2.5rem] shadow-2xl border-[3px] border-surface-500 bg-black group/video"
-              style={{ 
+              className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600 bg-black group/video"
+              style={{
                 aspectRatio: config.aspectRatio,
-                height: config.previewHeight,
+                width: '100%',
               }}
             >
               {cachedVideoPreview}
@@ -595,28 +652,14 @@ const SubtitleStylePreview = ({
                 <Maximize2 className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        ) : (
-          <div 
-            ref={previewRef}
-            className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-surface-600 group/video"
-            style={{
-              aspectRatio: config.aspectRatio,
-              width: '100%',
-            }}
-          >
-            {cachedVideoPreview}
-            {/* 最大化按钮 */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsMaximized(true)
-              }}
-              className="absolute top-3 right-3 p-2 rounded-lg bg-black/60 backdrop-blur-sm text-white opacity-0 group-hover/video:opacity-100 transition-opacity hover:bg-black/80 z-20"
-              title="最大化预览"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
+            
+            {/* 分辨率标注 */}
+            <div className="mt-3 flex items-center gap-2 text-xs text-surface-500">
+              <Monitor className="w-3.5 h-3.5" />
+              <span>{config.width}×{config.height}</span>
+              <span className="text-surface-600">|</span>
+              <span className="text-surface-400">所见即所得</span>
+            </div>
           </div>
         )}
 
@@ -642,19 +685,20 @@ const SubtitleStylePreview = ({
             >
               {/* 顶部信息栏 */}
               <div className="absolute -top-12 left-0 right-0 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white">
+                <div className="flex items-center gap-3 text-white">
                   {device === 'phone' ? (
                     <>
                       <Smartphone className="w-4 h-4" />
-                      <span className="text-sm">手机竖屏 9:16</span>
+                      <span className="text-sm font-medium">手机竖屏</span>
                     </>
                   ) : (
                     <>
                       <Monitor className="w-4 h-4" />
-                      <span className="text-sm">PC横屏 16:9</span>
+                      <span className="text-sm font-medium">PC横屏</span>
                     </>
                   )}
-                  <span className="text-xs text-surface-400 ml-2">{config.width}×{config.height}</span>
+                  <span className="px-2 py-0.5 rounded bg-surface-700 text-xs font-mono">{config.width}×{config.height}</span>
+                  <span className="text-xs text-surface-400">{config.description}</span>
                 </div>
                 <button
                   onClick={() => setIsMaximized(false)}
@@ -784,57 +828,101 @@ const SubtitleStylePreview = ({
             />
           </div>
 
-          {/* 字重 + 字号 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-surface-300 mb-2 block">字重</label>
-              <StyleDropdown
-                value={subtitle.style.fontWeight.toString()}
-                options={[
-                  { id: '300', name: '细体', preview: 'Aa', value: 300, description: 'Light' },
-                  { id: '400', name: '常规', preview: 'Aa', value: 400, description: 'Regular' },
-                  { id: '500', name: '中等', preview: 'Aa', value: 500, description: 'Medium' },
-                  { id: '700', name: '粗体', preview: 'Aa', value: 700, description: 'Bold' },
-                  { id: '900', name: '黑体', preview: 'Aa', value: 900, description: 'Black' },
-                ]}
-                onChange={(val) => onStyleChange({ fontWeight: Number(val) })}
-                renderOption={(option, isSelected) => (
-                  <div className={`
-                    flex items-center gap-3 px-3 py-2 cursor-pointer rounded-lg transition-all
-                    ${isSelected 
-                      ? 'bg-amber-500/20 text-amber-400' 
-                      : 'hover:bg-surface-700 text-surface-200'
-                    }
-                  `}>
-                    <span 
-                      className="text-base flex-shrink-0 w-7 text-center"
-                      style={{ fontWeight: option.value as number }}
-                    >
-                      {option.preview}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{option.name}</div>
-                    </div>
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                    )}
+          {/* 字号选择 - 使用标准字号 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 flex items-center gap-2">
+              <Type className="w-4 h-4 text-amber-400" />
+              <span>字号</span>
+              <span className="ml-auto text-amber-400 text-xs">{getFontSizeName(subtitle.style.fontSize, device)}</span>
+            </label>
+            <StyleDropdown
+              value={subtitle.style.fontSize.toString()}
+              groups={(() => {
+                const sizes = device === 'phone' ? PHONE_FONT_SIZES : PC_FONT_SIZES
+                const categories = [
+                  { key: 'small', label: '🔤 小字号' },
+                  { key: 'medium', label: '📝 常规字号' },
+                  { key: 'large', label: '📢 大字号' },
+                  { key: 'xlarge', label: '🎯 特大字号' },
+                ]
+                return categories
+                  .map(cat => ({
+                    label: cat.label,
+                    options: sizes
+                      .filter(s => s.category === cat.key)
+                      .map(s => ({
+                        id: s.value.toString(),
+                        name: s.name,
+                        description: s.description,
+                        value: s.value,
+                        preview: s.category === 'small' ? 'A' : s.category === 'medium' ? 'Aa' : s.category === 'large' ? 'AA' : '大',
+                      })),
+                  }))
+                  .filter(g => g.options.length > 0)
+              })()}
+              onChange={(val) => onStyleChange({ fontSize: Number(val) })}
+              renderOption={(option, isSelected) => (
+                <div className={`
+                  flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg transition-all
+                  ${isSelected 
+                    ? 'bg-amber-500/20 text-amber-400' 
+                    : 'hover:bg-surface-700 text-surface-200'
+                  }
+                `}>
+                  <span 
+                    className="text-base flex-shrink-0 w-8 text-center font-bold"
+                    style={{ fontSize: Math.min(18, Math.max(12, (option.value as number) / 5)) }}
+                  >
+                    {option.preview}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{option.name}</div>
+                    <div className="text-xs text-surface-500">{option.description}</div>
                   </div>
-                )}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-surface-300 mb-2 flex items-center justify-between">
-                <span>字号</span>
-                <span className="font-mono text-amber-400 text-xs">{subtitle.style.fontSize}px</span>
-              </label>
-              <Slider
-                value={[subtitle.style.fontSize]}
-                min={device === 'phone' ? 48 : 36}
-                max={device === 'phone' ? 120 : 96}
-                step={4}
-                onValueChange={(v) => onStyleChange({ fontSize: v[0] })}
-              />
-            </div>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
+          {/* 字重 */}
+          <div>
+            <label className="text-sm text-surface-300 mb-2 block">字重</label>
+            <StyleDropdown
+              value={subtitle.style.fontWeight.toString()}
+              options={[
+                { id: '300', name: '细体', preview: 'Aa', value: 300, description: 'Light' },
+                { id: '400', name: '常规', preview: 'Aa', value: 400, description: 'Regular' },
+                { id: '500', name: '中等', preview: 'Aa', value: 500, description: 'Medium' },
+                { id: '700', name: '粗体', preview: 'Aa', value: 700, description: 'Bold' },
+                { id: '900', name: '黑体', preview: 'Aa', value: 900, description: 'Black' },
+              ]}
+              onChange={(val) => onStyleChange({ fontWeight: Number(val) })}
+              renderOption={(option, isSelected) => (
+                <div className={`
+                  flex items-center gap-3 px-3 py-2 cursor-pointer rounded-lg transition-all
+                  ${isSelected 
+                    ? 'bg-amber-500/20 text-amber-400' 
+                    : 'hover:bg-surface-700 text-surface-200'
+                  }
+                `}>
+                  <span 
+                    className="text-base flex-shrink-0 w-7 text-center"
+                    style={{ fontWeight: option.value as number }}
+                  >
+                    {option.preview}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{option.name}</div>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  )}
+                </div>
+              )}
+            />
           </div>
 
           {/* 文字颜色 */}

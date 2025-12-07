@@ -27,6 +27,56 @@ export const FONT_OPTIONS: FontConfig[] = [
 ]
 
 // ============================================
+// 标准字号配置
+// ============================================
+
+export interface FontSizeOption {
+  value: number       // 字号像素值（内部使用）
+  name: string        // 显示名称（用户友好）
+  description: string // 描述/推荐场景
+  category: 'small' | 'medium' | 'large' | 'xlarge'
+}
+
+// 手机竖屏标准字号 (基于 1080×1920 分辨率)
+export const PHONE_FONT_SIZES: FontSizeOption[] = [
+  { value: 36, name: '极小', description: '适合长文本、多行字幕', category: 'small' },
+  { value: 42, name: '小', description: '信息密集型内容', category: 'small' },
+  { value: 48, name: '较小', description: '标准字幕偏小', category: 'medium' },
+  { value: 54, name: '标准', description: '清晰易读，通用选择', category: 'medium' },
+  { value: 60, name: '中等', description: '短视频常用尺寸', category: 'medium' },
+  { value: 66, name: '较大', description: '抖音/快手标准', category: 'large' },
+  { value: 72, name: '大', description: '强调重点内容', category: 'large' },
+  { value: 84, name: '特大', description: '冲击力强，吸引注意', category: 'xlarge' },
+  { value: 96, name: '超大', description: '标题或特效文字', category: 'xlarge' },
+  { value: 120, name: '巨大', description: '极致视觉冲击', category: 'xlarge' },
+]
+
+// PC横屏标准字号 (基于 1920×1080 分辨率)
+export const PC_FONT_SIZES: FontSizeOption[] = [
+  { value: 28, name: '极小', description: '适合长文本、多行字幕', category: 'small' },
+  { value: 32, name: '小', description: '信息密集型内容', category: 'small' },
+  { value: 36, name: '较小', description: '标准字幕偏小', category: 'medium' },
+  { value: 42, name: '标准', description: 'B站/YouTube 常用', category: 'medium' },
+  { value: 48, name: '中等', description: '清晰醒目', category: 'medium' },
+  { value: 56, name: '较大', description: '强调重点内容', category: 'large' },
+  { value: 64, name: '大', description: '视觉冲击力强', category: 'large' },
+  { value: 72, name: '特大', description: '标题或特效文字', category: 'xlarge' },
+  { value: 84, name: '超大', description: '极致视觉冲击', category: 'xlarge' },
+]
+
+// 获取字号推荐
+export function getFontSizeRecommendation(device: 'phone' | 'pc'): number {
+  return device === 'phone' ? 60 : 42
+}
+
+// 根据像素值获取字号名称
+export function getFontSizeName(value: number, device: 'phone' | 'pc'): string {
+  const sizes = device === 'phone' ? PHONE_FONT_SIZES : PC_FONT_SIZES
+  const found = sizes.find(s => s.value === value)
+  return found?.name || '自定义'
+}
+
+// ============================================
 // 颜色预设
 // ============================================
 
