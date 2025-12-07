@@ -485,6 +485,22 @@ const SubtitleStylePreview = ({
     } as SubtitleItem['style'],
   }), [subtitle.id, subtitle.text, subtitle.startTime, subtitle.endTime, scaledFontSize, styleKey])
 
+  // 缓存视频预览组件 - 只有样式变化时才重新渲染
+  const cachedVideoPreview = useMemo(() => (
+    <VideoPreview
+      videoUrl={segment.videoUrl}
+      subtitles={[subtitleItem]}
+      startTime={subtitle.startTime}
+      endTime={subtitle.endTime}
+      autoPlay={true}
+      loop={true}
+      showControls={true}
+      mode="native"
+      objectFit={device === 'phone' ? 'contain' : 'cover'}
+      className="w-full h-full"
+    />
+  ), [segment.videoUrl, subtitleItem, subtitle.startTime, subtitle.endTime, device])
+
   // 应用预设样式
   const applyPreset = (presetId: string) => {
     const preset = STYLE_PRESETS.find(p => p.id === presetId)
@@ -555,7 +571,7 @@ const SubtitleStylePreview = ({
           </button>
         </div>
 
-        {/* 预览区域 */}
+        {/* 预览区域 - 使用缓存的视频组件 */}
         {device === 'phone' ? (
           <div className="flex justify-center">
             <div 
@@ -566,18 +582,7 @@ const SubtitleStylePreview = ({
                 height: config.previewHeight,
               }}
             >
-              <VideoPreview
-                videoUrl={segment.videoUrl}
-                subtitles={[subtitleItem]}
-                startTime={subtitle.startTime}
-                endTime={subtitle.endTime}
-                autoPlay={true}
-                loop={true}
-                showControls={true}
-                mode="native"
-                objectFit="contain"
-                className="w-full h-full"
-              />
+              {cachedVideoPreview}
               {/* 最大化按钮 */}
               <button
                 onClick={(e) => {
@@ -600,17 +605,7 @@ const SubtitleStylePreview = ({
               width: '100%',
             }}
           >
-            <VideoPreview
-              videoUrl={segment.videoUrl}
-              subtitles={[subtitleItem]}
-              startTime={subtitle.startTime}
-              endTime={subtitle.endTime}
-              autoPlay={true}
-              loop={true}
-              showControls={true}
-              mode="native"
-              className="w-full h-full"
-            />
+            {cachedVideoPreview}
             {/* 最大化按钮 */}
             <button
               onClick={(e) => {
@@ -669,7 +664,7 @@ const SubtitleStylePreview = ({
                 </button>
               </div>
 
-              {/* 视频预览 */}
+              {/* 视频预览 - 使用缓存的字幕项 */}
               <div 
                 className={`
                   relative overflow-hidden shadow-2xl bg-black
@@ -684,18 +679,7 @@ const SubtitleStylePreview = ({
                   width: device === 'phone' ? 'auto' : 'min(85vw, 1100px)',
                 }}
               >
-                <VideoPreview
-                  videoUrl={segment.videoUrl}
-                  subtitles={[subtitleItem]}
-                  startTime={subtitle.startTime}
-                  endTime={subtitle.endTime}
-                  autoPlay={true}
-                  loop={true}
-                  showControls={true}
-                  mode="native"
-                  objectFit={device === 'phone' ? 'contain' : 'cover'}
-                  className="w-full h-full"
-                />
+                {cachedVideoPreview}
               </div>
 
               {/* 字幕文本 */}
