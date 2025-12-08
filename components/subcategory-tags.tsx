@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check } from 'lucide-react'
-import { Spinner } from '@/components/ui'
+import { X, Check, ChevronDown, Tag, Filter } from 'lucide-react'
+import { Spinner, Button } from '@/components/ui'
 import {
   getAllCategories,
   type CategoryTag,
@@ -48,6 +48,7 @@ export function SubcategoryTags({
 }: SubcategoryTagsProps) {
   const [dimensions, setDimensions] = useState<DimensionGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // 加载分类数据
   useEffect(() => {
@@ -102,117 +103,161 @@ export function SubcategoryTags({
 
   return (
     <div className={className}>
-      {/* 平铺的标签区域 */}
-      <div className="space-y-4">
-        {filteredDimensions.map((dim) => {
-          const DimensionIcon = DIMENSION_ICONS[dim.dimension]
-          const colors = DIMENSION_COLORS[dim.dimension] || { text: 'text-surface-400', bg: 'bg-surface-800' }
-          
-          return (
-            <div key={dim.dimension}>
-              {/* 维度标题 */}
-              <div className="flex items-center gap-2 mb-2.5">
-                {DimensionIcon && <DimensionIcon className={`w-4 h-4 ${colors.text}`} />}
-                <span className={`text-sm font-medium ${colors.text}`}>
-                  {DIMENSION_LABELS[dim.dimension] || dim.name}
-                </span>
-              </div>
+      {/* 顶部操作栏 - 已选标签 + 筛选按钮 */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* 筛选按钮 */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`
+            flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-200
+            ${isExpanded 
+              ? 'border-amber-400 bg-amber-400/10 text-amber-400' 
+              : 'border-surface-700 bg-surface-800/60 text-surface-300 hover:border-surface-500 hover:bg-surface-800'
+            }
+          `}
+        >
+          <Filter className="w-4 h-4" />
+          <span className="text-sm font-medium">筛选标签</span>
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+        </button>
 
-              {/* 标签列表 - 与上传页面风格一致 */}
-              <div className="flex flex-wrap gap-2.5">
-                {dim.tags.map((tag) => {
-                  const isSelected = selectedTags.includes(tag.id)
-                  const iconConfig = getTagIconConfig(dim.dimension, tag.name)
-                  const TagIcon = iconConfig?.icon
-                  const iconColor = iconConfig?.color || 'text-surface-400'
-                  
-                  return (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleTag(tag.id)}
-                      className={`
-                        group relative flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-200
-                        ${isSelected
-                          ? 'border-amber-400 bg-gradient-to-br from-amber-400/15 to-amber-500/5 shadow-lg shadow-amber-400/10'
-                          : 'border-surface-700 bg-surface-800/60 hover:border-surface-500 hover:bg-surface-800 hover:shadow-md'
-                        }
-                      `}
-                    >
-                      {/* 选中标记 */}
-                      {isSelected && (
-                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center shadow-lg">
-                          <Check className="w-2.5 h-2.5 text-surface-950" />
-                        </div>
-                      )}
-                      
-                      {/* 图标 */}
-                      {TagIcon && (
-                        <TagIcon 
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            isSelected ? 'text-amber-400 scale-110' : `${iconColor} group-hover:scale-105`
-                          }`} 
-                        />
-                      )}
-                      
-                      {/* 名称 */}
-                      <span
-                        className={`text-sm font-medium transition-colors ${
-                          isSelected ? 'text-amber-400' : 'text-surface-200 group-hover:text-surface-100'
-                        }`}
-                      >
-                        {tag.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+        {/* 已选标签展示 */}
+        {selectedTags.length > 0 && (
+          <>
+            <div className="h-6 w-px bg-surface-700" />
+            
+            <div className="flex items-center gap-2 flex-wrap flex-1">
+              <span className="text-sm text-surface-500 flex-shrink-0">已选:</span>
+              {selectedTagObjects.map((tag) => {
+                const iconConfig = getTagIconConfig(tag.dimension, tag.name)
+                const TagIcon = iconConfig?.icon
+                const iconColor = iconConfig?.color || 'text-amber-400'
+                return (
+                  <motion.button
+                    key={tag.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={() => toggleTag(tag.id)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-400/20 to-amber-500/10 text-amber-400 rounded-xl text-sm font-medium border border-amber-400/30 hover:bg-amber-400/25 hover:border-amber-400/50 transition-all group"
+                  >
+                    {TagIcon && <TagIcon className={`w-4 h-4 ${iconColor}`} />}
+                    <span>{tag.name}</span>
+                    <X className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </motion.button>
+                )
+              })}
+              
+              <button
+                onClick={clearAll}
+                className="text-xs text-surface-500 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-surface-800"
+              >
+                清除全部
+              </button>
             </div>
-          )
-        })}
+          </>
+        )}
       </div>
 
-      {/* 已选标签汇总 */}
+      {/* 展开的标签选择面板 */}
       <AnimatePresence>
-        {selectedTags.length > 0 && (
+        {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-surface-800">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-400/20 to-amber-500/10 rounded-lg border border-amber-400/40">
-                <span className="text-sm font-semibold text-amber-400">
-                  已选 {selectedTags.length} 个标签
-                </span>
-              </div>
-              <div className="flex-1 flex flex-wrap items-center gap-1.5">
-                {selectedTagObjects.map((tag) => {
-                  const iconConfig = getTagIconConfig(tag.dimension, tag.name)
-                  const TagIcon = iconConfig?.icon
+            <div className="mt-4 p-4 bg-surface-900/80 backdrop-blur-sm rounded-2xl border border-surface-700/50">
+              <div className="space-y-5">
+                {filteredDimensions.map((dim) => {
+                  const DimensionIcon = DIMENSION_ICONS[dim.dimension]
+                  const colors = DIMENSION_COLORS[dim.dimension] || { text: 'text-surface-400', bg: 'bg-surface-800' }
+                  
                   return (
-                    <motion.button
-                      key={tag.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      onClick={() => toggleTag(tag.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-amber-400/15 text-amber-400 rounded-md text-xs hover:bg-amber-400/25 transition-colors"
-                    >
-                      {TagIcon && <TagIcon className="w-3 h-3" />}
-                      <span>{tag.name}</span>
-                      <X className="w-3 h-3" />
-                    </motion.button>
+                    <div key={dim.dimension}>
+                      {/* 维度标题 */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {DimensionIcon && <DimensionIcon className={`w-4 h-4 ${colors.text}`} />}
+                        <span className={`text-sm font-medium ${colors.text}`}>
+                          {DIMENSION_LABELS[dim.dimension] || dim.name}
+                        </span>
+                        <span className="text-xs text-surface-600">
+                          ({dim.tags.length})
+                        </span>
+                      </div>
+
+                      {/* 标签列表 */}
+                      <div className="flex flex-wrap gap-3">
+                        {dim.tags.map((tag) => {
+                          const isSelected = selectedTags.includes(tag.id)
+                          const iconConfig = getTagIconConfig(dim.dimension, tag.name)
+                          const TagIcon = iconConfig?.icon
+                          const iconColor = iconConfig?.color || 'text-surface-400'
+                          
+                          return (
+                            <button
+                              key={tag.id}
+                              onClick={() => toggleTag(tag.id)}
+                              className={`
+                                group relative flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200
+                                ${isSelected
+                                  ? 'border-amber-400 bg-gradient-to-br from-amber-400/15 to-amber-500/5 shadow-sm shadow-amber-400/10'
+                                  : 'border-surface-700 bg-surface-800/60 hover:border-surface-500 hover:bg-surface-800'
+                                }
+                              `}
+                            >
+                              {/* 选中标记 */}
+                              {isSelected && (
+                                <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
+                                  <Check className="w-2.5 h-2.5 text-surface-950" />
+                                </div>
+                              )}
+                              
+                              {/* 图标 */}
+                              {TagIcon && (
+                                <TagIcon 
+                                  className={`w-4 h-4 ${
+                                    isSelected ? 'text-amber-400' : iconColor
+                                  }`} 
+                                />
+                              )}
+                              
+                              {/* 名称 */}
+                              <span
+                                className={`text-sm font-medium ${
+                                  isSelected ? 'text-amber-400' : 'text-surface-300 group-hover:text-surface-100'
+                                }`}
+                              >
+                                {tag.name}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                   )
                 })}
               </div>
-              <button
-                onClick={clearAll}
-                className="flex-shrink-0 text-xs text-surface-400 hover:text-amber-400 transition-colors px-2 py-1 rounded hover:bg-surface-800"
-              >
-                清除全部
-              </button>
+
+              {/* 底部操作 */}
+              <div className="flex items-center justify-between mt-5 pt-4 border-t border-surface-700/50">
+                <span className="text-xs text-surface-500">
+                  共 {filteredDimensions.reduce((acc, d) => acc + d.tags.length, 0)} 个标签
+                </span>
+                <div className="flex items-center gap-2">
+                  {selectedTags.length > 0 && (
+                    <Button variant="ghost" size="xs" onClick={clearAll}>
+                      清除选择
+                    </Button>
+                  )}
+                  <Button variant="primary" size="xs" onClick={() => setIsExpanded(false)}>
+                    确定 ({selectedTags.length})
+                  </Button>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

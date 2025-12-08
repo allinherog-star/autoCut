@@ -478,39 +478,6 @@ export default function LibraryPage() {
                 />
               </div>
 
-              {/* 视图控制 */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* 结果统计 */}
-                <span className="text-sm text-surface-500">
-                  {pagination?.total || 0} 个结果
-                </span>
-
-                {/* 视图切换 */}
-                <div className="flex items-center gap-1 bg-surface-800 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      viewMode === 'grid'
-                        ? 'bg-surface-700 text-surface-100'
-                        : 'text-surface-500 hover:text-surface-300'
-                    }`}
-                    title="网格视图"
-                  >
-                    <Grid className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      viewMode === 'list'
-                        ? 'bg-surface-700 text-surface-100'
-                        : 'text-surface-500 hover:text-surface-300'
-                    }`}
-                    title="列表视图"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* 批量操作栏 */}
