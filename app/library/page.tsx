@@ -36,6 +36,9 @@ import {
   Tag,
   Home,
   ChevronRight,
+  Heart,
+  RotateCcw,
+  Maximize2,
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
@@ -52,7 +55,7 @@ import {
   type MediaSource,
 } from '@/lib/api/media'
 import { getAllCategories, type CategoryTag } from '@/lib/api/categories'
-import { EMOTION_TEXT_PRESETS, presetToCSS, type EmotionTextStyle } from '@/lib/emotion-text-effects'
+import { EMOTION_TEXT_PRESETS, presetToCSS, type EmotionTextStyle, type EmotionType, EMOTION_COLORS, getEmotionLabel } from '@/lib/emotion-text-effects'
 import { 
   STICKER_PRESETS, 
   STICKER_CATEGORY_CONFIG, 
@@ -61,6 +64,7 @@ import {
   type StickerCategory,
   type StickerPreset,
 } from '@/lib/sticker-presets'
+import { EmotionTextEffect } from '@/components/emotion-text-effect'
 
 // ============================================
 // 类型定义
@@ -205,6 +209,10 @@ export default function LibraryPage() {
   // 预览状态
   const [previewMedia, setPreviewMedia] = useState<Media | null>(null)
 
+  // 情绪花字预览状态
+  const [previewEmotion, setPreviewEmotion] = useState<EmotionTextStyle | null>(null)
+  const [emotionPreviewKey, setEmotionPreviewKey] = useState(0)
+
   // 用户标签管理
   const [showTagModal, setShowTagModal] = useState(false)
   const [userTags, setUserTags] = useState<CategoryTag[]>([])
@@ -270,6 +278,14 @@ export default function LibraryPage() {
       counts['STICKER'] = mediaSource === 'system' 
         ? STICKER_PRESETS.length 
         : dbCount + STICKER_PRESETS.length
+    }
+    
+    // 情绪类型特殊处理：系统素材来源于代码预设（情绪花字）
+    if (mediaSource === 'system' || mediaSource === 'all') {
+      const dbCount = counts['EMOTION'] || 0
+      counts['EMOTION'] = mediaSource === 'system' 
+        ? EMOTION_TEXT_PRESETS.length 
+        : dbCount + EMOTION_TEXT_PRESETS.length
     }
     
     setTypeCounts(counts)
@@ -755,6 +771,143 @@ export default function LibraryPage() {
                   ))}
                 </div>
               </div>
+            ) : typeFilter === 'EMOTION' && (mediaSource === 'system' || mediaSource === 'all') ? (
+              /* 情绪花字系统预设 - 当选择情绪类型且来源是系统素材时显示 */
+              <div className="space-y-6">
+                {/* 标题 */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-red-400" />
+                    系统情绪花字
+                    <Badge variant="default" size="sm" className="bg-red-500/20 text-red-400 border-0">
+                      {EMOTION_TEXT_PRESETS.length} 个
+                    </Badge>
+                  </h3>
+                </div>
+
+                {/* 情绪类型筛选 */}
+                <div className="flex flex-wrap gap-2">
+                  {(['happy', 'excited', 'surprised', 'love', 'angry', 'sad', 'scared', 'confused', 'cool', 'funny'] as EmotionType[]).map((emotion) => {
+                    const colors = EMOTION_COLORS[emotion]
+                    const count = EMOTION_TEXT_PRESETS.filter(p => p.emotion === emotion).length
+                    const isSelected = categoryTags.includes(emotion)
+                    return (
+                      <button
+                        key={emotion}
+                        className={`px-3 py-1.5 text-sm rounded-lg border transition-all flex items-center gap-1.5
+                          ${isSelected 
+                            ? 'border-current' 
+                            : 'border-surface-700 text-surface-400 hover:text-surface-200 hover:border-surface-500'
+                          }`}
+                        style={isSelected ? { 
+                          backgroundColor: `${colors.primary}20`, 
+                          color: colors.primary,
+                          borderColor: colors.primary
+                        } : undefined}
+                        onClick={() => {
+                          if (isSelected) {
+                            setCategoryTags(categoryTags.filter(t => t !== emotion))
+                          } else {
+                            setCategoryTags([...categoryTags, emotion])
+                          }
+                        }}
+                      >
+                        {getEmotionLabel(emotion)}
+                        <span className="text-xs opacity-60">({count})</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* 情绪花字网格 - 静态缩略图预览 */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {EMOTION_TEXT_PRESETS
+                    .filter(preset => categoryTags.length === 0 || categoryTags.includes(preset.emotion))
+                    .map((preset) => {
+                      const colors = EMOTION_COLORS[preset.emotion]
+                      const displayText = preset.name.replace(/[🔥⭐🚀😱😅💕🍬⚡👊✨🌈🎭🔔💀💣💫❤️😤💧😨🤔😎📺🤣😹💗😘🤩👑💅🍉❓😑🤦✋🥺😭😴🛋️🤤🌸😻🎉📣🤙💘]/, '').trim() || '示例'
+                      return (
+                        <motion.div
+                          key={preset.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          whileHover={{ scale: 1.03 }}
+                          className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-surface-500 transition-all cursor-pointer bg-surface-800/50"
+                          onClick={() => {
+                            setPreviewEmotion(preset)
+                            setEmotionPreviewKey(k => k + 1)
+                          }}
+                        >
+                          {/* 静态预览区域 */}
+                          <div 
+                            className="relative aspect-[4/3] flex items-center justify-center p-3 overflow-hidden"
+                            style={{
+                              background: `radial-gradient(ellipse at center, ${colors.primary}20 0%, transparent 70%), 
+                                           linear-gradient(135deg, ${colors.primary}08 0%, ${colors.secondary}08 100%)`,
+                            }}
+                          >
+                            {/* 网格背景 */}
+                            <div className="absolute inset-0 bg-grid opacity-15" />
+                            
+                            {/* 静态文字预览 - 使用 CSS 样式而非动画组件 */}
+                            <div 
+                              className="relative z-10 text-center leading-tight"
+                              style={{
+                                ...presetToCSS(preset, 0.32),
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {displayText}
+                            </div>
+
+                            {/* 装饰 emoji */}
+                            {preset.decoration && (
+                              <div className="absolute top-2 left-2 text-lg opacity-60">
+                                {preset.decoration.items[0]}
+                              </div>
+                            )}
+                            
+                            {/* 情绪标签 */}
+                            <div className="absolute top-2 right-2">
+                              <Badge 
+                                variant="default" 
+                                size="sm" 
+                                style={{
+                                  backgroundColor: `${colors.primary}30`,
+                                  color: colors.primary,
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                }}
+                              >
+                                {getEmotionLabel(preset.emotion)}
+                              </Badge>
+                            </div>
+
+                            {/* 悬浮播放提示 */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                                <Maximize2 className="w-3.5 h-3.5" />
+                                预览动效
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* 信息 */}
+                          <div className="p-2.5 bg-surface-850">
+                            <p className="text-xs font-medium text-surface-200 truncate" title={preset.name}>
+                              {preset.name}
+                            </p>
+                            <p className="text-[10px] text-surface-500 mt-0.5 truncate">{preset.description}</p>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                </div>
+              </div>
             ) : loading && mediaList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24">
                 <Spinner size="lg" />
@@ -1084,6 +1237,117 @@ export default function LibraryPage() {
         src={previewMedia?.path || ''}
         title={previewMedia?.name}
       />
+
+      {/* 情绪花字预览弹窗 */}
+      <AnimatePresence>
+        {previewEmotion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setPreviewEmotion(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-4xl bg-surface-900 rounded-2xl overflow-hidden border border-surface-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 顶部工具栏 */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-surface-800">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${EMOTION_COLORS[previewEmotion.emotion].primary}20` }}
+                  >
+                    <Heart className="w-5 h-5" style={{ color: EMOTION_COLORS[previewEmotion.emotion].primary }} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-surface-100">{previewEmotion.name}</h3>
+                    <p className="text-sm text-surface-400">{previewEmotion.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEmotionPreviewKey(k => k + 1)}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1.5" />
+                    重播动画
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isIconOnly
+                    onClick={() => setPreviewEmotion(null)}
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* 预览区域 */}
+              <div 
+                className="relative aspect-video flex items-center justify-center overflow-hidden"
+                style={{
+                  background: `radial-gradient(ellipse at center, ${EMOTION_COLORS[previewEmotion.emotion].primary}20 0%, transparent 60%), 
+                               linear-gradient(180deg, #1a1a2e 0%, #0d0d15 100%)`,
+                }}
+              >
+                {/* 网格背景 */}
+                <div className="absolute inset-0 bg-grid opacity-30" />
+                
+                {/* 花字效果 */}
+                <div className="relative z-10">
+                  <EmotionTextEffect
+                    key={emotionPreviewKey}
+                    text={previewEmotion.name.replace(/[🔥⭐🚀😱😅💕🍬⚡👊✨🌈🎭🔔💀💣💫❤️😤💧😨🤔😎📺🤣😹💗😘🤩👑💅🍉❓😑🤦✋🥺😭😴🛋️🤤🌸😻🎉📣🤙💘]/, '').trim() || '示例文字'}
+                    preset={previewEmotion.id}
+                    scale={0.8}
+                  />
+                </div>
+
+                {/* 情绪标签 */}
+                <div className="absolute top-4 left-4">
+                  <Badge 
+                    variant="default" 
+                    size="sm"
+                    style={{
+                      backgroundColor: `${EMOTION_COLORS[previewEmotion.emotion].primary}30`,
+                      color: EMOTION_COLORS[previewEmotion.emotion].primary,
+                    }}
+                  >
+                    {getEmotionLabel(previewEmotion.emotion)}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* 底部信息 */}
+              <div className="px-6 py-4 border-t border-surface-800 bg-surface-850">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-surface-500">动画类型</span>
+                    <p className="text-surface-200 mt-0.5">{previewEmotion.animation.enter}</p>
+                  </div>
+                  <div>
+                    <span className="text-surface-500">循环动画</span>
+                    <p className="text-surface-200 mt-0.5">{previewEmotion.animation.loop || '无'}</p>
+                  </div>
+                  <div>
+                    <span className="text-surface-500">装饰元素</span>
+                    <p className="text-surface-200 mt-0.5">
+                      {previewEmotion.decoration?.items.slice(0, 5).join(' ') || '无'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 用户标签管理弹窗 */}
       <UserTagModal
