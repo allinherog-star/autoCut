@@ -77,13 +77,13 @@ export async function getCategoriesByDimension(
  * 维度显示名称映射
  */
 export const DIMENSION_NAMES: Record<CategoryDimension, string> = {
-  EMOTION: '情绪',
-  INDUSTRY: '行业',
+  EMOTION: '氛围',
+  INDUSTRY: '类型',
   STYLE: '风格',
   SCENE: '场景',
   PLATFORM: '平台',
   TEMPO: '节奏',
-  MOOD: '氛围',
+  MOOD: '调性',
 }
 
 /**

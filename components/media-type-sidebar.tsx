@@ -177,7 +177,7 @@ export function MediaTypeSidebar({
       <div className="flex items-center justify-between px-4 py-4 border-b border-surface-800">
         {!collapsed && (
           <h2 className="text-sm font-semibold text-surface-300 uppercase tracking-wider">
-            素材分类
+            素材类型
           </h2>
         )}
         <button
@@ -262,7 +262,7 @@ export function MediaTypeSidebar({
         <div className="px-4 py-3 border-t border-surface-800">
           <div className="flex items-center justify-between text-xs text-surface-500">
             <span>共 {totalCount} 个素材</span>
-            <span>{MEDIA_TYPE_CONFIG.length - 1} 个分类</span>
+            <span>{MEDIA_TYPE_CONFIG.length - 1} 个类型</span>
           </div>
         </div>
       )}

@@ -2,56 +2,68 @@ import { PrismaClient, CategoryDimension } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// 情绪维度标签
+// 情绪氛围类（表达情感和心理状态）
 const emotionTags = [
-  { name: '开心', nameEn: 'happy', icon: '😄', color: '#FFD93D', description: '欢快、搞笑、轻松的内容' },
-  { name: '感动', nameEn: 'touching', icon: '🥹', color: '#FF6B6B', description: '温暖、走心、催泪的内容' },
-  { name: '治愈', nameEn: 'healing', icon: '🌿', color: '#6BCB77', description: '放松、舒适、解压的内容' },
-  { name: '励志', nameEn: 'inspiring', icon: '💪', color: '#4D96FF', description: '热血、正能量、鼓舞人心' },
-  { name: '紧张', nameEn: 'tense', icon: '😰', color: '#9B59B6', description: '悬疑、紧迫、刺激的内容' },
-  { name: '震撼', nameEn: 'stunning', icon: '🤯', color: '#E74C3C', description: '惊艳、大片感、视觉冲击' },
-  { name: '共鸣', nameEn: 'relatable', icon: '🤝', color: '#3498DB', description: '感同身受、真实、接地气' },
-  { name: '反转', nameEn: 'twist', icon: '🔄', color: '#F39C12', description: '意外、神转折、出人意料' },
-  { name: '可爱', nameEn: 'cute', icon: '🥰', color: '#FF85A2', description: '萌系、甜美、少女心' },
-  { name: '酷炫', nameEn: 'cool', icon: '😎', color: '#2C3E50', description: '潮流、帅气、高级感' },
+  { name: '开心', nameEn: 'happy', icon: null, color: '#FFD93D', description: '欢乐、愉悦、快乐' },
+  { name: '感动', nameEn: 'touching', icon: null, color: '#FF6B6B', description: '泪目、走心、催泪' },
+  { name: '紧张', nameEn: 'tense', icon: null, color: '#9C27B0', description: '悬疑、刺激、心跳加速' },
+  { name: '治愈', nameEn: 'healing', icon: null, color: '#4CAF50', description: '温柔、陪伴、解压' },
+  { name: '暖心', nameEn: 'heartwarming', icon: null, color: '#FF8A80', description: '温情、甜蜜、正能量' },
+  { name: '震撼', nameEn: 'stunning', icon: null, color: '#E91E63', description: '惊艳、大片感、视觉冲击' },
+  { name: '破防', nameEn: 'emotional', icon: null, color: '#F44336', description: 'emo、泪崩、戳心' },
+  { name: '心酸', nameEn: 'bittersweet', icon: null, color: '#2196F3', description: '扎心、伤感、共情' },
+  { name: '热血', nameEn: 'passionate', icon: null, color: '#FF5722', description: '燃爆、激情、冲击' },
+  { name: '励志', nameEn: 'inspiring', icon: null, color: '#FFC107', description: '正能量、逆袭、冲鸭' },
+  { name: '轻松', nameEn: 'relaxed', icon: null, color: '#8BC34A', description: '欢乐、活泼、轻快' },
+  { name: '真实', nameEn: 'authentic', icon: null, color: '#9E9E9E', description: '真诚、接地气、共鸣' },
+  { name: '共鸣', nameEn: 'relatable', icon: null, color: '#03A9F4', description: '感同身受、懂你、戳中' },
 ]
 
-// 行业/垂类维度标签
+// 视频类型维度标签（与上传页面 VIDEO_TYPES 保持一致）
 const industryTags = [
-  { name: '美食', nameEn: 'food', icon: '🍜', color: '#FF6B35' },
-  { name: '旅游', nameEn: 'travel', icon: '✈️', color: '#4ECDC4' },
-  { name: '知识', nameEn: 'knowledge', icon: '📚', color: '#45B7D1' },
-  { name: '科技', nameEn: 'tech', icon: '💻', color: '#96CEB4' },
-  { name: '美妆', nameEn: 'beauty', icon: '💄', color: '#DDA0DD' },
-  { name: '穿搭', nameEn: 'fashion', icon: '👗', color: '#FFB6C1' },
-  { name: '健身', nameEn: 'fitness', icon: '🏋️', color: '#98D8C8' },
-  { name: '音乐', nameEn: 'music', icon: '🎵', color: '#9B59B6' },
-  { name: '舞蹈', nameEn: 'dance', icon: '💃', color: '#E91E63' },
-  { name: '游戏', nameEn: 'gaming', icon: '🎮', color: '#673AB7' },
-  { name: '生活', nameEn: 'lifestyle', icon: '🏠', color: '#8BC34A' },
-  { name: '职场', nameEn: 'career', icon: '💼', color: '#607D8B' },
-  { name: '情感', nameEn: 'relationship', icon: '💕', color: '#E91E63' },
-  { name: '宠物', nameEn: 'pets', icon: '🐱', color: '#FF9800' },
-  { name: '母婴', nameEn: 'parenting', icon: '👶', color: '#FFCDD2' },
-  { name: '汽车', nameEn: 'auto', icon: '🚗', color: '#37474F' },
-  { name: '家居', nameEn: 'home', icon: '🛋️', color: '#795548' },
-  { name: '三农', nameEn: 'agriculture', icon: '🌾', color: '#689F38' },
-  { name: '剧情', nameEn: 'drama', icon: '🎬', color: '#F44336' },
-  { name: '搞笑', nameEn: 'comedy', icon: '😂', color: '#FFEB3B' },
+  // 日常记录类
+  { name: 'Vlog', nameEn: 'vlog', icon: null, color: '#38BDF8', description: '记录日常生活' },
+  { name: '旅游旅拍', nameEn: 'travel', icon: null, color: '#06B6D4', description: '旅行攻略记录' },
+  { name: '生活小妙招', nameEn: 'life-hack', icon: null, color: '#FACC15', description: '实用生活技巧' },
+  
+  // 探店体验类
+  { name: '美食探店', nameEn: 'food', icon: null, color: '#FB923C', description: '美食推荐分享' },
+  { name: '睡寝探店', nameEn: 'hotel', icon: null, color: '#A78BFA', description: '酒店民宿体验' },
+  
+  // 时尚生活类
+  { name: '时尚穿搭', nameEn: 'fashion', icon: null, color: '#F472B6', description: '穿搭分享推荐' },
+  { name: '健身减脂', nameEn: 'fitness', icon: null, color: '#34D399', description: '健身教程分享' },
+  
+  // 知识教程类
+  { name: '课程教程', nameEn: 'tutorial', icon: null, color: '#3B82F6', description: '技能教学课程' },
+  { name: '知识科普', nameEn: 'knowledge', icon: null, color: '#A855F7', description: '科普知识讲解' },
+  { name: '职场攻略', nameEn: 'career', icon: null, color: '#64748B', description: '职场经验分享' },
+  { name: '效率工具', nameEn: 'tools', icon: null, color: '#FBBF24', description: '工具软件推荐' },
+  
+  // 种草带货类
+  { name: '安利种草', nameEn: 'recommend', icon: null, color: '#22C55E', description: '好物推荐分享' },
+  { name: '评测对比', nameEn: 'review', icon: null, color: '#6366F1', description: '产品评测对比' },
+  { name: '优惠带货', nameEn: 'deals', icon: null, color: '#F97316', description: '优惠信息带货' },
+  
+  // 娱乐内容类
+  { name: '影视解说', nameEn: 'movie', icon: null, color: '#EF4444', description: '影视作品解读' },
+  { name: '游戏', nameEn: 'gaming', icon: null, color: '#7C3AED', description: '游戏实况攻略' },
+  { name: '直播切片', nameEn: 'live-clip', icon: null, color: '#EC4899', description: '直播精彩片段' },
+  { name: '情感咨询', nameEn: 'emotion', icon: null, color: '#F43F5E', description: '情感故事分享' },
 ]
 
-// 风格维度标签
+// 风格表现类（内容表现手法或风格特征）
 const styleTags = [
-  { name: '幽默', nameEn: 'humorous', icon: '😜', color: '#FFC107', description: '搞笑、段子、吐槽' },
-  { name: '文艺', nameEn: 'artistic', icon: '🎨', color: '#9C27B0', description: '清新、小众、有格调' },
-  { name: '专业', nameEn: 'professional', icon: '🎓', color: '#2196F3', description: '干货、硬核、有深度' },
-  { name: '潮流', nameEn: 'trendy', icon: '🔥', color: '#FF5722', description: '时尚、流行、年轻化' },
-  { name: '真实', nameEn: 'authentic', icon: '📷', color: '#4CAF50', description: '接地气、日常、真诚' },
-  { name: '高级', nameEn: 'luxury', icon: '✨', color: '#9E9E9E', description: '质感、精致、高端' },
-  { name: '复古', nameEn: 'retro', icon: '📻', color: '#795548', description: '怀旧、经典、年代感' },
-  { name: '极简', nameEn: 'minimal', icon: '⬜', color: '#ECEFF1', description: '简洁、留白、克制' },
-  { name: '热血', nameEn: 'passionate', icon: '🔥', color: '#D32F2F', description: '激情、燃、热烈' },
-  { name: '温柔', nameEn: 'gentle', icon: '🌸', color: '#F8BBD9', description: '柔和、舒适、温馨' },
+  { name: '沙雕', nameEn: 'shagou', icon: null, color: '#FFD93D', description: '搞怪、无厘头、抽象' },
+  { name: '魔性', nameEn: 'magic', icon: null, color: '#E040FB', description: '洗脑、上头、鬼畜' },
+  { name: '戏精', nameEn: 'dramatic', icon: null, color: '#9C27B0', description: '夸张、演技、小剧场' },
+  { name: '表演狂', nameEn: 'performer', icon: null, color: '#E91E63', description: '沉浸式、角色扮演' },
+  { name: '酷炫', nameEn: 'cool', icon: null, color: '#00BCD4', description: '赛博、街头、炫酷' },
+  { name: '娱乐', nameEn: 'entertainment', icon: null, color: '#03A9F4', description: '欢乐、解压、轻松' },
+  { name: '反转', nameEn: 'twist', icon: null, color: '#FF9800', description: '神转折、意外、出人意料' },
+  { name: '潮流', nameEn: 'trendy', icon: null, color: '#7C4DFF', description: '时尚、YYDS、绝绝子' },
+  { name: '可爱', nameEn: 'cute', icon: null, color: '#FF85A2', description: '萌系、甜美、软萌' },
+  { name: '接地气', nameEn: 'relatable', icon: null, color: '#795548', description: '真实、生活化、普通人' },
 ]
 
 // 场景维度标签

@@ -108,7 +108,7 @@ export function CategoryFilter({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
         <input
           type="text"
-          placeholder="搜索分类标签..."
+          placeholder="搜索标签..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full h-10 pl-10 pr-10 bg-surface-800 border border-surface-700 rounded-lg text-sm text-surface-100 placeholder:text-surface-500 focus:outline-none focus:border-amber-400/50"
@@ -237,7 +237,7 @@ export function CategoryFilter({
           onClick={() => setShowAll(!showAll)}
           className="w-full mt-3 py-2 text-sm text-surface-400 hover:text-surface-200 transition-colors"
         >
-          {showAll ? '收起' : `显示全部 ${filteredDimensions.length} 个维度`}
+          {showAll ? '收起' : `显示全部 ${filteredDimensions.length} 组标签`}
         </button>
       )}
     </div>

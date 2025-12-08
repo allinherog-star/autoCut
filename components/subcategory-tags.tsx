@@ -27,13 +27,14 @@ interface SubcategoryTagsProps {
 }
 
 // 只保留这几个维度，按顺序排列
-const VISIBLE_DIMENSIONS: CategoryDimension[] = ['PLATFORM', 'INDUSTRY', 'SCENE', 'EMOTION']
+const VISIBLE_DIMENSIONS: CategoryDimension[] = ['PLATFORM', 'INDUSTRY', 'SCENE', 'STYLE', 'EMOTION']
 
 const DIMENSION_LABELS: Record<string, string> = {
   PLATFORM: '平台',
-  INDUSTRY: '行业',
-  EMOTION: '情绪',
+  INDUSTRY: '类型',
   SCENE: '场景',
+  STYLE: '风格',
+  EMOTION: '情绪',
 }
 
 // ============================================
@@ -94,7 +95,7 @@ export function SubcategoryTags({
     return (
       <div className={`flex items-center justify-center py-4 ${className}`}>
         <Spinner size="sm" />
-        <span className="ml-2 text-sm text-surface-500">加载分类...</span>
+        <span className="ml-2 text-sm text-surface-500">加载标签...</span>
       </div>
     )
   }
