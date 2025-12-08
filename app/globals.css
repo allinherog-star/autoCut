@@ -706,4 +706,485 @@
   50% { border-color: currentColor; }
 }
 
+/* ============================================
+   🎭 情绪文字特效动画
+   灵感来源："一见你就笑"综艺节目花字效果
+   ============================================ */
+
+/* ------------------------------------
+   入场动画
+   ------------------------------------ */
+
+/* 欢乐弹跳 */
+@keyframes emotion-bouncy-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(50px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-10px);
+  }
+  70% {
+    transform: scale(0.9) translateY(5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 彩虹波浪 */
+@keyframes emotion-rainbow-wave {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) rotateX(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+  }
+}
+
+/* 爆炸入场 */
+@keyframes emotion-explosion-in {
+  0% {
+    opacity: 0;
+    transform: scale(3);
+    filter: blur(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 弹簧弹出 */
+@keyframes emotion-spring-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  60% {
+    transform: scale(1.1) rotate(10deg);
+  }
+  80% {
+    transform: scale(0.95) rotate(-5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* 心跳入场 */
+@keyframes emotion-heartbeat-in {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  45% {
+    transform: scale(0.9);
+  }
+  65% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 果冻弹出 */
+@keyframes emotion-jelly-pop {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5) scaleY(1.5);
+  }
+  30% {
+    transform: scaleX(1.2) scaleY(0.8);
+  }
+  50% {
+    transform: scaleX(0.9) scaleY(1.1);
+  }
+  70% {
+    transform: scaleX(1.05) scaleY(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+  }
+}
+
+/* 漫画风格弹出 */
+@keyframes emotion-comic-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-30deg);
+  }
+  25% {
+    transform: scale(1.4) rotate(10deg);
+  }
+  50% {
+    transform: scale(0.8) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* 霓虹闪烁入场 */
+@keyframes emotion-neon-flicker-in {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  30% { opacity: 0.5; }
+  50% { opacity: 1; }
+  70% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+/* 故障入场 */
+@keyframes emotion-glitch-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  20% {
+    transform: translateX(5px);
+    filter: hue-rotate(90deg);
+  }
+  40% {
+    transform: translateX(-5px);
+    filter: hue-rotate(-90deg);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+  80% {
+    transform: translateX(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: hue-rotate(0deg);
+  }
+}
+
+/* 愤怒入场 */
+@keyframes emotion-rage-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  30% {
+    transform: scale(1.05) translateX(-3px);
+  }
+  50% {
+    transform: scale(1) translateX(3px);
+  }
+  70% {
+    transform: scale(1.02) translateX(-2px);
+  }
+  90% {
+    transform: scale(1) translateX(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+/* 悲伤下落 */
+@keyframes emotion-sad-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ------------------------------------
+   循环动画
+   ------------------------------------ */
+
+/* 开心摇摆 */
+@keyframes emotion-happy-wiggle {
+  0%, 100% {
+    transform: rotate(-3deg) translateY(-2px);
+  }
+  50% {
+    transform: rotate(3deg) translateY(2px);
+  }
+}
+
+/* 颜色变换 */
+@keyframes emotion-color-shift {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* 火焰抖动 */
+@keyframes emotion-fire-shake {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-2px) translateY(-1px);
+  }
+  50% {
+    transform: translateX(2px) translateY(1px);
+  }
+  75% {
+    transform: translateX(-2px) translateY(1px);
+  }
+}
+
+/* 惊讶抖动 */
+@keyframes emotion-surprised-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25%, 75% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+/* 温柔漂浮 */
+@keyframes emotion-gentle-float {
+  0%, 100% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* 闪烁 */
+@keyframes emotion-twinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* 摇晃 */
+@keyframes emotion-wobble {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+/* 漫画抖动 */
+@keyframes emotion-comic-shake {
+  0%, 100% {
+    transform: translateX(0) rotate(0);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(2deg);
+  }
+}
+
+/* 霓虹脉冲 */
+@keyframes emotion-neon-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.3);
+  }
+}
+
+/* 故障循环 */
+@keyframes emotion-glitch-loop {
+  0%, 100% {
+    transform: translateX(0);
+    filter: hue-rotate(0deg);
+  }
+  10% {
+    transform: translateX(-2px);
+    filter: hue-rotate(90deg);
+  }
+  20% {
+    transform: translateX(2px);
+    filter: hue-rotate(-90deg);
+  }
+  30% {
+    transform: translateX(0);
+    filter: hue-rotate(0deg);
+  }
+}
+
+/* 愤怒持续抖动 */
+@keyframes emotion-angry-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 50%, 90% {
+    transform: translateX(-3px);
+  }
+  30%, 70% {
+    transform: translateX(3px);
+  }
+}
+
+/* 轻柔摇摆 */
+@keyframes emotion-gentle-sway {
+  0%, 100% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+/* 颤抖 */
+@keyframes emotion-tremble {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  20% {
+    transform: translateX(-1px) translateY(-0.5px);
+  }
+  40% {
+    transform: translateX(1px) translateY(0.5px);
+  }
+  60% {
+    transform: translateX(-1px) translateY(0.5px);
+  }
+  80% {
+    transform: translateX(1px) translateY(-0.5px);
+  }
+}
+
+/* 困惑摇晃 */
+@keyframes emotion-dizzy-wobble {
+  0%, 100% {
+    transform: rotate(-8deg) translateY(-2px);
+  }
+  50% {
+    transform: rotate(8deg) translateY(2px);
+  }
+}
+
+/* ------------------------------------
+   装饰元素动画
+   ------------------------------------ */
+
+/* 星星闪烁 */
+@keyframes emotion-sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2) rotate(180deg);
+  }
+}
+
+/* emoji 漂浮 */
+@keyframes emotion-emoji-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(-8px) rotate(5deg);
+  }
+}
+
+/* 爱心跳动 */
+@keyframes emotion-heart-beat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+}
+
+/* 粒子爆发 */
+@keyframes emotion-particle-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+/* ------------------------------------
+   应用动画的工具类
+   ------------------------------------ */
+
+.emotion-bouncy-pop { animation: emotion-bouncy-pop 0.6s ease-out; }
+.emotion-rainbow-wave { animation: emotion-rainbow-wave 0.8s ease-out; }
+.emotion-explosion-in { animation: emotion-explosion-in 0.5s ease-out; }
+.emotion-spring-pop { animation: emotion-spring-pop 0.6s ease-out; }
+.emotion-heartbeat-in { animation: emotion-heartbeat-in 0.7s ease-out; }
+.emotion-jelly-pop { animation: emotion-jelly-pop 0.6s ease-out; }
+.emotion-comic-pop { animation: emotion-comic-pop 0.5s ease-out; }
+.emotion-neon-flicker-in { animation: emotion-neon-flicker-in 0.6s ease-out; }
+.emotion-glitch-in { animation: emotion-glitch-in 0.4s ease-out; }
+.emotion-rage-in { animation: emotion-rage-in 0.4s ease-out; }
+.emotion-sad-drop { animation: emotion-sad-drop 0.8s ease-out; }
+
+.emotion-happy-wiggle { animation: emotion-happy-wiggle 0.5s ease-in-out infinite; }
+.emotion-color-shift { animation: emotion-color-shift 3s linear infinite; }
+.emotion-fire-shake { animation: emotion-fire-shake 0.2s linear infinite; }
+.emotion-surprised-shake { animation: emotion-surprised-shake 0.15s linear infinite; }
+.emotion-gentle-float { animation: emotion-gentle-float 2s ease-in-out infinite; }
+.emotion-twinkle { animation: emotion-twinkle 1.5s ease-in-out infinite; }
+.emotion-wobble { animation: emotion-wobble 0.8s ease-in-out infinite; }
+.emotion-comic-shake { animation: emotion-comic-shake 0.3s linear infinite; }
+.emotion-neon-pulse { animation: emotion-neon-pulse 1.5s ease-in-out infinite; }
+.emotion-glitch-loop { animation: emotion-glitch-loop 2s linear infinite; }
+.emotion-angry-shake { animation: emotion-angry-shake 0.2s linear infinite; }
+.emotion-gentle-sway { animation: emotion-gentle-sway 3s ease-in-out infinite; }
+.emotion-tremble { animation: emotion-tremble 0.15s linear infinite; }
+.emotion-dizzy-wobble { animation: emotion-dizzy-wobble 1s ease-in-out infinite; }
+
+.emotion-sparkle { animation: emotion-sparkle 1s ease-in-out infinite; }
+.emotion-emoji-float { animation: emotion-emoji-float 2s ease-in-out infinite; }
+.emotion-heart-beat { animation: emotion-heart-beat 1s ease-in-out infinite; }
+.emotion-particle-burst { animation: emotion-particle-burst 0.8s ease-out forwards; }
+
 

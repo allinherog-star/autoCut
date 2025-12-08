@@ -274,6 +274,9 @@ const defaultBottomBarConfig: BottomBarConfig = {
 export default function EditorLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  
+  // 测试模式：允许任意切换步骤
+  const isTestMode = true // TODO: 正式发布时改为 false 或通过环境变量控制
 
   // 根据路径确定当前步骤
   const currentStepIndex = steps.findIndex((step) => pathname?.startsWith(step.path))
@@ -321,7 +324,14 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   }, [currentStep, router])
 
   const goToStep = useCallback((index: number) => {
-    // 只能去已完成的步骤，或者当前步骤已完成时可以去下一步
+    // 测试模式下允许任意切换
+    if (isTestMode) {
+      setCurrentStep(index)
+      router.push(steps[index].path)
+      return
+    }
+    
+    // 正式模式：只能去已完成的步骤，或者当前步骤已完成时可以去下一步
     const canAccess = index < currentStep || // 可以返回之前的步骤
                      (index === currentStep) || // 可以停留在当前步骤
                      (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
@@ -427,8 +437,9 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
               {steps.map((step, index) => {
                 const isActive = index === currentStep
                 const isCompleted = completedSteps.includes(index)
-                // 只有当前步骤已完成时，才能进入下一步
-                const isAccessible =
+                // 测试模式下所有步骤都可以访问
+                // 正式模式：只有当前步骤已完成时，才能进入下一步
+                const isAccessible = isTestMode || // 测试模式下全部可访问
                   index < currentStep || // 可以返回之前的步骤
                   index === currentStep || // 当前步骤
                   (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
