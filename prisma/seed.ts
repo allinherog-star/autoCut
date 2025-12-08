@@ -70,10 +70,9 @@ const styleTags = [
   { name: '上头魔性', nameEn: 'addictive', icon: null, color: '#E040FB', description: '洗脑、上头、鬼畜' },
   { name: '震撼超燃', nameEn: 'epic', icon: null, color: '#F44336', description: '燃爆、震撼、大片感' },
   { name: '硬核解说', nameEn: 'hardcore', icon: null, color: '#3F51B5', description: '专业、深度、干货' },
-  { name: '励志', nameEn: 'inspiring', icon: null, color: '#FFC107', description: '正能量、逆袭、冲鸭' },
+  { name: '振奋励志', nameEn: 'inspiring', icon: null, color: '#FFC107', description: '正能量、逆袭、冲鸭' },
   { name: '另类潮流', nameEn: 'alternative', icon: null, color: '#7C4DFF', description: '小众、独特、个性' },
   { name: '怀旧复古', nameEn: 'retro', icon: null, color: '#795548', description: '复古、经典、年代感' },
-  { name: '心酸励志', nameEn: 'bittersweet', icon: null, color: '#2196F3', description: '扎心、共情、奋斗' },
   { name: '脑洞科幻', nameEn: 'scifi', icon: null, color: '#00BCD4', description: '科幻、脑洞、未来感' },
   { name: '炫酷不翻车', nameEn: 'cool-safe', icon: null, color: '#00E676', description: '炫技、稳定、不出错' },
 ]
@@ -140,14 +139,15 @@ async function main() {
     })
   }
 
-  // 批量创建风格标签
+  // 批量创建风格标签（先删除旧的，再重新创建）
   console.log('📝 创建风格维度标签...')
+  await prisma.categoryTag.deleteMany({
+    where: { dimension: CategoryDimension.STYLE }
+  })
   for (let i = 0; i < styleTags.length; i++) {
     const tag = styleTags[i]
-    await prisma.categoryTag.upsert({
-      where: { dimension_name: { dimension: CategoryDimension.STYLE, name: tag.name } },
-      update: { ...tag, sortOrder: i, isSystem: true },
-      create: { ...tag, dimension: CategoryDimension.STYLE, sortOrder: i, isSystem: true },
+    await prisma.categoryTag.create({
+      data: { ...tag, dimension: CategoryDimension.STYLE, sortOrder: i, isSystem: true },
     })
   }
 
@@ -210,7 +210,7 @@ async function main() {
     '共鸣': 1.5,
     '感动': 1.4,
     '开心': 1.3,
-    '励志': 1.3,
+    '振奋励志': 1.3,
     '紧张': 1.2,
   }
 

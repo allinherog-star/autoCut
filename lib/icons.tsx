@@ -150,10 +150,9 @@ export const STYLE_ICONS: Record<string, TagIconConfig> = {
   '上头魔性': { icon: Zap, color: 'text-fuchsia-400' },
   '震撼超燃': { icon: Flame, color: 'text-red-500' },
   '硬核解说': { icon: GraduationCap, color: 'text-indigo-400' },
-  '励志': { icon: TrendingUp, color: 'text-amber-400' },
+  '振奋励志': { icon: TrendingUp, color: 'text-amber-400' },
   '另类潮流': { icon: Sparkles, color: 'text-violet-400' },
   '怀旧复古': { icon: Music, color: 'text-yellow-700' },
-  '心酸励志': { icon: Heart, color: 'text-blue-400' },
   '脑洞科幻': { icon: Zap, color: 'text-cyan-400' },
   '炫酷不翻车': { icon: Glasses, color: 'text-green-400' },
 }
