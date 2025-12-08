@@ -140,6 +140,76 @@ export const DECORATION_EMOJIS: Record<EmotionType, string[]> = {
 
 export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
   // ============================================
+  // 💥 史诗级冲击系列 - 最震撼最炸裂
+  // ============================================
+  {
+    id: 'hammer-smash',
+    name: '🔨 锤爆碎屏',
+    emotion: 'excited',
+    description: '重锤从天而降砸裂屏幕！蜘蛛网裂纹+碎片飞溅+震颤余波',
+    layout: {
+      randomRotation: { min: -3, max: 3 },
+      randomOffset: { x: 2, y: 2 },
+      randomScale: { min: 1, max: 1.05 },
+      stagger: false,
+      staggerDelay: 0,
+    },
+    text: {
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 100,
+      color: '#FFFFFF',
+      gradient: 'linear-gradient(180deg, #FFFFFF 0%, #FF4444 30%, #CC0000 60%, #880000 100%)',
+      stroke: { color: '#000000', width: 10 },
+      shadow: '0 0 60px #FF0000, 0 0 120px rgba(255,0,0,0.8), 10px 10px 0 #000, -5px -5px 0 #FF4444, 0 0 200px rgba(255,0,0,0.5)',
+    },
+    decoration: {
+      type: 'particle',
+      items: ['💥', '🔨', '⚡', '💢', '🔥', '✨'],
+      position: 'around',
+      animated: true,
+    },
+    animation: {
+      enter: 'hammer-smash-in',
+      loop: 'crack-shake',
+      duration: 400,
+    },
+  },
+  {
+    id: 'epic-impact',
+    name: '💀 毁天灭地',
+    emotion: 'excited',
+    description: '末日级冲击波，天崩地裂的震撼效果',
+    layout: {
+      randomRotation: { min: -5, max: 5 },
+      randomOffset: { x: 3, y: 3 },
+      randomScale: { min: 1, max: 1.1 },
+      stagger: false,
+      staggerDelay: 0,
+    },
+    text: {
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 96,
+      color: '#FFFFFF',
+      gradient: 'linear-gradient(180deg, #FFFFFF 0%, #FFD700 20%, #FF6600 50%, #FF0000 80%, #660000 100%)',
+      stroke: { color: '#000000', width: 8 },
+      shadow: '0 0 80px #FF6600, 0 0 150px rgba(255,102,0,0.7), 8px 8px 0 #000, 0 0 250px rgba(255,0,0,0.4)',
+    },
+    decoration: {
+      type: 'particle',
+      items: ['💀', '☠️', '💥', '🔥', '⚡', '💢'],
+      position: 'around',
+      animated: true,
+    },
+    animation: {
+      enter: 'hammer-smash-in',
+      loop: 'crack-shake',
+      duration: 350,
+    },
+  },
+
+  // ============================================
   // 🔥 综艺爆款系列 - 最高能最吸睛
   // ============================================
   {

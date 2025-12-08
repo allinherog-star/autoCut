@@ -61,6 +61,7 @@ type BackgroundEffectType =
   | 'glitch-bg'          // 故障背景
   | 'rainbow-burst'      // 彩虹爆发
   | 'speed-lines'        // 速度线
+  | 'screen-crack'       // 屏幕裂纹（锤击碎屏）
   | 'none'
 
 // ============================================
@@ -458,6 +459,527 @@ const SpeedLines = memo(function SpeedLines({ color, direction = 'left' }: { col
 })
 
 // ============================================
+// 背景特效组件 - 屏幕裂纹（锤击碎屏效果）- 超真实版
+// ============================================
+
+const ScreenCrack = memo(function ScreenCrack({ color, intensity = 1 }: { color: string; intensity?: number }) {
+  // 生成真实的蜘蛛网状裂纹路径
+  const generateRealisticCrack = useCallback((
+    startAngle: number, 
+    maxLength: number, 
+    depth: number = 0,
+    startX: number = 0,
+    startY: number = 0
+  ): { main: string; branches: string[] } => {
+    const points: { x: number; y: number }[] = [{ x: startX, y: startY }]
+    const branches: string[] = []
+    let currentAngle = startAngle
+    let currentX = startX
+    let currentY = startY
+    
+    // 裂纹段数随深度减少
+    const segments = Math.max(3, Math.floor(randomInRange(6, 10) - depth * 2))
+    // 总长度随深度减少
+    const totalLength = maxLength * Math.pow(0.6, depth)
+    
+    for (let i = 0; i < segments; i++) {
+      // 每段长度不均匀，模拟真实玻璃裂纹
+      const segRatio = randomInRange(0.08, 0.2)
+      const segLength = totalLength * segRatio
+      
+      // 角度变化：越远离中心，变化越小
+      const distFromCenter = Math.sqrt(currentX * currentX + currentY * currentY)
+      const angleVariation = randomInRange(-35, 35) * (1 - distFromCenter / 300)
+      currentAngle += angleVariation
+      
+      // 添加微小的锯齿感
+      const jitter = randomInRange(-3, 3)
+      currentX += Math.cos((currentAngle * Math.PI) / 180) * segLength + jitter
+      currentY += Math.sin((currentAngle * Math.PI) / 180) * segLength + jitter
+      
+      points.push({ x: currentX, y: currentY })
+      
+      // 在某些点产生分支（概率随深度降低）
+      if (depth < 3 && i > 1 && Math.random() < (0.4 - depth * 0.1)) {
+        const branchAngle = currentAngle + randomInRange(-70, 70)
+        const branchResult = generateRealisticCrack(
+          branchAngle,
+          totalLength * 0.5,
+          depth + 1,
+          currentX,
+          currentY
+        )
+        branches.push(branchResult.main)
+        branches.push(...branchResult.branches)
+      }
+    }
+    
+    // 生成平滑的贝塞尔曲线路径
+    let path = `M ${points[0].x} ${points[0].y}`
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1]
+      const curr = points[i]
+      // 使用二次贝塞尔曲线使裂纹更自然
+      const cpX = (prev.x + curr.x) / 2 + randomInRange(-5, 5)
+      const cpY = (prev.y + curr.y) / 2 + randomInRange(-5, 5)
+      path += ` Q ${cpX} ${cpY} ${curr.x} ${curr.y}`
+    }
+    
+    return { main: path, branches }
+  }, [])
+
+  // 生成同心圆裂纹（玻璃碎裂的特征）
+  const generateConcentricCracks = useCallback((radius: number): string[] => {
+    const paths: string[] = []
+    const segments = Math.floor(randomInRange(8, 14))
+    
+    // 在圆周上生成不连续的弧线
+    for (let i = 0; i < segments; i++) {
+      const startAngle = (360 / segments) * i + randomInRange(-10, 10)
+      const arcLength = randomInRange(15, 35) // 弧度
+      const endAngle = startAngle + arcLength
+      
+      const startRad = (startAngle * Math.PI) / 180
+      const endRad = (endAngle * Math.PI) / 180
+      
+      const x1 = Math.cos(startRad) * radius
+      const y1 = Math.sin(startRad) * radius
+      const x2 = Math.cos(endRad) * radius
+      const y2 = Math.sin(endRad) * radius
+      
+      // 弧线有微小波动
+      const midAngle = (startAngle + endAngle) / 2
+      const midRad = (midAngle * Math.PI) / 180
+      const midRadius = radius + randomInRange(-8, 8)
+      const mx = Math.cos(midRad) * midRadius
+      const my = Math.sin(midRad) * midRadius
+      
+      paths.push(`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`)
+    }
+    
+    return paths
+  }, [])
+
+  // 生成所有裂纹数据
+  const crackData = useMemo(() => {
+    const mainCracks: { path: string; width: number; delay: number; glow: number }[] = []
+    const allBranches: { path: string; width: number; delay: number }[] = []
+    const concentricCracks: { path: string; radius: number; delay: number }[] = []
+    
+    // 主放射裂纹（12-16条）
+    const mainCount = Math.floor(randomInRange(12, 16) * intensity)
+    for (let i = 0; i < mainCount; i++) {
+      const baseAngle = (360 / mainCount) * i
+      const angle = baseAngle + randomInRange(-8, 8)
+      const length = randomInRange(150, 250) * intensity
+      
+      const result = generateRealisticCrack(angle, length, 0)
+      
+      mainCracks.push({
+        path: result.main,
+        width: randomInRange(2.5, 4.5),
+        delay: i * 0.015,
+        glow: randomInRange(8, 15),
+      })
+      
+      result.branches.forEach((branch, j) => {
+        allBranches.push({
+          path: branch,
+          width: randomInRange(1, 2.5),
+          delay: i * 0.015 + 0.08 + j * 0.02,
+        })
+      })
+    }
+    
+    // 同心圆裂纹（3-4圈）
+    const circleCount = Math.floor(randomInRange(3, 5) * intensity)
+    for (let i = 0; i < circleCount; i++) {
+      const radius = 40 + i * 45
+      const paths = generateConcentricCracks(radius)
+      paths.forEach((path, j) => {
+        concentricCracks.push({
+          path,
+          radius,
+          delay: 0.15 + i * 0.05 + j * 0.01,
+        })
+      })
+    }
+    
+    return { mainCracks, allBranches, concentricCracks }
+  }, [intensity, generateRealisticCrack, generateConcentricCracks])
+
+  // 生成真实的不规则碎片
+  const shards = useMemo(() => {
+    const count = Math.floor(25 * intensity)
+    return Array.from({ length: count }, (_, i) => {
+      const angle = randomInRange(0, 360)
+      const distance = randomInRange(60, 200)
+      
+      // 生成不规则多边形碎片
+      const vertices = Math.floor(randomInRange(4, 7))
+      const size = randomInRange(8, 25)
+      const points: string[] = []
+      
+      for (let v = 0; v < vertices; v++) {
+        const vAngle = (360 / vertices) * v + randomInRange(-20, 20)
+        const vRadius = size * randomInRange(0.5, 1)
+        const vx = 50 + Math.cos((vAngle * Math.PI) / 180) * vRadius * (100 / size)
+        const vy = 50 + Math.sin((vAngle * Math.PI) / 180) * vRadius * (100 / size)
+        points.push(`${vx}% ${vy}%`)
+      }
+      
+      return {
+        angle,
+        distance,
+        size,
+        clipPath: `polygon(${points.join(', ')})`,
+        rotation: randomInRange(-180, 180),
+        rotationSpeed: randomInRange(-360, 360),
+        delay: randomInRange(0.05, 0.2),
+        gravity: randomInRange(50, 150), // 模拟重力
+        opacity: randomInRange(0.7, 1),
+      }
+    })
+  }, [intensity])
+
+  // 灰尘/微粒效果
+  const dustParticles = useMemo(() => {
+    return Array.from({ length: Math.floor(40 * intensity) }, () => ({
+      angle: randomInRange(0, 360),
+      distance: randomInRange(30, 180),
+      size: randomInRange(2, 6),
+      delay: randomInRange(0, 0.3),
+      duration: randomInRange(0.8, 1.5),
+    }))
+  }, [intensity])
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+      {/* 冲击瞬间的屏幕变形效果 */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%)`,
+        }}
+        initial={{ scale: 1 }}
+        animate={{
+          scale: [1, 1.02, 0.99, 1],
+        }}
+        transition={{
+          duration: 0.15,
+          ease: 'easeOut',
+        }}
+      />
+
+      {/* 冲击闪光 - 多层 */}
+      <motion.div
+        className="absolute"
+        style={{
+          width: '100px',
+          height: '100px',
+          background: `radial-gradient(circle, #FFFFFF 0%, ${color} 30%, transparent 70%)`,
+          filter: 'blur(5px)',
+        }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 3, 2],
+          opacity: [0, 1, 0],
+        }}
+        transition={{
+          duration: 0.2,
+          ease: 'easeOut',
+        }}
+      />
+      
+      {/* 冲击波纹 - 多层扩散 */}
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={`wave-${i}`}
+          className="absolute rounded-full"
+          style={{
+            width: '40px',
+            height: '40px',
+            border: `${3 - i}px solid`,
+            borderColor: i === 0 ? '#FFFFFF' : color,
+            boxShadow: `0 0 ${20 - i * 5}px ${color}`,
+          }}
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{
+            scale: [0, 6 + i * 2, 10 + i * 3],
+            opacity: [1, 0.6, 0],
+          }}
+          transition={{
+            duration: 0.4 + i * 0.1,
+            delay: i * 0.05,
+            ease: 'easeOut',
+          }}
+        />
+      ))}
+
+      {/* 中心凹陷效果 */}
+      <motion.div
+        className="absolute"
+        style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(0,0,0,0.5) 0%, transparent 70%)`,
+          boxShadow: `inset 0 0 30px rgba(0,0,0,0.8)`,
+        }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 1.5, 1],
+          opacity: [0, 0.8, 0.4],
+        }}
+        transition={{
+          duration: 0.3,
+          ease: 'easeOut',
+        }}
+      />
+      
+      {/* 裂纹 SVG */}
+      <svg
+        className="absolute"
+        width="600"
+        height="600"
+        viewBox="-300 -300 600 600"
+        style={{ overflow: 'visible' }}
+      >
+        {/* 定义发光滤镜 */}
+        <defs>
+          <filter id="crack-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feFlood floodColor={color} floodOpacity="0.8" />
+            <feComposite in2="blur" operator="in" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="crack-glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feFlood floodColor="#FFFFFF" floodOpacity="0.9" />
+            <feComposite in2="blur" operator="in" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* 同心圆裂纹 */}
+        {crackData.concentricCracks.map((crack, i) => (
+          <motion.path
+            key={`concentric-${i}`}
+            d={crack.path}
+            fill="none"
+            stroke={color}
+            strokeWidth={randomInRange(1.5, 2.5)}
+            strokeLinecap="round"
+            filter="url(#crack-glow)"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{
+              pathLength: [0, 1],
+              opacity: [0, 0.7, 0.5],
+            }}
+            transition={{
+              duration: 0.15,
+              delay: crack.delay,
+              ease: 'easeOut',
+            }}
+          />
+        ))}
+        
+        {/* 主裂纹 - 带高亮边缘 */}
+        {crackData.mainCracks.map((crack, i) => (
+          <g key={`main-group-${i}`}>
+            {/* 外层发光 */}
+            <motion.path
+              d={crack.path}
+              fill="none"
+              stroke={color}
+              strokeWidth={crack.width + 4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ opacity: 0.3 }}
+              filter="url(#crack-glow)"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{
+                pathLength: [0, 1],
+                opacity: [0, 0.3],
+              }}
+              transition={{
+                duration: 0.2,
+                delay: crack.delay,
+                ease: 'easeOut',
+              }}
+            />
+            {/* 主裂纹线 */}
+            <motion.path
+              d={crack.path}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth={crack.width}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#crack-glow-strong)"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{
+                pathLength: [0, 1],
+                opacity: [0, 1, 0.85],
+              }}
+              transition={{
+                duration: 0.18,
+                delay: crack.delay,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            />
+            {/* 内部深色线 - 模拟裂纹深度 */}
+            <motion.path
+              d={crack.path}
+              fill="none"
+              stroke="rgba(0,0,0,0.6)"
+              strokeWidth={crack.width * 0.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{
+                pathLength: [0, 1],
+                opacity: [0, 0.6],
+              }}
+              transition={{
+                duration: 0.18,
+                delay: crack.delay + 0.02,
+                ease: 'easeOut',
+              }}
+            />
+          </g>
+        ))}
+        
+        {/* 分支裂纹 */}
+        {crackData.allBranches.map((branch, i) => (
+          <motion.path
+            key={`branch-${i}`}
+            d={branch.path}
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth={branch.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ opacity: 0.7 }}
+            filter="url(#crack-glow)"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{
+              pathLength: [0, 1],
+              opacity: [0, 0.7, 0.5],
+            }}
+            transition={{
+              duration: 0.15,
+              delay: branch.delay,
+              ease: 'easeOut',
+            }}
+          />
+        ))}
+      </svg>
+      
+      {/* 真实碎片飞溅 - 带重力和旋转 */}
+      {shards.map((shard, i) => (
+        <motion.div
+          key={`shard-${i}`}
+          className="absolute"
+          style={{
+            width: `${shard.size}px`,
+            height: `${shard.size}px`,
+            background: `linear-gradient(135deg, #FFFFFF 0%, ${color} 40%, rgba(0,0,0,0.3) 100%)`,
+            clipPath: shard.clipPath,
+            boxShadow: `0 0 ${shard.size / 2}px ${color}, inset 0 0 ${shard.size / 4}px rgba(255,255,255,0.5)`,
+          }}
+          initial={{
+            x: 0,
+            y: 0,
+            rotate: 0,
+            scale: 0,
+            opacity: 0,
+          }}
+          animate={{
+            x: [0, Math.cos((shard.angle * Math.PI) / 180) * shard.distance],
+            y: [0, Math.sin((shard.angle * Math.PI) / 180) * shard.distance + shard.gravity],
+            rotate: [0, shard.rotation + shard.rotationSpeed],
+            scale: [0, 1.3, 1, 0.8],
+            opacity: [0, shard.opacity, shard.opacity * 0.8, 0],
+          }}
+          transition={{
+            duration: 0.8,
+            delay: shard.delay,
+            ease: [0.25, 0.46, 0.45, 0.94],
+          }}
+        />
+      ))}
+
+      {/* 灰尘微粒 */}
+      {dustParticles.map((dust, i) => (
+        <motion.div
+          key={`dust-${i}`}
+          className="absolute rounded-full"
+          style={{
+            width: `${dust.size}px`,
+            height: `${dust.size}px`,
+            background: `radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 100%)`,
+          }}
+          initial={{
+            x: 0,
+            y: 0,
+            scale: 0,
+            opacity: 0,
+          }}
+          animate={{
+            x: Math.cos((dust.angle * Math.PI) / 180) * dust.distance,
+            y: Math.sin((dust.angle * Math.PI) / 180) * dust.distance + 30,
+            scale: [0, 1, 0.5],
+            opacity: [0, 0.8, 0],
+          }}
+          transition={{
+            duration: dust.duration,
+            delay: dust.delay,
+            ease: 'easeOut',
+          }}
+        />
+      ))}
+      
+      {/* 持续的裂纹闪烁效果 */}
+      <motion.div
+        className="absolute"
+        style={{
+          width: '500px',
+          height: '500px',
+          background: `radial-gradient(circle, ${color}20 0%, transparent 50%)`,
+        }}
+        animate={{
+          scale: [1, 1.05, 1],
+          opacity: [0.3, 0.6, 0.3],
+        }}
+        transition={{
+          duration: 0.4,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+
+      {/* 边缘暗角效果 */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(circle, transparent 30%, rgba(0,0,0,0.4) 100%)`,
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.5, 0.3] }}
+        transition={{ duration: 0.5 }}
+      />
+    </div>
+  )
+})
+
+// ============================================
 // 背景特效组件 - 彩虹爆发
 // ============================================
 
@@ -691,6 +1213,53 @@ const getAnimationVariants = (preset: EmotionTextStyle, index: number, totalChar
   }
 
   switch (animationType) {
+    // ========== 史诗级冲击系列 ==========
+    case 'hammer-smash-in':
+      // 锤击碎屏：从远处快速冲来，重重锤击屏幕 - 超真实版
+      return {
+        hidden: { 
+          opacity: 0, 
+          scale: 0.02, 
+          y: -200,
+          filter: 'blur(80px) brightness(0.3)',
+          rotateX: 45,
+          rotateZ: randomInRange(-15, 15),
+        },
+        visible: {
+          opacity: [0, 0.5, 1, 1, 1, 1, 1],
+          // 关键：冲击时的压缩和反弹
+          scale: [0.02, 0.15, 0.5, 1.8, 0.75, 1.2, 0.9, 1.05, 1],
+          y: [-200, -80, -20, 15, -8, 5, -2, 0],
+          // 冲击时的形变 - 水平拉伸
+          scaleX: [1, 1, 1, 1.3, 0.85, 1.1, 0.95, 1],
+          scaleY: [1, 1, 1, 0.7, 1.15, 0.92, 1.05, 1],
+          filter: [
+            'blur(80px) brightness(0.3)', 
+            'blur(40px) brightness(0.6)', 
+            'blur(15px) brightness(1)', 
+            'blur(0px) brightness(4)', // 冲击瞬间闪白
+            'blur(2px) brightness(1.5)',
+            'blur(0px) brightness(1.2)',
+            'blur(0px) brightness(1)'
+          ],
+          rotateX: [45, 20, 5, -8, 3, -2, 0],
+          rotateZ: [randomInRange(-15, 15), randomInRange(-8, 8), randomInRange(-3, 3), 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.6,
+            times: [0, 0.15, 0.35, 0.45, 0.55, 0.7, 0.85, 0.95, 1],
+            ease: [0.16, 1, 0.3, 1], // 极速冲入 + 弹性反弹
+          },
+        },
+        exit: { 
+          opacity: 0, 
+          scale: 2.5, 
+          y: -50,
+          filter: 'blur(40px) brightness(3)', 
+          transition: { duration: 0.15, ease: 'easeIn' } 
+        },
+      }
+
     // ========== 综艺爆款系列 ==========
     case 'variety-boom-in':
       return {
@@ -922,6 +1491,34 @@ const getAnimationVariants = (preset: EmotionTextStyle, index: number, totalChar
 // 循环动画变体
 const getLoopVariants = (loopType: string | undefined): Variants => {
   switch (loopType) {
+    // 碎裂震动 - 模拟屏幕被锤碎后的不稳定震动（超真实版）
+    case 'crack-shake':
+      return {
+        animate: {
+          // 不规则的微震动，模拟结构不稳定
+          x: [-3, 4, -2, 5, -4, 2, -1, 3, 0],
+          y: [-2, 3, -4, 2, -1, 3, -2, 1, 0],
+          // 轻微的倾斜，像要倒塌
+          rotate: [-0.8, 1.2, -0.5, 0.8, -1, 0.6, -0.3, 0.4, 0],
+          // 呼吸感的缩放
+          scale: [1, 1.015, 0.99, 1.02, 0.995, 1.01, 1],
+          // 裂纹闪烁效果
+          filter: [
+            'brightness(1) contrast(1)',
+            'brightness(1.15) contrast(1.05)',
+            'brightness(0.98) contrast(1)',
+            'brightness(1.1) contrast(1.02)',
+            'brightness(1) contrast(1)',
+          ],
+          transition: {
+            duration: 0.25,
+            repeat: Infinity,
+            repeatDelay: 0.15,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
     case 'intense-shake':
       return {
         animate: {
@@ -1059,6 +1656,9 @@ function getBackgroundEffect(preset: EmotionTextStyle): {
 
   // 首先根据预设 ID 精确匹配 - 确保每个预设有独特的背景
   const presetBackgroundMap: Record<string, BackgroundEffectType> = {
+    // 史诗级冲击系列 - 屏幕裂纹
+    'hammer-smash': 'screen-crack',         // 锤击碎屏
+    'epic-impact': 'screen-crack',          // 毁天灭地
     // 综艺爆款系列 - 6种不同背景
     'variety-boom': 'explosion-lines',      // 爆炸集中线
     'variety-highlight': 'sparkle-field',   // 星光场
@@ -1120,6 +1720,9 @@ function getBackgroundEffect(preset: EmotionTextStyle): {
   }
 
   // 否则根据动画类型匹配
+  if (animationType.includes('hammer') || animationType.includes('smash')) {
+    return { type: 'screen-crack', color: colors.primary, intensity: 1.3 }
+  }
   if (animationType.includes('boom') || animationType.includes('explosion')) {
     return { type: 'explosion-lines', color: colors.primary, intensity: 1.2 }
   }
@@ -1199,6 +1802,8 @@ const BackgroundEffectRenderer = memo(function BackgroundEffectRenderer({
       return <SpeedLines color={effectConfig.color} />
     case 'rainbow-burst':
       return <RainbowBurst />
+    case 'screen-crack':
+      return <ScreenCrack color={effectConfig.color} intensity={effectConfig.intensity || 1.2} />
     default:
       return null
   }
@@ -1221,6 +1826,9 @@ const ParticleEffectRenderer = memo(function ParticleEffectRenderer({
   const particleConfig = useMemo(() => {
     // 首先根据预设 ID 精确匹配 - 确保每个预设有独特的粒子效果
     const presetParticleMap: Record<string, { type: ParticleType; count: number; spread: number }> = {
+      // 史诗级冲击系列 - 大量火花和碎片
+      'hammer-smash': { type: 'fire', count: 50, spread: 200 },       // 锤击火花爆发
+      'epic-impact': { type: 'fire', count: 60, spread: 220 },        // 毁灭级火花
       // 综艺爆款系列 - 不同粒子类型和数量
       'variety-boom': { type: 'fire', count: 35, spread: 160 },       // 火花爆发
       'variety-highlight': { type: 'sparkle', count: 30, spread: 140 }, // 闪耀星光
