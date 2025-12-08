@@ -52,6 +52,7 @@ import {
   type MediaSource,
 } from '@/lib/api/media'
 import { getAllCategories, type CategoryTag } from '@/lib/api/categories'
+import { EMOTION_TEXT_PRESETS, presetToCSS, type EmotionTextStyle } from '@/lib/emotion-text-effects'
 
 // ============================================
 // 类型定义
@@ -246,6 +247,14 @@ export default function LibraryPage() {
         }
       })
     )
+    
+    // 花字类型特殊处理：系统素材来源于代码预设
+    if (mediaSource === 'system' || mediaSource === 'all') {
+      const dbCount = counts['FANCY_TEXT'] || 0
+      counts['FANCY_TEXT'] = mediaSource === 'system' 
+        ? EMOTION_TEXT_PRESETS.length 
+        : dbCount + EMOTION_TEXT_PRESETS.length
+    }
     
     setTypeCounts(counts)
   }, [mediaSource])
@@ -624,8 +633,63 @@ export default function LibraryPage() {
               </div>
             )}
 
-            {/* 加载状态 */}
-            {loading && mediaList.length === 0 ? (
+            {/* 花字系统预设 - 当选择花字类型且来源是系统素材时显示 */}
+            {typeFilter === 'FANCY_TEXT' && (mediaSource === 'system' || mediaSource === 'all') ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                    <Type className="w-5 h-5 text-cyan-400" />
+                    系统花字预设
+                    <Badge variant="default" size="sm" className="bg-cyan-500/20 text-cyan-400 border-0">
+                      {EMOTION_TEXT_PRESETS.length} 个
+                    </Badge>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {EMOTION_TEXT_PRESETS.map((preset) => (
+                    <motion.div
+                      key={preset.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-cyan-500/50 transition-all cursor-pointer bg-surface-800/50"
+                    >
+                      {/* 预览区域 */}
+                      <div className="relative aspect-video bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center justify-center p-4 overflow-hidden">
+                        {/* 网格背景 */}
+                        <div className="absolute inset-0 bg-grid opacity-20" />
+                        {/* 花字预览 */}
+                        <div 
+                          style={{
+                            ...presetToCSS(preset, 0.35),
+                            maxWidth: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          className="relative z-10"
+                        >
+                          花字
+                        </div>
+                        {/* 类型标签 */}
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="default" size="sm" className="bg-cyan-500/20 text-cyan-400 border-0">
+                            <Type className="w-3 h-3" />
+                          </Badge>
+                        </div>
+                      </div>
+                      {/* 信息 */}
+                      <div className="p-3 bg-surface-850">
+                        <p className="text-sm font-medium text-surface-200 truncate" title={preset.name}>
+                          {preset.name}
+                        </p>
+                        <p className="text-xs text-surface-500 mt-0.5 truncate">{preset.description}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            ) : loading && mediaList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24">
                 <Spinner size="lg" />
                 <p className="mt-4 text-surface-500">加载中...</p>

@@ -874,13 +874,18 @@ export function styleToCSS(style: EnhancedSubtitleStyle, scale: number = 1): Rea
     lineHeight: 1.4,
   }
 
+  // 判断是否使用渐变
+  const hasGradient = style.colorType === 'gradient' && style.gradientColors && style.gradientColors.length >= 2
+
   // 文字颜色/渐变
-  if (style.colorType === 'gradient' && style.gradientColors && style.gradientColors.length >= 2) {
+  if (hasGradient) {
     const angle = style.gradientAngle ?? 90
-    css.background = `linear-gradient(${angle}deg, ${style.gradientColors.join(', ')})`
+    // 使用 backgroundImage 而不是 background，避免与 backgroundClip 冲突
+    css.backgroundImage = `linear-gradient(${angle}deg, ${style.gradientColors!.join(', ')})`
     css.WebkitBackgroundClip = 'text'
     css.WebkitTextFillColor = 'transparent'
     css.backgroundClip = 'text'
+    // 重要：渐变文字不能使用 text-shadow，会产生重影
   } else {
     css.color = style.color
   }
@@ -899,42 +904,48 @@ export function styleToCSS(style: EnhancedSubtitleStyle, scale: number = 1): Rea
     }
   }
 
-  // 描边和阴影
-  const shadows: string[] = []
-  
-  if (style.hasOutline && style.outlineWidth > 0) {
-    const ow = style.outlineWidth * scale
-    const oc = style.outlineColor
-    // 使用 8 方向描边
-    shadows.push(
-      `${-ow}px ${-ow}px 0 ${oc}`,
-      `${ow}px ${-ow}px 0 ${oc}`,
-      `${-ow}px ${ow}px 0 ${oc}`,
-      `${ow}px ${ow}px 0 ${oc}`,
-      `0 ${-ow}px 0 ${oc}`,
-      `0 ${ow}px 0 ${oc}`,
-      `${-ow}px 0 0 ${oc}`,
-      `${ow}px 0 0 ${oc}`
-    )
-  }
-
-  if (style.hasShadow) {
-    shadows.push(
-      `${style.shadowOffsetX * scale}px ${style.shadowOffsetY * scale}px ${style.shadowBlur * scale}px ${style.shadowColor}`
-    )
-  }
-
-  // 应用花字效果的阴影
+  // 花字效果
   const decoration = DECORATION_EFFECTS.find(d => d.id === style.decorationId)
-  if (decoration?.textShadow) {
-    shadows.push(decoration.textShadow)
+
+  // 描边和阴影（只有非渐变文字才能使用，渐变文字会产生重影）
+  if (!hasGradient) {
+    const shadows: string[] = []
+    
+    // 应用花字效果的阴影（优先级最高，因为花字效果通常包含完整的视觉设计）
+    if (decoration?.textShadow) {
+      // 花字效果已有完整阴影，直接使用，不再添加其他阴影
+      css.textShadow = decoration.textShadow
+    } else {
+      // 没有花字效果时，才使用描边和阴影
+      if (style.hasOutline && style.outlineWidth > 0) {
+        const ow = style.outlineWidth * scale
+        const oc = style.outlineColor
+        // 使用 8 方向描边
+        shadows.push(
+          `${-ow}px ${-ow}px 0 ${oc}`,
+          `${ow}px ${-ow}px 0 ${oc}`,
+          `${-ow}px ${ow}px 0 ${oc}`,
+          `${ow}px ${ow}px 0 ${oc}`,
+          `0 ${-ow}px 0 ${oc}`,
+          `0 ${ow}px 0 ${oc}`,
+          `${-ow}px 0 0 ${oc}`,
+          `${ow}px 0 0 ${oc}`
+        )
+      }
+
+      if (style.hasShadow) {
+        shadows.push(
+          `${style.shadowOffsetX * scale}px ${style.shadowOffsetY * scale}px ${style.shadowBlur * scale}px ${style.shadowColor}`
+        )
+      }
+
+      if (shadows.length > 0) {
+        css.textShadow = shadows.join(', ')
+      }
+    }
   }
 
-  if (shadows.length > 0) {
-    css.textShadow = shadows.join(', ')
-  }
-
-  // 花字效果的其他样式
+  // 花字效果的其他样式（非阴影部分，渐变文字也可以用）
   if (decoration?.border) css.border = decoration.border
   if (decoration?.borderRadius) css.borderRadius = decoration.borderRadius
   if (decoration?.padding) css.padding = decoration.padding

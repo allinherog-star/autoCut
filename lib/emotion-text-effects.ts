@@ -275,38 +275,6 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
     },
   },
   {
-    id: 'variety-laugh',
-    name: '🤣 爆笑时刻',
-    emotion: 'funny',
-    description: '笑到不行，综艺搞笑名场面',
-    layout: {
-      randomRotation: { min: -20, max: 20 },
-      randomOffset: { x: 8, y: 6 },
-      randomScale: { min: 0.85, max: 1.2 },
-      stagger: true,
-      staggerDelay: 40,
-    },
-    text: {
-      fontFamily: 'ZCOOL KuaiLe',
-      fontWeight: 400,
-      fontSize: 68,
-      color: '#FFEB3B',
-      stroke: { color: '#E91E63', width: 5 },
-      shadow: '4px 4px 0 #E91E63, 8px 8px 0 #9C27B0, -2px -2px 0 #00BCD4',
-    },
-    decoration: {
-      type: 'emoji',
-      items: ['🤣', '😂', '😹', '💀'],
-      position: 'random',
-      animated: true,
-    },
-    animation: {
-      enter: 'laugh-bounce-in',
-      loop: 'laugh-wobble',
-      duration: 500,
-    },
-  },
-  {
     id: 'variety-awkward',
     name: '😅 社死现场',
     emotion: 'funny',
@@ -412,38 +380,6 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
   // ============================================
   // 🎬 漫画风格系列 - 漫画对话框背景
   // ============================================
-  {
-    id: 'comic-boom',
-    name: '💥 漫画爆炸',
-    emotion: 'excited',
-    description: '漫画式爆炸+对话框背景+多色描边',
-    layout: {
-      randomRotation: { min: -15, max: 15 },
-      randomOffset: { x: 5, y: 4 },
-      randomScale: { min: 0.92, max: 1.2 },
-      stagger: true,
-      staggerDelay: 30,
-    },
-    text: {
-      fontFamily: 'ZCOOL QingKe HuangYou',
-      fontWeight: 400,
-      fontSize: 84,
-      color: '#FFFF00',
-      stroke: { color: '#000000', width: 8 },
-      shadow: '8px 8px 0 #000, -4px -4px 0 #FF0000, 4px -4px 0 #00FF00, -4px 4px 0 #0000FF, 12px 12px 0 rgba(0,0,0,0.3)',
-    },
-    decoration: {
-      type: 'shape',
-      items: ['💥', '💢', '⚡', '✨', '💣', '🌟'],
-      position: 'around',
-      animated: true,
-    },
-    animation: {
-      enter: 'comic-explosion-in',
-      loop: 'comic-vibrate',
-      duration: 350,
-    },
-  },
   {
     id: 'comic-action',
     name: '⚡ 动作线',
@@ -648,104 +584,8 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
   },
 
   // ========== 💀 吐槽系列 ==========
-  {
-    id: 'roast-mode',
-    name: '💀 吐槽模式',
-    emotion: 'funny',
-    description: '毒舌吐槽，笑死人不偿命',
-    layout: {
-      randomRotation: { min: -12, max: 12 },
-      randomOffset: { x: 5, y: 4 },
-      randomScale: { min: 0.88, max: 1.12 },
-      stagger: true,
-      staggerDelay: 45,
-    },
-    text: {
-      fontFamily: 'ZCOOL QingKe HuangYou',
-      fontWeight: 400,
-      fontSize: 62,
-      color: '#69F0AE',
-      stroke: { color: '#1B5E20', width: 4 },
-      shadow: '4px 4px 0 #1B5E20, 0 0 20px rgba(105,240,174,0.5), -2px -2px 0 #00C853',
-    },
-    decoration: {
-      type: 'emoji',
-      items: ['💀', '🙄', '😏', '🤷'],
-      position: 'random',
-      animated: true,
-    },
-    animation: {
-      enter: 'sass-slide-in',
-      loop: 'sass-bounce',
-      duration: 500,
-    },
-  },
-  {
-    id: 'cringe-alert',
-    name: '😬 尬到抠脚',
-    emotion: 'confused',
-    description: '尴尬程度爆表',
-    layout: {
-      randomRotation: { min: -18, max: 18 },
-      randomOffset: { x: 7, y: 6 },
-      randomScale: { min: 0.85, max: 1.1 },
-      stagger: true,
-      staggerDelay: 55,
-    },
-    text: {
-      fontFamily: 'ZCOOL KuaiLe',
-      fontWeight: 400,
-      fontSize: 56,
-      color: '#FFCC80',
-      stroke: { color: '#E65100', width: 4 },
-      shadow: '3px 3px 0 #E65100, 6px 6px 0 #BF360C, 0 0 15px rgba(255,204,128,0.4)',
-    },
-    decoration: {
-      type: 'emoji',
-      items: ['😬', '🫣', '😖', '🙈'],
-      position: 'around',
-      animated: true,
-    },
-    animation: {
-      enter: 'cringe-shrink-in',
-      loop: 'cringe-squirm',
-      duration: 650,
-    },
-  },
 
   // ========== 原有开心系列（优化版） ==========
-  {
-    id: 'happy-bounce',
-    name: '🎉 欢乐弹跳',
-    emotion: 'happy',
-    description: '活泼的弹跳效果，适合开心场景',
-    layout: {
-      randomRotation: { min: -10, max: 10 },
-      randomOffset: { x: 5, y: 5 },
-      randomScale: { min: 0.92, max: 1.12 },
-      stagger: true,
-      staggerDelay: 45,
-    },
-    text: {
-      fontFamily: 'ZCOOL KuaiLe',
-      fontWeight: 400,
-      fontSize: 52,
-      color: '#FFD93D',
-      stroke: { color: '#FF6B6B', width: 4 },
-      shadow: '4px 4px 0 #FF6B6B, 8px 8px 0 rgba(0,0,0,0.25), 0 0 20px rgba(255,217,61,0.4)',
-    },
-    decoration: {
-      type: 'emoji',
-      items: ['✨', '🌟', '💫', '🎉'],
-      position: 'around',
-      animated: true,
-    },
-    animation: {
-      enter: 'bouncy-pop',
-      loop: 'happy-wiggle',
-      duration: 550,
-    },
-  },
   {
     id: 'happy-rainbow',
     name: '🌈 彩虹糖',
@@ -942,38 +782,6 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
 
   // ========== 搞笑系列 ==========
   {
-    id: 'funny-wobble',
-    name: '滑稽摇摆',
-    emotion: 'funny',
-    description: '左右摇摆的搞笑效果',
-    layout: {
-      randomRotation: { min: -15, max: 15 },
-      randomOffset: { x: 6, y: 4 },
-      randomScale: { min: 0.9, max: 1.15 },
-      stagger: true,
-      staggerDelay: 70,
-    },
-    text: {
-      fontFamily: 'ZCOOL KuaiLe',
-      fontWeight: 400,
-      fontSize: 54,
-      color: '#A29BFE',
-      stroke: { color: '#FD79A8', width: 3 },
-      shadow: '3px 3px 0 #FD79A8, -2px 2px 0 #FFEAA7',
-    },
-    decoration: {
-      type: 'emoji',
-      items: ['🤣', '😂', '🤪', '😜'],
-      position: 'random',
-      animated: true,
-    },
-    animation: {
-      enter: 'jelly-pop',
-      loop: 'wobble',
-      duration: 600,
-    },
-  },
-  {
     id: 'funny-cartoon',
     name: '漫画风',
     emotion: 'funny',
@@ -1160,36 +968,41 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
   },
 
   // ========== 困惑系列 ==========
+
+  // ============================================
+  // 🎬 用户自定义花字 - 系统固化
+  // ============================================
   {
-    id: 'confused-spin',
-    name: '一脸问号',
-    emotion: 'confused',
-    description: '困惑旋转效果',
+    id: 'system-variety-fire',
+    name: '🔥 综艺烈焰',
+    emotion: 'excited',
+    description: '综艺节目经典炸裂效果，火焰配色+强力阴影',
     layout: {
-      randomRotation: { min: -20, max: 20 },
-      randomOffset: { x: 8, y: 6 },
-      randomScale: { min: 0.85, max: 1.1 },
-      stagger: true,
-      staggerDelay: 80,
+      randomRotation: { min: -6, max: 6 },
+      randomOffset: { x: 2, y: 2 },
+      randomScale: { min: 1, max: 1.1 },
+      stagger: false,
+      staggerDelay: 0,
     },
     text: {
-      fontFamily: 'ZCOOL KuaiLe',
-      fontWeight: 400,
-      fontSize: 50,
-      color: '#FDCB6E',
-      stroke: { color: '#E17055', width: 2 },
-      shadow: '2px 2px 0 #E17055, 4px 4px 8px rgba(0,0,0,0.2)',
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 88,
+      color: '#FFFFFF',
+      // 注意：不使用 gradient，因为渐变会导致 shadow 失效产生重影
+      stroke: { color: '#000000', width: 8 },
+      shadow: '0 0 50px #FF6B00, 0 0 100px rgba(255,107,0,0.7), 8px 8px 0 #000, -4px -4px 0 #FF0000, 0 0 150px rgba(255,0,0,0.4)',
     },
     decoration: {
-      type: 'emoji',
-      items: ['❓', '🤔', '💭', '🌀'],
+      type: 'particle',
+      items: ['💥', '⚡', '🔥', '✨', '💢'],
       position: 'around',
       animated: true,
     },
     animation: {
-      enter: 'confused-pop',
-      loop: 'dizzy-wobble',
-      duration: 700,
+      enter: 'variety-boom-in',
+      loop: 'intense-shake',
+      duration: 300,
     },
   },
 ]
@@ -1263,42 +1076,39 @@ export function presetToCSS(preset: EmotionTextStyle, scale: number = 1): React.
     lineHeight: 1.4,
   }
 
+  // 判断是否使用渐变
+  const hasGradient = !!preset.text.gradient
+
   // 渐变或纯色
-  if (preset.text.gradient) {
-    css.background = preset.text.gradient
+  if (hasGradient) {
+    // 使用 backgroundImage 而不是 background，避免与 backgroundClip 冲突
+    css.backgroundImage = preset.text.gradient
     css.WebkitBackgroundClip = 'text'
     css.WebkitTextFillColor = 'transparent'
     css.backgroundClip = 'text'
+    // 重要：渐变文字不能使用 text-shadow，会产生重影
+    // 不添加任何阴影效果
   } else {
     css.color = preset.text.color
-  }
-
-  // 阴影
-  const shadows: string[] = []
-  
-  // 描边（使用多方向阴影模拟）
-  if (preset.text.stroke) {
-    const { color, width } = preset.text.stroke
-    const sw = width * scale
-    shadows.push(
-      `${-sw}px ${-sw}px 0 ${color}`,
-      `${sw}px ${-sw}px 0 ${color}`,
-      `${-sw}px ${sw}px 0 ${color}`,
-      `${sw}px ${sw}px 0 ${color}`,
-      `0 ${-sw}px 0 ${color}`,
-      `0 ${sw}px 0 ${color}`,
-      `${-sw}px 0 0 ${color}`,
-      `${sw}px 0 0 ${color}`
-    )
-  }
-
-  // 阴影效果
-  if (preset.text.shadow) {
-    shadows.push(preset.text.shadow)
-  }
-
-  if (shadows.length > 0) {
-    css.textShadow = shadows.join(', ')
+    
+    // 只有纯色文字才能使用阴影效果
+    if (preset.text.shadow) {
+      css.textShadow = preset.text.shadow
+    } else if (preset.text.stroke) {
+      const { color, width } = preset.text.stroke
+      const sw = width * scale
+      const shadows = [
+        `${-sw}px ${-sw}px 0 ${color}`,
+        `${sw}px ${-sw}px 0 ${color}`,
+        `${-sw}px ${sw}px 0 ${color}`,
+        `${sw}px ${sw}px 0 ${color}`,
+        `0 ${-sw}px 0 ${color}`,
+        `0 ${sw}px 0 ${color}`,
+        `${-sw}px 0 0 ${color}`,
+        `${sw}px 0 0 ${color}`
+      ]
+      css.textShadow = shadows.join(', ')
+    }
   }
 
   return css
