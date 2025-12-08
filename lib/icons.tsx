@@ -128,6 +128,7 @@ export const SCENE_ICONS: Record<string, TagIconConfig> = {
   '开头3秒': { icon: Anchor, color: 'text-red-500' },
   '步骤牵引': { icon: ArrowLeftRight, color: 'text-blue-400' },
   '转场过渡': { icon: Layers, color: 'text-purple-400' },
+  '情绪增强': { icon: Heart, color: 'text-pink-400' },
   '三连结尾': { icon: Flag, color: 'text-emerald-400' },
 }
 

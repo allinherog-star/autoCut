@@ -94,6 +94,9 @@ export async function uploadMedia(
   }
 }
 
+// 素材来源类型
+export type MediaSource = 'all' | 'system' | 'user'
+
 /**
  * 获取素材列表
  */
@@ -103,6 +106,7 @@ export async function getMediaList(params?: {
   type?: MediaType
   search?: string
   categories?: string[] // 分类标签 ID 列表
+  source?: MediaSource // 素材来源：全部/系统/用户
 }): Promise<ApiResponse<MediaListResponse>> {
   try {
     const searchParams = new URLSearchParams()
@@ -113,6 +117,9 @@ export async function getMediaList(params?: {
     if (params?.search) searchParams.set('search', params.search)
     if (params?.categories && params.categories.length > 0) {
       searchParams.set('categories', params.categories.join(','))
+    }
+    if (params?.source && params.source !== 'all') {
+      searchParams.set('source', params.source)
     }
 
     const url = `/api/media${searchParams.toString() ? `?${searchParams}` : ''}`

@@ -74,6 +74,49 @@ export async function getCategoriesByDimension(
 }
 
 /**
+ * 创建用户自定义标签
+ */
+export async function createCategoryTag(data: {
+  dimension: CategoryDimension
+  name: string
+  color?: string
+  description?: string
+}): Promise<ApiResponse<CategoryTag>> {
+  try {
+    const response = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return response.json()
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create tag',
+      code: 'CREATE_ERROR',
+    }
+  }
+}
+
+/**
+ * 删除用户自定义标签
+ */
+export async function deleteCategoryTag(id: string): Promise<ApiResponse<{ id: string; deleted: boolean }>> {
+  try {
+    const response = await fetch(`/api/categories?id=${id}`, {
+      method: 'DELETE',
+    })
+    return response.json()
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete tag',
+      code: 'DELETE_ERROR',
+    }
+  }
+}
+
+/**
  * 维度显示名称映射
  */
 export const DIMENSION_NAMES: Record<CategoryDimension, string> = {

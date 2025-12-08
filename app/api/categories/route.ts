@@ -77,3 +77,94 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/categories - 创建用户自定义标签
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { dimension, name, color, description } = body
+
+    // 验证必填字段
+    if (!dimension || !name) {
+      return errorResponse('维度和名称为必填项', 'VALIDATION_ERROR', 400)
+    }
+
+    // 验证维度是否有效
+    if (!Object.values(CategoryDimension).includes(dimension)) {
+      return errorResponse('无效的维度', 'INVALID_DIMENSION', 400)
+    }
+
+    // 检查是否已存在相同名称的标签
+    const existing = await prisma.categoryTag.findUnique({
+      where: { dimension_name: { dimension, name } },
+    })
+
+    if (existing) {
+      return errorResponse('该维度下已存在相同名称的标签', 'DUPLICATE_TAG', 400)
+    }
+
+    // 获取当前维度的最大排序值
+    const maxSort = await prisma.categoryTag.findFirst({
+      where: { dimension },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    })
+
+    // 创建用户自定义标签
+    const tag = await prisma.categoryTag.create({
+      data: {
+        dimension,
+        name,
+        color: color || '#808080',
+        description: description || '',
+        sortOrder: (maxSort?.sortOrder || 0) + 1,
+        isSystem: false, // 用户创建的标签
+      },
+    })
+
+    return successResponse(tag)
+  } catch (error) {
+    console.error('Create category error:', error)
+    return errorResponse('创建标签失败', 'CREATE_FAILED', 500)
+  }
+}
+
+/**
+ * DELETE /api/categories - 删除用户自定义标签
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return errorResponse('缺少标签 ID', 'MISSING_ID', 400)
+    }
+
+    // 检查标签是否存在
+    const tag = await prisma.categoryTag.findUnique({
+      where: { id },
+    })
+
+    if (!tag) {
+      return errorResponse('标签不存在', 'NOT_FOUND', 404)
+    }
+
+    // 不允许删除系统标签
+    if (tag.isSystem) {
+      return errorResponse('系统标签不能删除', 'SYSTEM_TAG', 403)
+    }
+
+    // 删除标签
+    await prisma.categoryTag.delete({
+      where: { id },
+    })
+
+    return successResponse({ id, deleted: true })
+  } catch (error) {
+    console.error('Delete category error:', error)
+    return errorResponse('删除标签失败', 'DELETE_FAILED', 500)
+  }
+}
+

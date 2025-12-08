@@ -41,6 +41,7 @@ import { Button, Card, Badge, Spinner, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { MediaTypeSidebar, MEDIA_TYPE_CONFIG, type MediaTypeFilter } from '@/components/media-type-sidebar'
 import { SubcategoryTags } from '@/components/subcategory-tags'
+import { UserTagModal } from '@/components/user-tag-modal'
 import {
   getMediaList,
   deleteMedia,
@@ -48,13 +49,22 @@ import {
   type Media,
   type MediaType,
   type MediaListResponse,
+  type MediaSource,
 } from '@/lib/api/media'
+import { getAllCategories, type CategoryTag } from '@/lib/api/categories'
 
 // ============================================
 // 类型定义
 // ============================================
 
 type ViewMode = 'grid' | 'list'
+
+// 素材库来源配置
+const SOURCE_TABS = [
+  { id: 'all' as MediaSource, name: '全部', icon: Layers },
+  { id: 'system' as MediaSource, name: '系统素材', icon: FolderOpen },
+  { id: 'user' as MediaSource, name: '我的素材', icon: Upload },
+]
 
 interface UploadingFile {
   id: string
@@ -167,6 +177,7 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryTags, setCategoryTags] = useState<string[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mediaSource, setMediaSource] = useState<MediaSource>('all')
 
   // 类型计数
   const [typeCounts, setTypeCounts] = useState<Record<string, number>>({})
@@ -185,6 +196,10 @@ export default function LibraryPage() {
   // 预览状态
   const [previewMedia, setPreviewMedia] = useState<Media | null>(null)
 
+  // 用户标签管理
+  const [showTagModal, setShowTagModal] = useState(false)
+  const [userTags, setUserTags] = useState<CategoryTag[]>([])
+
   // 获取当前类型配置
   const currentTypeConfig = MEDIA_TYPE_CONFIG.find((c) => c.type === typeFilter)
 
@@ -200,6 +215,7 @@ export default function LibraryPage() {
         type: typeFilter === 'ALL' ? undefined : typeFilter,
         search: searchQuery || undefined,
         categories: categoryTags.length > 0 ? categoryTags : undefined,
+        source: mediaSource,
       })
 
       if (response.success && response.data) {
@@ -211,7 +227,7 @@ export default function LibraryPage() {
 
       setLoading(false)
     },
-    [typeFilter, searchQuery, categoryTags]
+    [typeFilter, searchQuery, categoryTags, mediaSource]
   )
 
   // 加载类型计数
@@ -224,7 +240,7 @@ export default function LibraryPage() {
     
     await Promise.all(
       types.map(async (type) => {
-        const response = await getMediaList({ type, limit: 1 })
+        const response = await getMediaList({ type, limit: 1, source: mediaSource })
         if (response.success && response.data) {
           counts[type] = response.data.pagination.total
         }
@@ -232,6 +248,15 @@ export default function LibraryPage() {
     )
     
     setTypeCounts(counts)
+  }, [mediaSource])
+
+  // 加载用户自定义标签
+  const loadUserTags = useCallback(async () => {
+    const response = await getAllCategories()
+    if (response.success && response.data) {
+      const allTags = response.data.dimensions.flatMap((d) => d.tags)
+      setUserTags(allTags.filter((t) => !t.isSystem))
+    }
   }, [])
 
   // 初始加载
@@ -243,6 +268,11 @@ export default function LibraryPage() {
   useEffect(() => {
     loadTypeCounts()
   }, [loadTypeCounts])
+
+  // 加载用户标签
+  useEffect(() => {
+    loadUserTags()
+  }, [loadUserTags])
 
   // 上传文件
   const handleUpload = async (files: FileList | null) => {
@@ -467,8 +497,8 @@ export default function LibraryPage() {
 
         {/* 右侧内容区 */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* 工具栏 - 二级分类 + 视图控制 */}
-          <div className="flex-shrink-0 px-4 py-3 bg-surface-900/50 border-b border-surface-800">
+          {/* 工具栏 - 二级分类标签（在上面） */}
+          <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
             <div className="flex items-center justify-between gap-4">
               {/* 二级分类标签 */}
               <div className="flex-1 min-w-0">
@@ -478,7 +508,58 @@ export default function LibraryPage() {
                 />
               </div>
 
+{/* 管理标签按钮暂时隐藏
+              <button
+                onClick={() => setShowTagModal(true)}
+                className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 text-sm text-surface-400 hover:text-surface-200 hover:bg-surface-800 rounded-lg transition-colors"
+              >
+                <Tag className="w-4 h-4" />
+                <span>管理标签</span>
+                {userTags.length > 0 && (
+                  <span className="px-1.5 py-0.5 text-xs bg-surface-700 rounded-full">
+                    {userTags.length}
+                  </span>
+                )}
+              </button>
+              */}
             </div>
+          </div>
+
+          {/* 素材来源页签 - Tab 样式（在下面） */}
+          <div className="flex-shrink-0 bg-surface-900/50 border-b border-surface-800">
+            <div className="flex items-center px-4">
+              {SOURCE_TABS.map((tab) => {
+                const TabIcon = tab.icon
+                const isActive = mediaSource === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setMediaSource(tab.id)}
+                    className={`
+                      relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all duration-200
+                      ${isActive 
+                        ? 'text-amber-400' 
+                        : 'text-surface-400 hover:text-surface-200'
+                      }
+                    `}
+                  >
+                    <TabIcon className="w-4 h-4" />
+                    <span>{tab.name}</span>
+                    {/* 底部激活指示器 */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="source-tab-indicator"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-t-full"
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex-shrink-0 px-4 py-2 bg-surface-900/20">
 
             {/* 批量操作栏 */}
             {selectedIds.length > 0 && (
@@ -844,6 +925,14 @@ export default function LibraryPage() {
         type={previewMedia?.type === 'VIDEO' ? 'video' : 'image'}
         src={previewMedia?.path || ''}
         title={previewMedia?.name}
+      />
+
+      {/* 用户标签管理弹窗 */}
+      <UserTagModal
+        isOpen={showTagModal}
+        onClose={() => setShowTagModal(false)}
+        onTagCreated={loadUserTags}
+        userTags={userTags}
       />
     </div>
   )

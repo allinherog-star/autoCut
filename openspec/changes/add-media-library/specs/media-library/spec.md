@@ -79,3 +79,4 @@ The system SHALL store uploaded files in a structured directory.
 - **AND** images SHALL be stored in `public/uploads/images/`
 - **AND** filenames SHALL be UUIDs with original extension preserved
 
+

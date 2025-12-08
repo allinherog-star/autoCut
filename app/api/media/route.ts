@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') as MediaType | null
     const search = searchParams.get('search')
     const categoryIds = searchParams.get('categories')?.split(',').filter(Boolean) || []
+    const source = searchParams.get('source') as 'all' | 'system' | 'user' | null
 
     // 构建查询条件
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,6 +119,13 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.name = { contains: search }
+    }
+
+    // 按来源筛选
+    if (source === 'system') {
+      where.isSystem = true
+    } else if (source === 'user') {
+      where.isSystem = false
     }
 
     // 按分类标签筛选

@@ -82,6 +82,7 @@ const sceneTags = [
   { name: '开头3秒', nameEn: 'hook', icon: null, color: '#F44336', description: '前3秒抓人眼球、黄金开场' },
   { name: '步骤牵引', nameEn: 'guide', icon: null, color: '#2196F3', description: '引导观众、承上启下' },
   { name: '转场过渡', nameEn: 'transition', icon: null, color: '#9C27B0', description: '画面切换、衔接自然' },
+  { name: '情绪增强', nameEn: 'emotional', icon: null, color: '#E91E63', description: '情感铺垫、氛围营造' },
   { name: '三连结尾', nameEn: 'ending', icon: null, color: '#4CAF50', description: '引导点赞收藏关注' },
 ]
 
@@ -151,14 +152,15 @@ async function main() {
     })
   }
 
-  // 批量创建场景标签
+  // 批量创建场景标签（先删除旧的，再重新创建）
   console.log('📝 创建场景维度标签...')
+  await prisma.categoryTag.deleteMany({
+    where: { dimension: CategoryDimension.SCENE }
+  })
   for (let i = 0; i < sceneTags.length; i++) {
     const tag = sceneTags[i]
-    await prisma.categoryTag.upsert({
-      where: { dimension_name: { dimension: CategoryDimension.SCENE, name: tag.name } },
-      update: { ...tag, sortOrder: i, isSystem: true },
-      create: { ...tag, dimension: CategoryDimension.SCENE, sortOrder: i, isSystem: true },
+    await prisma.categoryTag.create({
+      data: { ...tag, dimension: CategoryDimension.SCENE, sortOrder: i, isSystem: true },
     })
   }
 
