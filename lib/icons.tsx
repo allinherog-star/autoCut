@@ -34,7 +34,7 @@ import {
   Clapperboard,
   Laugh,
   
-  // 场景图标
+  // 场景/时机图标
   Anchor,
   ArrowLeftRight,
   Flame,
@@ -45,6 +45,7 @@ import {
   Lightbulb,
   Theater,
   AudioLines,
+  Layers,
   
   // 情绪图标
   Smile,
@@ -120,57 +121,63 @@ export const INDUSTRY_ICONS: Record<string, TagIconConfig> = {
 }
 
 // ============================================
-// 场景图标映射（含颜色）
+// 时机图标映射（视频中使用的时机节点）
 // ============================================
 
 export const SCENE_ICONS: Record<string, TagIconConfig> = {
-  '开头Hook': { icon: Anchor, color: 'text-red-500' },
-  '转场过渡': { icon: ArrowLeftRight, color: 'text-purple-400' },
-  '高潮爆点': { icon: Flame, color: 'text-orange-500' },
-  '结尾收尾': { icon: Flag, color: 'text-emerald-400' },
-  '背景氛围': { icon: Sunrise, color: 'text-sky-400' },
-  '产品展示': { icon: Package, color: 'text-amber-500' },
-  '人物出场': { icon: UserCircle, color: 'text-pink-400' },
-  '知识讲解': { icon: Lightbulb, color: 'text-yellow-400' },
-  '情绪渲染': { icon: Theater, color: 'text-violet-400' },
-  '节奏卡点': { icon: AudioLines, color: 'text-cyan-400' },
+  '开头3秒': { icon: Anchor, color: 'text-red-500' },
+  '步骤牵引': { icon: ArrowLeftRight, color: 'text-blue-400' },
+  '转场过渡': { icon: Layers, color: 'text-purple-400' },
+  '三连结尾': { icon: Flag, color: 'text-emerald-400' },
 }
 
 // ============================================
-// 风格表现类图标映射（内容表现手法或风格特征）
+// 表现力图标映射（内容表现手法或风格特征）
 // ============================================
 
 export const STYLE_ICONS: Record<string, TagIconConfig> = {
   '沙雕': { icon: Laugh, color: 'text-yellow-400' },
-  '魔性': { icon: Zap, color: 'text-fuchsia-400' },
   '戏精': { icon: Theater, color: 'text-purple-400' },
-  '表演狂': { icon: Drama, color: 'text-pink-400' },
-  '酷炫': { icon: Glasses, color: 'text-cyan-400' },
-  '娱乐': { icon: Music, color: 'text-sky-400' },
-  '反转': { icon: RefreshCw, color: 'text-orange-400' },
-  '潮流': { icon: Sparkles, color: 'text-violet-400' },
-  '可爱': { icon: HeartPulse, color: 'text-pink-400' },
-  '接地气': { icon: Home, color: 'text-yellow-600' },
+  '逗比欢乐多': { icon: Smile, color: 'text-orange-400' },
+  '接地气': { icon: Home, color: 'text-yellow-700' },
+  '又穷又开心': { icon: Smile, color: 'text-lime-400' },
+  '呆萌可爱': { icon: HeartPulse, color: 'text-pink-400' },
+  '反转再反转': { icon: RefreshCw, color: 'text-pink-500' },
+  '社畜归来': { icon: Briefcase, color: 'text-slate-400' },
+  '躺平EMO': { icon: Users, color: 'text-gray-400' },
+  '心灵鸡汤': { icon: Lightbulb, color: 'text-yellow-400' },
+  '治愈小伤口': { icon: Leaf, color: 'text-emerald-400' },
+  '上头魔性': { icon: Zap, color: 'text-fuchsia-400' },
+  '震撼超燃': { icon: Flame, color: 'text-red-500' },
+  '硬核解说': { icon: GraduationCap, color: 'text-indigo-400' },
+  '励志': { icon: TrendingUp, color: 'text-amber-400' },
+  '另类潮流': { icon: Sparkles, color: 'text-violet-400' },
+  '怀旧复古': { icon: Music, color: 'text-yellow-700' },
+  '心酸励志': { icon: Heart, color: 'text-blue-400' },
+  '脑洞科幻': { icon: Zap, color: 'text-cyan-400' },
+  '炫酷不翻车': { icon: Glasses, color: 'text-green-400' },
 }
 
 // ============================================
-// 情绪氛围类图标映射（表达情感和心理状态）
+// 情绪标签图标映射（表达情感和心理状态）
 // ============================================
 
 export const EMOTION_ICONS: Record<string, TagIconConfig> = {
-  '开心': { icon: Smile, color: 'text-yellow-400' },
+  '笑了': { icon: Laugh, color: 'text-yellow-400' },
+  '好奇': { icon: AlertCircle, color: 'text-sky-400' },
   '感动': { icon: HeartHandshake, color: 'text-red-400' },
+  '失落': { icon: Users, color: 'text-gray-400' },
+  '心疼': { icon: HeartPulse, color: 'text-pink-500' },
   '紧张': { icon: AlertCircle, color: 'text-purple-400' },
-  '治愈': { icon: Leaf, color: 'text-emerald-400' },
-  '暖心': { icon: Heart, color: 'text-rose-400' },
-  '震撼': { icon: Zap, color: 'text-pink-500' },
-  '破防': { icon: HeartPulse, color: 'text-red-500' },
-  '心酸': { icon: Users, color: 'text-blue-400' },
-  '热血': { icon: Flame, color: 'text-orange-500' },
-  '励志': { icon: TrendingUp, color: 'text-amber-400' },
-  '轻松': { icon: Smile, color: 'text-lime-400' },
-  '真实': { icon: UserCircle, color: 'text-slate-300' },
-  '共鸣': { icon: Users, color: 'text-sky-400' },
+  '兴奋': { icon: Flame, color: 'text-orange-500' },
+  '期待': { icon: Sparkles, color: 'text-amber-400' },
+  '有点东西': { icon: Lightbulb, color: 'text-lime-400' },
+  '破防': { icon: Heart, color: 'text-red-500' },
+  '爱了': { icon: Heart, color: 'text-pink-500' },
+  '震撼': { icon: Zap, color: 'text-violet-500' },
+  '惊讶': { icon: AlertCircle, color: 'text-cyan-400' },
+  '愤怒': { icon: Flame, color: 'text-red-600' },
+  '开心': { icon: Smile, color: 'text-emerald-400' },
 }
 
 // ============================================

@@ -2,21 +2,23 @@ import { PrismaClient, CategoryDimension } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// 情绪氛围类（表达情感和心理状态）
+// 情绪标签（表达情感和心理状态）
 const emotionTags = [
-  { name: '开心', nameEn: 'happy', icon: null, color: '#FFD93D', description: '欢乐、愉悦、快乐' },
+  { name: '笑了', nameEn: 'laughing', icon: null, color: '#FFD93D', description: '哈哈哈、笑死、太好笑' },
+  { name: '好奇', nameEn: 'curious', icon: null, color: '#03A9F4', description: '想知道、悬念、吸引' },
   { name: '感动', nameEn: 'touching', icon: null, color: '#FF6B6B', description: '泪目、走心、催泪' },
+  { name: '失落', nameEn: 'disappointed', icon: null, color: '#9E9E9E', description: '遗憾、可惜、叹气' },
+  { name: '心疼', nameEn: 'heartache', icon: null, color: '#E91E63', description: '心痛、怜惜、难过' },
   { name: '紧张', nameEn: 'tense', icon: null, color: '#9C27B0', description: '悬疑、刺激、心跳加速' },
-  { name: '治愈', nameEn: 'healing', icon: null, color: '#4CAF50', description: '温柔、陪伴、解压' },
-  { name: '暖心', nameEn: 'heartwarming', icon: null, color: '#FF8A80', description: '温情、甜蜜、正能量' },
-  { name: '震撼', nameEn: 'stunning', icon: null, color: '#E91E63', description: '惊艳、大片感、视觉冲击' },
+  { name: '兴奋', nameEn: 'excited', icon: null, color: '#FF5722', description: '激动、太棒了、冲' },
+  { name: '期待', nameEn: 'anticipating', icon: null, color: '#FFC107', description: '等不及、想看、催更' },
+  { name: '有点东西', nameEn: 'impressive', icon: null, color: '#8BC34A', description: '有料、厉害、学到了' },
   { name: '破防', nameEn: 'emotional', icon: null, color: '#F44336', description: 'emo、泪崩、戳心' },
-  { name: '心酸', nameEn: 'bittersweet', icon: null, color: '#2196F3', description: '扎心、伤感、共情' },
-  { name: '热血', nameEn: 'passionate', icon: null, color: '#FF5722', description: '燃爆、激情、冲击' },
-  { name: '励志', nameEn: 'inspiring', icon: null, color: '#FFC107', description: '正能量、逆袭、冲鸭' },
-  { name: '轻松', nameEn: 'relaxed', icon: null, color: '#8BC34A', description: '欢乐、活泼、轻快' },
-  { name: '真实', nameEn: 'authentic', icon: null, color: '#9E9E9E', description: '真诚、接地气、共鸣' },
-  { name: '共鸣', nameEn: 'relatable', icon: null, color: '#03A9F4', description: '感同身受、懂你、戳中' },
+  { name: '爱了', nameEn: 'love', icon: null, color: '#E91E63', description: '喜欢、太爱了、心动' },
+  { name: '震撼', nameEn: 'stunning', icon: null, color: '#673AB7', description: '惊艳、大片感、视觉冲击' },
+  { name: '惊讶', nameEn: 'surprised', icon: null, color: '#00BCD4', description: '没想到、意外、居然' },
+  { name: '愤怒', nameEn: 'angry', icon: null, color: '#D32F2F', description: '生气、不爽、太过分' },
+  { name: '开心', nameEn: 'happy', icon: null, color: '#4CAF50', description: '快乐、愉悦、美好' },
 ]
 
 // 视频类型维度标签（与上传页面 VIDEO_TYPES 保持一致）
@@ -52,32 +54,36 @@ const industryTags = [
   { name: '情感咨询', nameEn: 'emotion', icon: null, color: '#F43F5E', description: '情感故事分享' },
 ]
 
-// 风格表现类（内容表现手法或风格特征）
+// 表现力标签（内容表现手法或风格特征）
 const styleTags = [
   { name: '沙雕', nameEn: 'shagou', icon: null, color: '#FFD93D', description: '搞怪、无厘头、抽象' },
-  { name: '魔性', nameEn: 'magic', icon: null, color: '#E040FB', description: '洗脑、上头、鬼畜' },
   { name: '戏精', nameEn: 'dramatic', icon: null, color: '#9C27B0', description: '夸张、演技、小剧场' },
-  { name: '表演狂', nameEn: 'performer', icon: null, color: '#E91E63', description: '沉浸式、角色扮演' },
-  { name: '酷炫', nameEn: 'cool', icon: null, color: '#00BCD4', description: '赛博、街头、炫酷' },
-  { name: '娱乐', nameEn: 'entertainment', icon: null, color: '#03A9F4', description: '欢乐、解压、轻松' },
-  { name: '反转', nameEn: 'twist', icon: null, color: '#FF9800', description: '神转折、意外、出人意料' },
-  { name: '潮流', nameEn: 'trendy', icon: null, color: '#7C4DFF', description: '时尚、YYDS、绝绝子' },
-  { name: '可爱', nameEn: 'cute', icon: null, color: '#FF85A2', description: '萌系、甜美、软萌' },
+  { name: '逗比欢乐多', nameEn: 'funny', icon: null, color: '#FF9800', description: '搞笑、欢乐、段子手' },
   { name: '接地气', nameEn: 'relatable', icon: null, color: '#795548', description: '真实、生活化、普通人' },
+  { name: '又穷又开心', nameEn: 'poor-happy', icon: null, color: '#8BC34A', description: '省钱、平价、穷开心' },
+  { name: '呆萌可爱', nameEn: 'cute', icon: null, color: '#FF85A2', description: '萌系、甜美、软萌' },
+  { name: '反转再反转', nameEn: 'twist', icon: null, color: '#E91E63', description: '神转折、意外、出人意料' },
+  { name: '社畜归来', nameEn: 'worker', icon: null, color: '#607D8B', description: '打工人、职场、摸鱼' },
+  { name: '躺平EMO', nameEn: 'emo', icon: null, color: '#9E9E9E', description: '丧、躺平、佛系' },
+  { name: '心灵鸡汤', nameEn: 'chicken-soup', icon: null, color: '#FFEB3B', description: '正能量、励志语录' },
+  { name: '治愈小伤口', nameEn: 'healing', icon: null, color: '#4CAF50', description: '治愈、温暖、解压' },
+  { name: '上头魔性', nameEn: 'addictive', icon: null, color: '#E040FB', description: '洗脑、上头、鬼畜' },
+  { name: '震撼超燃', nameEn: 'epic', icon: null, color: '#F44336', description: '燃爆、震撼、大片感' },
+  { name: '硬核解说', nameEn: 'hardcore', icon: null, color: '#3F51B5', description: '专业、深度、干货' },
+  { name: '励志', nameEn: 'inspiring', icon: null, color: '#FFC107', description: '正能量、逆袭、冲鸭' },
+  { name: '另类潮流', nameEn: 'alternative', icon: null, color: '#7C4DFF', description: '小众、独特、个性' },
+  { name: '怀旧复古', nameEn: 'retro', icon: null, color: '#795548', description: '复古、经典、年代感' },
+  { name: '心酸励志', nameEn: 'bittersweet', icon: null, color: '#2196F3', description: '扎心、共情、奋斗' },
+  { name: '脑洞科幻', nameEn: 'scifi', icon: null, color: '#00BCD4', description: '科幻、脑洞、未来感' },
+  { name: '炫酷不翻车', nameEn: 'cool-safe', icon: null, color: '#00E676', description: '炫技、稳定、不出错' },
 ]
 
-// 场景维度标签
+// 时机标签（视频中使用的时机节点）
 const sceneTags = [
-  { name: '开头Hook', nameEn: 'hook', icon: '🎣', color: '#F44336', description: '前3秒抓人眼球' },
-  { name: '转场过渡', nameEn: 'transition', icon: '🔀', color: '#9C27B0', description: '画面切换衔接' },
-  { name: '高潮爆点', nameEn: 'climax', icon: '💥', color: '#FF9800', description: '情绪最高点' },
-  { name: '结尾收尾', nameEn: 'ending', icon: '🎬', color: '#4CAF50', description: '完美收官' },
-  { name: '背景氛围', nameEn: 'ambient', icon: '🌅', color: '#03A9F4', description: '营造环境氛围' },
-  { name: '产品展示', nameEn: 'product', icon: '📦', color: '#795548', description: '商品/产品特写' },
-  { name: '人物出场', nameEn: 'intro', icon: '🙋', color: '#E91E63', description: '人物登场亮相' },
-  { name: '知识讲解', nameEn: 'explain', icon: '💡', color: '#FFC107', description: '信息图解说明' },
-  { name: '情绪渲染', nameEn: 'emotional', icon: '🎭', color: '#673AB7', description: '强化情感表达' },
-  { name: '节奏卡点', nameEn: 'beat', icon: '🎵', color: '#00BCD4', description: '配合音乐节拍' },
+  { name: '开头3秒', nameEn: 'hook', icon: null, color: '#F44336', description: '前3秒抓人眼球、黄金开场' },
+  { name: '步骤牵引', nameEn: 'guide', icon: null, color: '#2196F3', description: '引导观众、承上启下' },
+  { name: '转场过渡', nameEn: 'transition', icon: null, color: '#9C27B0', description: '画面切换、衔接自然' },
+  { name: '三连结尾', nameEn: 'ending', icon: null, color: '#4CAF50', description: '引导点赞收藏关注' },
 ]
 
 // 平台适配标签
