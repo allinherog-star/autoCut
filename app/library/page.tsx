@@ -468,14 +468,17 @@ export default function LibraryPage() {
                 className="hidden"
                 onChange={(e) => handleUpload(e.target.files)}
               />
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Upload className="w-4 h-4" />}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                上传素材
-              </Button>
+              {/* 只有"我的素材"才显示上传按钮 */}
+              {mediaSource === 'user' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Upload className="w-4 h-4" />}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  上传素材
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -638,20 +641,32 @@ export default function LibraryPage() {
                   )}
                 </div>
                 <h2 className="text-xl font-semibold text-surface-200 mb-2">
-                  {typeFilter === 'ALL' ? '素材库为空' : `暂无${currentTypeConfig?.label}素材`}
+                  {mediaSource === 'system' 
+                    ? '暂无系统素材' 
+                    : mediaSource === 'user'
+                    ? '暂无我的素材'
+                    : typeFilter === 'ALL' 
+                    ? '素材库为空' 
+                    : `暂无${currentTypeConfig?.label}素材`}
                 </h2>
                 <p className="text-surface-500 mb-6">
-                  {typeFilter === 'ALL' 
+                  {mediaSource === 'system'
+                    ? '系统素材将在后续版本中提供'
+                    : mediaSource === 'user'
+                    ? '上传你的第一个素材开始吧'
+                    : typeFilter === 'ALL' 
                     ? '上传你的第一个素材开始吧'
                     : `上传或导入${currentTypeConfig?.label}素材`}
                 </p>
-                <Button
-                  variant="primary"
-                  leftIcon={<Upload className="w-4 h-4" />}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  上传素材
-                </Button>
+                {mediaSource === 'user' && (
+                  <Button
+                    variant="primary"
+                    leftIcon={<Upload className="w-4 h-4" />}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    上传素材
+                  </Button>
+                )}
               </div>
             ) : viewMode === 'grid' ? (
               /* 网格视图 */
@@ -678,14 +693,23 @@ export default function LibraryPage() {
                       onClick={() => setPreviewMedia(media)}
                     >
                       {/* 缩略图 */}
-                      <div className="relative aspect-video bg-surface-800">
+                      <div className="relative aspect-video bg-surface-800 overflow-hidden">
                         {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
                           media.thumbnailPath || media.path ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={media.thumbnailPath || media.path}
-                              alt={media.name}
+                              alt=""
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // 图片加载失败时隐藏图片，显示默认图标
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const parent = target.parentElement
+                                if (parent) {
+                                  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-surface-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
+                                }
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
@@ -803,8 +827,12 @@ export default function LibraryPage() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={media.thumbnailPath || media.path}
-                              alt={media.name}
+                              alt=""
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
