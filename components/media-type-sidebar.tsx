@@ -10,6 +10,7 @@ import {
   Volume2,
   Type,
   Smile,
+  Heart,
   Sparkles,
   Layers,
   LayoutTemplate,
@@ -110,6 +111,15 @@ export const MEDIA_TYPE_CONFIG: MediaTypeItem[] = [
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-400/15',
     description: '表情贴纸和贴图',
+  },
+  {
+    type: 'EMOTION',
+    label: '情绪',
+    labelEn: 'Emotion',
+    icon: Heart,
+    color: 'text-red-400',
+    bgColor: 'bg-red-400/15',
+    description: '情绪氛围素材',
   },
   {
     type: 'FONT',

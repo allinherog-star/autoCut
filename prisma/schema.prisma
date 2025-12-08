@@ -19,6 +19,7 @@ enum MediaType {
   FANCY_TEXT   // 花字
   FONT         // 字体
   STICKER      // 表情/贴纸
+  EMOTION      // 情绪
   EFFECT       // 特效
   TRANSITION   // 转场
   TEMPLATE     // 模版

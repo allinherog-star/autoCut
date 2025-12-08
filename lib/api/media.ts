@@ -10,6 +10,7 @@ export type MediaType =
   | 'FANCY_TEXT' 
   | 'FONT' 
   | 'STICKER' 
+  | 'EMOTION'
   | 'EFFECT' 
   | 'TRANSITION'
   | 'TEMPLATE'

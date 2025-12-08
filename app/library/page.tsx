@@ -245,7 +245,7 @@ export default function LibraryPage() {
     const counts: Record<string, number> = {}
     
     // 并行获取各类型的数量
-    const types: MediaType[] = ['VIDEO', 'IMAGE', 'AUDIO', 'SOUND_EFFECT', 'FANCY_TEXT', 'FONT', 'STICKER', 'EFFECT', 'TRANSITION', 'TEMPLATE']
+    const types: MediaType[] = ['VIDEO', 'IMAGE', 'AUDIO', 'SOUND_EFFECT', 'FANCY_TEXT', 'FONT', 'STICKER', 'EMOTION', 'EFFECT', 'TRANSITION', 'TEMPLATE']
     
     await Promise.all(
       types.map(async (type) => {

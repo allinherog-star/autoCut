@@ -60,6 +60,7 @@ export type MediaCategory =
   | 'fancy_text' 
   | 'font' 
   | 'sticker' 
+  | 'emotion'
   | 'effect' 
   | 'transition'
   | 'template'
@@ -99,6 +100,7 @@ export function isValidTypeForCategory(mimeType: string, category: MediaCategory
     case 'image':
     case 'fancy_text':
     case 'sticker':
+    case 'emotion':
       return SUPPORTED_IMAGE_TYPES.includes(mimeType)
     case 'audio':
     case 'sound_effect':
@@ -118,6 +120,7 @@ export function isValidTypeForCategory(mimeType: string, category: MediaCategory
 const FONT_DIR = path.join(UPLOAD_DIR, 'fonts')
 const EFFECT_DIR = path.join(UPLOAD_DIR, 'effects')
 const STICKER_DIR = path.join(UPLOAD_DIR, 'stickers')
+const EMOTION_DIR = path.join(UPLOAD_DIR, 'emotions')
 const TRANSITION_DIR = path.join(UPLOAD_DIR, 'transitions')
 const TEMPLATE_DIR = path.join(UPLOAD_DIR, 'templates')
 const FANCY_TEXT_DIR = path.join(UPLOAD_DIR, 'fancy_texts')
@@ -142,6 +145,8 @@ function getStorageDir(category: MediaCategory): string {
       return EFFECT_DIR
     case 'sticker':
       return STICKER_DIR
+    case 'emotion':
+      return EMOTION_DIR
     case 'transition':
       return TRANSITION_DIR
     case 'template':
@@ -172,6 +177,8 @@ function getStorageSubPath(category: MediaCategory): string {
       return 'effects'
     case 'sticker':
       return 'stickers'
+    case 'emotion':
+      return 'emotions'
     case 'transition':
       return 'transitions'
     case 'template':
@@ -301,6 +308,7 @@ export async function initStorage(): Promise<void> {
   await ensureDir(FONT_DIR)
   await ensureDir(EFFECT_DIR)
   await ensureDir(STICKER_DIR)
+  await ensureDir(EMOTION_DIR)
   await ensureDir(TRANSITION_DIR)
   await ensureDir(TEMPLATE_DIR)
   await ensureDir(FANCY_TEXT_DIR)
