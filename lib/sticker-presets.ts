@@ -1044,3 +1044,4 @@ export function getStickerAnimationClass(sticker: StickerPreset): string {
   return `animate-sticker-${sticker.animation.type}`
 }
 
+
