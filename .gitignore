@@ -56,3 +56,9 @@ public/worker-*.js
 
 
 
+
+/lib/generated/prisma
+
+# Uploaded files
+/public/uploads/*
+!/public/uploads/.gitkeep

@@ -1,0 +1,94 @@
+// Prisma Schema for AutoCut
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 素材类型枚举
+enum MediaType {
+  VIDEO
+  IMAGE
+  AUDIO
+}
+
+// 素材表
+model Media {
+  id            String    @id @default(uuid())
+  name          String    // 显示名称
+  filename      String    // 存储文件名
+  type          MediaType // 素材类型
+  mimeType      String    // MIME 类型
+  size          Int       // 文件大小（字节）
+  path          String    // 相对路径
+  duration      Float?    // 视频/音频时长（秒）
+  width         Int?      // 宽度（像素）
+  height        Int?      // 高度（像素）
+  thumbnailPath String?   // 缩略图路径
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  tags     MediaTag[]
+  projects ProjectMedia[]
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("media")
+}
+
+// 素材标签表
+model MediaTag {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  color String? // 标签颜色
+
+  createdAt DateTime @default(now())
+
+  // 关联
+  media Media[]
+
+  @@map("media_tags")
+}
+
+// 项目表
+model Project {
+  id           String  @id @default(uuid())
+  name         String
+  description  String? @db.Text
+  targetDevice String  @default("phone") // phone | desktop
+  videoType    String? // vlog, tutorial, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  media ProjectMedia[]
+
+  @@index([createdAt])
+  @@map("projects")
+}
+
+// 项目素材关联表
+model ProjectMedia {
+  id        String  @id @default(uuid())
+  projectId String
+  mediaId   String
+  order     Int     @default(0) // 排序顺序
+  isMain    Boolean @default(false) // 是否为主素材
+
+  // 关联
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, mediaId])
+  @@index([projectId])
+  @@index([mediaId])
+  @@map("project_media")
+}
