@@ -16,6 +16,12 @@ import {
   X,
   Check,
   AlertCircle,
+  Type,
+  Sparkles,
+  Smile,
+  LayoutTemplate,
+  Volume2,
+  Layers,
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner } from '@/components/ui'
 import {
@@ -29,7 +35,7 @@ import {
 // 类型定义
 // ============================================
 
-type MediaTypeFilter = 'ALL' | 'VIDEO' | 'IMAGE' | 'AUDIO'
+type MediaTypeFilter = 'ALL' | Media['type']
 
 interface MediaLibraryPanelProps {
   onSelect?: (media: Media) => void
@@ -73,6 +79,21 @@ function getMediaIcon(type: Media['type']) {
       return ImageIcon
     case 'AUDIO':
       return Music
+    case 'SOUND_EFFECT':
+      return Volume2
+    case 'FANCY_TEXT':
+    case 'FONT':
+      return Type
+    case 'STICKER':
+      return Smile
+    case 'EFFECT':
+      return Sparkles
+    case 'TRANSITION':
+      return Layers
+    case 'TEMPLATE':
+      return LayoutTemplate
+    default:
+      return FolderOpen
   }
 }
 

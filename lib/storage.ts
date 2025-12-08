@@ -34,15 +34,45 @@ export const SUPPORTED_AUDIO_TYPES = [
   'audio/flac',
 ]
 
-export type MediaCategory = 'video' | 'image' | 'audio'
+// 字体文件类型
+export const SUPPORTED_FONT_TYPES = [
+  'font/ttf',
+  'font/otf',
+  'font/woff',
+  'font/woff2',
+  'application/x-font-ttf',
+  'application/x-font-otf',
+  'application/font-woff',
+  'application/font-woff2',
+]
+
+// JSON/配置文件类型（用于特效、转场、模版等）
+export const SUPPORTED_CONFIG_TYPES = [
+  'application/json',
+]
+
+// 素材类别
+export type MediaCategory = 
+  | 'video' 
+  | 'image' 
+  | 'audio' 
+  | 'sound_effect'
+  | 'fancy_text' 
+  | 'font' 
+  | 'sticker' 
+  | 'effect' 
+  | 'transition'
+  | 'template'
 
 /**
- * 获取文件类型分类
+ * 获取文件类型分类（基于 MIME 类型）
  */
 export function getMediaCategory(mimeType: string): MediaCategory | null {
   if (SUPPORTED_VIDEO_TYPES.includes(mimeType)) return 'video'
   if (SUPPORTED_IMAGE_TYPES.includes(mimeType)) return 'image'
   if (SUPPORTED_AUDIO_TYPES.includes(mimeType)) return 'audio'
+  if (SUPPORTED_FONT_TYPES.includes(mimeType)) return 'font'
+  if (SUPPORTED_CONFIG_TYPES.includes(mimeType)) return 'effect' // 默认为特效
   return null
 }
 
@@ -50,8 +80,48 @@ export function getMediaCategory(mimeType: string): MediaCategory | null {
  * 检查文件类型是否支持
  */
 export function isSupportedType(mimeType: string): boolean {
-  return getMediaCategory(mimeType) !== null
+  return (
+    SUPPORTED_VIDEO_TYPES.includes(mimeType) ||
+    SUPPORTED_IMAGE_TYPES.includes(mimeType) ||
+    SUPPORTED_AUDIO_TYPES.includes(mimeType) ||
+    SUPPORTED_FONT_TYPES.includes(mimeType) ||
+    SUPPORTED_CONFIG_TYPES.includes(mimeType)
+  )
 }
+
+/**
+ * 根据指定类别验证文件类型
+ */
+export function isValidTypeForCategory(mimeType: string, category: MediaCategory): boolean {
+  switch (category) {
+    case 'video':
+      return SUPPORTED_VIDEO_TYPES.includes(mimeType)
+    case 'image':
+    case 'fancy_text':
+    case 'sticker':
+      return SUPPORTED_IMAGE_TYPES.includes(mimeType)
+    case 'audio':
+    case 'sound_effect':
+      return SUPPORTED_AUDIO_TYPES.includes(mimeType)
+    case 'font':
+      return SUPPORTED_FONT_TYPES.includes(mimeType)
+    case 'effect':
+    case 'transition':
+    case 'template':
+      return SUPPORTED_CONFIG_TYPES.includes(mimeType) || SUPPORTED_VIDEO_TYPES.includes(mimeType) || SUPPORTED_IMAGE_TYPES.includes(mimeType)
+    default:
+      return false
+  }
+}
+
+// 新增存储目录
+const FONT_DIR = path.join(UPLOAD_DIR, 'fonts')
+const EFFECT_DIR = path.join(UPLOAD_DIR, 'effects')
+const STICKER_DIR = path.join(UPLOAD_DIR, 'stickers')
+const TRANSITION_DIR = path.join(UPLOAD_DIR, 'transitions')
+const TEMPLATE_DIR = path.join(UPLOAD_DIR, 'templates')
+const FANCY_TEXT_DIR = path.join(UPLOAD_DIR, 'fancy_texts')
+const SOUND_EFFECT_DIR = path.join(UPLOAD_DIR, 'sound_effects')
 
 /**
  * 获取存储目录
@@ -64,6 +134,52 @@ function getStorageDir(category: MediaCategory): string {
       return IMAGE_DIR
     case 'audio':
       return AUDIO_DIR
+    case 'sound_effect':
+      return SOUND_EFFECT_DIR
+    case 'font':
+      return FONT_DIR
+    case 'effect':
+      return EFFECT_DIR
+    case 'sticker':
+      return STICKER_DIR
+    case 'transition':
+      return TRANSITION_DIR
+    case 'template':
+      return TEMPLATE_DIR
+    case 'fancy_text':
+      return FANCY_TEXT_DIR
+    default:
+      return UPLOAD_DIR
+  }
+}
+
+/**
+ * 获取存储子路径
+ */
+function getStorageSubPath(category: MediaCategory): string {
+  switch (category) {
+    case 'video':
+      return 'videos'
+    case 'image':
+      return 'images'
+    case 'audio':
+      return 'audio'
+    case 'sound_effect':
+      return 'sound_effects'
+    case 'font':
+      return 'fonts'
+    case 'effect':
+      return 'effects'
+    case 'sticker':
+      return 'stickers'
+    case 'transition':
+      return 'transitions'
+    case 'template':
+      return 'templates'
+    case 'fancy_text':
+      return 'fancy_texts'
+    default:
+      return 'misc'
   }
 }
 
@@ -100,20 +216,23 @@ export interface StorageResult {
 export async function saveFile(
   file: File | Buffer,
   originalFilename: string,
-  mimeType: string
+  mimeType: string,
+  category?: MediaCategory
 ): Promise<StorageResult> {
-  const category = getMediaCategory(mimeType)
-  if (!category) {
+  // 如果没有指定类别，自动推断
+  const mediaCategory = category || getMediaCategory(mimeType)
+  if (!mediaCategory) {
     throw new Error(`Unsupported file type: ${mimeType}`)
   }
 
-  const storageDir = getStorageDir(category)
+  const storageDir = getStorageDir(mediaCategory)
   await ensureDir(storageDir)
 
   const ext = getExtension(originalFilename)
   const filename = `${uuidv4()}${ext}`
   const fullPath = path.join(storageDir, filename)
-  const relativePath = `/uploads/${category}s/${filename}`
+  const subPath = getStorageSubPath(mediaCategory)
+  const relativePath = `/uploads/${subPath}/${filename}`
 
   // 获取文件数据
   let buffer: Buffer
@@ -178,5 +297,12 @@ export async function initStorage(): Promise<void> {
   await ensureDir(VIDEO_DIR)
   await ensureDir(IMAGE_DIR)
   await ensureDir(AUDIO_DIR)
+  await ensureDir(SOUND_EFFECT_DIR)
+  await ensureDir(FONT_DIR)
+  await ensureDir(EFFECT_DIR)
+  await ensureDir(STICKER_DIR)
+  await ensureDir(TRANSITION_DIR)
+  await ensureDir(TEMPLATE_DIR)
+  await ensureDir(FANCY_TEXT_DIR)
 }
 

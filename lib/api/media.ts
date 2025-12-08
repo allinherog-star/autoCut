@@ -2,11 +2,23 @@
  * 素材 API 客户端
  */
 
+export type MediaType = 
+  | 'VIDEO' 
+  | 'IMAGE' 
+  | 'AUDIO' 
+  | 'SOUND_EFFECT'
+  | 'FANCY_TEXT' 
+  | 'FONT' 
+  | 'STICKER' 
+  | 'EFFECT' 
+  | 'TRANSITION'
+  | 'TEMPLATE'
+
 export interface Media {
   id: string
   name: string
   filename: string
-  type: 'VIDEO' | 'IMAGE' | 'AUDIO'
+  type: MediaType
   mimeType: string
   size: number
   path: string
@@ -88,7 +100,7 @@ export async function uploadMedia(
 export async function getMediaList(params?: {
   page?: number
   limit?: number
-  type?: 'VIDEO' | 'IMAGE' | 'AUDIO'
+  type?: MediaType
   search?: string
 }): Promise<ApiResponse<MediaListResponse>> {
   try {

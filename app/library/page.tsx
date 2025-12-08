@@ -24,6 +24,13 @@ import {
   Edit2,
   Download,
   Scissors,
+  Type,
+  Sparkles,
+  Smile,
+  Wand2,
+  LayoutTemplate,
+  Volume2,
+  Layers,
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
@@ -32,6 +39,7 @@ import {
   deleteMedia,
   uploadMedia,
   type Media,
+  type MediaType,
   type MediaListResponse,
 } from '@/lib/api/media'
 
@@ -39,7 +47,7 @@ import {
 // 类型定义
 // ============================================
 
-type MediaTypeFilter = 'ALL' | 'VIDEO' | 'IMAGE' | 'AUDIO'
+type MediaTypeFilter = 'ALL' | MediaType
 type ViewMode = 'grid' | 'list'
 
 interface UploadingFile {
@@ -87,6 +95,49 @@ function getMediaIcon(type: Media['type']) {
       return ImageIcon
     case 'AUDIO':
       return Music
+    case 'SOUND_EFFECT':
+      return Volume2
+    case 'FANCY_TEXT':
+      return Type
+    case 'FONT':
+      return Type
+    case 'STICKER':
+      return Smile
+    case 'EFFECT':
+      return Sparkles
+    case 'TRANSITION':
+      return Layers
+    case 'TEMPLATE':
+      return LayoutTemplate
+    default:
+      return FolderOpen
+  }
+}
+
+function getMediaTypeName(type: Media['type']): string {
+  switch (type) {
+    case 'VIDEO':
+      return '视频'
+    case 'IMAGE':
+      return '图片'
+    case 'AUDIO':
+      return '音乐'
+    case 'SOUND_EFFECT':
+      return '音效'
+    case 'FANCY_TEXT':
+      return '花字'
+    case 'FONT':
+      return '字体'
+    case 'STICKER':
+      return '表情'
+    case 'EFFECT':
+      return '特效'
+    case 'TRANSITION':
+      return '转场'
+    case 'TEMPLATE':
+      return '模版'
+    default:
+      return '未知'
   }
 }
 
@@ -240,7 +291,14 @@ export default function LibraryPage() {
     { type: 'ALL', label: '全部', icon: FolderOpen },
     { type: 'VIDEO', label: '视频', icon: Video },
     { type: 'IMAGE', label: '图片', icon: ImageIcon },
-    { type: 'AUDIO', label: '音频', icon: Music },
+    { type: 'AUDIO', label: '音乐', icon: Music },
+    { type: 'SOUND_EFFECT', label: '音效', icon: Volume2 },
+    { type: 'FANCY_TEXT', label: '花字', icon: Type },
+    { type: 'FONT', label: '字体', icon: Type },
+    { type: 'STICKER', label: '表情', icon: Smile },
+    { type: 'EFFECT', label: '特效', icon: Sparkles },
+    { type: 'TRANSITION', label: '转场', icon: Layers },
+    { type: 'TEMPLATE', label: '模版', icon: LayoutTemplate },
   ]
 
   // 统计信息
@@ -656,7 +714,7 @@ export default function LibraryPage() {
                           size="sm"
                         >
                           <Icon className="w-3 h-3 mr-1" />
-                          {media.type === 'VIDEO' ? '视频' : media.type === 'IMAGE' ? '图片' : '音频'}
+                          {getMediaTypeName(media.type)}
                         </Badge>
                         <span>{formatFileSize(media.size)}</span>
                         {media.duration && <span>{formatDuration(media.duration)}</span>}

@@ -12,9 +12,16 @@ datasource db {
 
 // 素材类型枚举
 enum MediaType {
-  VIDEO
-  IMAGE
-  AUDIO
+  VIDEO        // 视频
+  IMAGE        // 图片
+  AUDIO        // 音频/音乐
+  SOUND_EFFECT // 音效
+  FANCY_TEXT   // 花字
+  FONT         // 字体
+  STICKER      // 表情/贴纸
+  EFFECT       // 特效
+  TRANSITION   // 转场
+  TEMPLATE     // 模版
 }
 
 // 素材表
