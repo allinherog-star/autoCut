@@ -53,6 +53,14 @@ import {
 } from '@/lib/api/media'
 import { getAllCategories, type CategoryTag } from '@/lib/api/categories'
 import { EMOTION_TEXT_PRESETS, presetToCSS, type EmotionTextStyle } from '@/lib/emotion-text-effects'
+import { 
+  STICKER_PRESETS, 
+  STICKER_CATEGORY_CONFIG, 
+  stickerToCSS, 
+  STICKER_ANIMATIONS_CSS,
+  type StickerCategory,
+  type StickerPreset,
+} from '@/lib/sticker-presets'
 
 // ============================================
 // 类型定义
@@ -254,6 +262,14 @@ export default function LibraryPage() {
       counts['FANCY_TEXT'] = mediaSource === 'system' 
         ? EMOTION_TEXT_PRESETS.length 
         : dbCount + EMOTION_TEXT_PRESETS.length
+    }
+    
+    // 表情类型特殊处理：系统素材来源于代码预设
+    if (mediaSource === 'system' || mediaSource === 'all') {
+      const dbCount = counts['STICKER'] || 0
+      counts['STICKER'] = mediaSource === 'system' 
+        ? STICKER_PRESETS.length 
+        : dbCount + STICKER_PRESETS.length
     }
     
     setTypeCounts(counts)
@@ -684,6 +700,56 @@ export default function LibraryPage() {
                           {preset.name}
                         </p>
                         <p className="text-xs text-surface-500 mt-0.5 truncate">{preset.description}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            ) : typeFilter === 'STICKER' && (mediaSource === 'system' || mediaSource === 'all') ? (
+              /* 表情系统预设 - 当选择表情类型且来源是系统素材时显示 */
+              <div className="space-y-4">
+                {/* 注入动画样式 */}
+                <style dangerouslySetInnerHTML={{ __html: STICKER_ANIMATIONS_CSS }} />
+                
+                {/* 标题 */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                    <Smile className="w-5 h-5 text-yellow-400" />
+                    系统表情预设
+                    <Badge variant="default" size="sm" className="bg-yellow-500/20 text-yellow-400 border-0">
+                      {STICKER_PRESETS.length} 个
+                    </Badge>
+                  </h3>
+                </div>
+
+                {/* 平铺展示所有表情 */}
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
+                  {STICKER_PRESETS.map((sticker) => (
+                    <motion.div
+                      key={sticker.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ scale: 1.08 }}
+                      className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-yellow-500/50 transition-all cursor-pointer bg-surface-800/50"
+                    >
+                      {/* 预览区域 */}
+                      <div className="relative aspect-square bg-gradient-to-br from-surface-900 via-surface-850 to-surface-900 flex items-center justify-center p-2 overflow-hidden">
+                        {/* 网格背景 */}
+                        <div className="absolute inset-0 bg-grid opacity-10" />
+                        {/* 表情预览 */}
+                        <span 
+                          style={stickerToCSS(sticker, 0.55)}
+                          className="relative z-10"
+                        >
+                          {sticker.content.value}
+                        </span>
+                      </div>
+                      {/* 信息 - 悬浮显示 */}
+                      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[10px] font-medium text-white truncate text-center">
+                          {sticker.name}
+                        </p>
                       </div>
                     </motion.div>
                   ))}

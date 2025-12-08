@@ -490,7 +490,7 @@ const highlights = [
   {
     icon: Sparkles,
     title: '海量素材库',
-    description: '音频、视频、花字、字体、动效、转场、滤镜、贴纸等，按情绪智能分类',
+    description: '音频、视频、花字、表情、字体、动效、转场、滤镜等，按情绪智能分类',
   },
   {
     icon: Wand2,

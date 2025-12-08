@@ -103,6 +103,15 @@ export const MEDIA_TYPE_CONFIG: MediaTypeItem[] = [
     description: '装饰文字和艺术字',
   },
   {
+    type: 'STICKER',
+    label: '表情',
+    labelEn: 'Emoji',
+    icon: Smile,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-400/15',
+    description: '表情贴纸和贴图',
+  },
+  {
     type: 'FONT',
     label: '字体',
     labelEn: 'Font',
@@ -110,15 +119,6 @@ export const MEDIA_TYPE_CONFIG: MediaTypeItem[] = [
     color: 'text-slate-400',
     bgColor: 'bg-slate-400/15',
     description: '字体文件资源',
-  },
-  {
-    type: 'STICKER',
-    label: '贴纸',
-    labelEn: 'Sticker',
-    icon: Smile,
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-400/15',
-    description: '表情贴纸和贴图',
   },
   {
     type: 'EFFECT',
