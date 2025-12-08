@@ -37,20 +37,25 @@ model Media {
   width         Int?      // 宽度（像素）
   height        Int?      // 高度（像素）
   thumbnailPath String?   // 缩略图路径
+  description   String?   @db.Text // 描述
+  isSystem      Boolean   @default(false) // 是否系统预设素材
+  usageCount    Int       @default(0) // 使用次数（热度）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // 关联
-  tags     MediaTag[]
-  projects ProjectMedia[]
+  tags       MediaTag[]
+  projects   ProjectMedia[]
+  categories MediaCategory[] // 多维度分类
 
   @@index([type])
   @@index([createdAt])
+  @@index([usageCount])
   @@map("media")
 }
 
-// 素材标签表
+// 素材标签表（保留旧表兼容）
 model MediaTag {
   id    String  @id @default(uuid())
   name  String  @unique
@@ -62,6 +67,84 @@ model MediaTag {
   media Media[]
 
   @@map("media_tags")
+}
+
+// ============================================
+// 多维度分类系统
+// ============================================
+
+// 分类维度枚举
+enum CategoryDimension {
+  EMOTION   // 情绪维度
+  INDUSTRY  // 行业/垂类
+  STYLE     // 风格维度
+  SCENE     // 场景维度
+  PLATFORM  // 适配平台
+  TEMPO     // 节奏/速度
+  MOOD      // 氛围/调性
+}
+
+// 分类标签表
+model CategoryTag {
+  id          String            @id @default(uuid())
+  dimension   CategoryDimension // 所属维度
+  name        String            // 标签名称
+  nameEn      String?           // 英文名称
+  icon        String?           // 图标（emoji或图标名）
+  color       String?           // 标签颜色
+  description String?           // 描述
+  sortOrder   Int               @default(0) // 排序
+  isSystem    Boolean           @default(false) // 是否系统预设
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  media               MediaCategory[]
+  platformPreferences PlatformPreference[]
+
+  @@unique([dimension, name])
+  @@index([dimension])
+  @@index([sortOrder])
+  @@map("category_tags")
+}
+
+// 素材分类关联表
+model MediaCategory {
+  id         String @id @default(uuid())
+  mediaId    String
+  categoryId String
+  confidence Float? @default(1.0) // AI 推荐的置信度（0-1）
+
+  createdAt DateTime @default(now())
+
+  // 关联
+  media    Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  category CategoryTag @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, categoryId])
+  @@index([mediaId])
+  @@index([categoryId])
+  @@map("media_categories")
+}
+
+// 平台推荐配置表（存储各平台的偏好权重）
+model PlatformPreference {
+  id         String @id @default(uuid())
+  platform   String // douyin, bilibili, xiaohongshu, kuaishou, weixin
+  categoryId String
+  weight     Float  @default(1.0) // 权重（0-2，1为标准）
+  tips       String? @db.Text // 使用建议
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  category CategoryTag @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([platform, categoryId])
+  @@index([platform])
+  @@map("platform_preferences")
 }
 
 // 项目表

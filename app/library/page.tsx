@@ -31,9 +31,16 @@ import {
   LayoutTemplate,
   Volume2,
   Layers,
+  Filter,
+  X,
+  Tag,
+  Home,
+  ChevronRight,
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner, Progress } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
+import { MediaTypeSidebar, MEDIA_TYPE_CONFIG, type MediaTypeFilter } from '@/components/media-type-sidebar'
+import { SubcategoryTags } from '@/components/subcategory-tags'
 import {
   getMediaList,
   deleteMedia,
@@ -47,7 +54,6 @@ import {
 // 类型定义
 // ============================================
 
-type MediaTypeFilter = 'ALL' | MediaType
 type ViewMode = 'grid' | 'list'
 
 interface UploadingFile {
@@ -159,6 +165,11 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [typeFilter, setTypeFilter] = useState<MediaTypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [categoryTags, setCategoryTags] = useState<string[]>([])
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // 类型计数
+  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({})
 
   // 上传状态
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
@@ -174,6 +185,9 @@ export default function LibraryPage() {
   // 预览状态
   const [previewMedia, setPreviewMedia] = useState<Media | null>(null)
 
+  // 获取当前类型配置
+  const currentTypeConfig = MEDIA_TYPE_CONFIG.find((c) => c.type === typeFilter)
+
   // 加载素材列表
   const loadMedia = useCallback(
     async (page: number = 1) => {
@@ -185,6 +199,7 @@ export default function LibraryPage() {
         limit: 24,
         type: typeFilter === 'ALL' ? undefined : typeFilter,
         search: searchQuery || undefined,
+        categories: categoryTags.length > 0 ? categoryTags : undefined,
       })
 
       if (response.success && response.data) {
@@ -196,13 +211,38 @@ export default function LibraryPage() {
 
       setLoading(false)
     },
-    [typeFilter, searchQuery]
+    [typeFilter, searchQuery, categoryTags]
   )
+
+  // 加载类型计数
+  const loadTypeCounts = useCallback(async () => {
+    // 获取所有类型的计数
+    const counts: Record<string, number> = {}
+    
+    // 并行获取各类型的数量
+    const types: MediaType[] = ['VIDEO', 'IMAGE', 'AUDIO', 'SOUND_EFFECT', 'FANCY_TEXT', 'FONT', 'STICKER', 'EFFECT', 'TRANSITION', 'TEMPLATE']
+    
+    await Promise.all(
+      types.map(async (type) => {
+        const response = await getMediaList({ type, limit: 1 })
+        if (response.success && response.data) {
+          counts[type] = response.data.pagination.total
+        }
+      })
+    )
+    
+    setTypeCounts(counts)
+  }, [])
 
   // 初始加载
   useEffect(() => {
     loadMedia()
   }, [loadMedia])
+
+  // 加载计数
+  useEffect(() => {
+    loadTypeCounts()
+  }, [loadTypeCounts])
 
   // 上传文件
   const handleUpload = async (files: FileList | null) => {
@@ -227,6 +267,7 @@ export default function LibraryPage() {
       if (response.success) {
         setUploadingFiles((prev) => prev.filter((u) => u.id !== upload.id))
         loadMedia() // 刷新列表
+        loadTypeCounts() // 刷新计数
       } else {
         setUploadingFiles((prev) =>
           prev.map((u) =>
@@ -246,6 +287,7 @@ export default function LibraryPage() {
       setMediaList((prev) => prev.filter((m) => m.id !== id))
       setSelectedIds((prev) => prev.filter((i) => i !== id))
       setDeleteId(null)
+      loadTypeCounts() // 刷新计数
     } else {
       setError(response.error || '删除失败')
     }
@@ -260,6 +302,7 @@ export default function LibraryPage() {
     }
     setSelectedIds([])
     loadMedia()
+    loadTypeCounts()
   }
 
   // 拖拽处理
@@ -286,21 +329,6 @@ export default function LibraryPage() {
     )
   }
 
-  // 类型筛选按钮
-  const filterButtons: { type: MediaTypeFilter; label: string; icon: typeof Video }[] = [
-    { type: 'ALL', label: '全部', icon: FolderOpen },
-    { type: 'VIDEO', label: '视频', icon: Video },
-    { type: 'IMAGE', label: '图片', icon: ImageIcon },
-    { type: 'AUDIO', label: '音乐', icon: Music },
-    { type: 'SOUND_EFFECT', label: '音效', icon: Volume2 },
-    { type: 'FANCY_TEXT', label: '花字', icon: Type },
-    { type: 'FONT', label: '字体', icon: Type },
-    { type: 'STICKER', label: '表情', icon: Smile },
-    { type: 'EFFECT', label: '特效', icon: Sparkles },
-    { type: 'TRANSITION', label: '转场', icon: Layers },
-    { type: 'TEMPLATE', label: '模版', icon: LayoutTemplate },
-  ]
-
   // 统计信息
   const stats = {
     total: pagination?.total || 0,
@@ -310,8 +338,8 @@ export default function LibraryPage() {
   }
 
   return (
-    <main
-      className="min-h-screen bg-surface-950"
+    <div
+      className="h-screen flex flex-col bg-surface-950"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -336,9 +364,9 @@ export default function LibraryPage() {
         )}
       </AnimatePresence>
 
-      {/* 导航栏 */}
-      <nav className="sticky top-0 z-40 bg-surface-950/80 backdrop-blur-xl border-b border-surface-800">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      {/* 顶部导航栏 */}
+      <header className="flex-shrink-0 bg-surface-900/80 backdrop-blur-xl border-b border-surface-800 z-40">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -349,27 +377,59 @@ export default function LibraryPage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center">
-                  <FolderOpen className="w-5 h-5 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold text-surface-100">素材库</h1>
-                  <p className="text-xs text-surface-500">{stats.total} 个素材</p>
-                </div>
-              </div>
+              
+              {/* 面包屑导航 */}
+              <nav className="flex items-center gap-2 text-sm">
+                <button
+                  onClick={() => router.push('/')}
+                  className="flex items-center gap-1.5 text-surface-400 hover:text-surface-200 transition-colors"
+                >
+                  <Home className="w-4 h-4" />
+                  <span>首页</span>
+                </button>
+                <ChevronRight className="w-4 h-4 text-surface-600" />
+                <span className="flex items-center gap-1.5 text-surface-200">
+                  <FolderOpen className="w-4 h-4 text-amber-400" />
+                  <span className="font-medium">素材库</span>
+                </span>
+                {typeFilter !== 'ALL' && currentTypeConfig && (
+                  <>
+                    <ChevronRight className="w-4 h-4 text-surface-600" />
+                    <span className={`flex items-center gap-1.5 ${currentTypeConfig.color}`}>
+                      <currentTypeConfig.icon className="w-4 h-4" />
+                      <span className="font-medium">{currentTypeConfig.label}</span>
+                    </span>
+                  </>
+                )}
+              </nav>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* 搜索框 */}
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
+                <input
+                  type="text"
+                  placeholder="搜索素材..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-9 pl-9 pr-4 bg-surface-800 border border-surface-700 rounded-lg text-sm text-surface-100 placeholder:text-surface-500 focus:outline-none focus:border-amber-400/50"
+                />
+              </div>
+
               <Button
                 variant="ghost"
                 size="sm"
                 isIconOnly
-                onClick={() => loadMedia()}
+                onClick={() => {
+                  loadMedia()
+                  loadTypeCounts()
+                }}
                 disabled={loading}
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
+              
               <input
                 ref={fileInputRef}
                 type="file"
@@ -389,385 +449,388 @@ export default function LibraryPage() {
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* 工具栏 */}
-      <div className="sticky top-[73px] z-30 bg-surface-900/80 backdrop-blur-xl border-b border-surface-800">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* 搜索框 */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
-              <input
-                type="text"
-                placeholder="搜索素材..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 bg-surface-800 border border-surface-700 rounded-lg text-sm text-surface-100 placeholder:text-surface-500 focus:outline-none focus:border-amber-400/50"
-              />
+      {/* 主内容区 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧侧边栏 - 素材大类 */}
+        <MediaTypeSidebar
+          selectedType={typeFilter}
+          onTypeChange={(type) => {
+            setTypeFilter(type)
+            setCategoryTags([]) // 切换大类时清空细分分类
+          }}
+          counts={typeCounts}
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+        />
+
+        {/* 右侧内容区 */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* 工具栏 - 二级分类 + 视图控制 */}
+          <div className="flex-shrink-0 px-4 py-3 bg-surface-900/50 border-b border-surface-800">
+            <div className="flex items-center justify-between gap-4">
+              {/* 二级分类标签 */}
+              <div className="flex-1 min-w-0">
+                <SubcategoryTags
+                  selectedTags={categoryTags}
+                  onTagsChange={setCategoryTags}
+                />
+              </div>
+
+              {/* 视图控制 */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* 结果统计 */}
+                <span className="text-sm text-surface-500">
+                  {pagination?.total || 0} 个结果
+                </span>
+
+                {/* 视图切换 */}
+                <div className="flex items-center gap-1 bg-surface-800 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      viewMode === 'grid'
+                        ? 'bg-surface-700 text-surface-100'
+                        : 'text-surface-500 hover:text-surface-300'
+                    }`}
+                    title="网格视图"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-surface-700 text-surface-100'
+                        : 'text-surface-500 hover:text-surface-300'
+                    }`}
+                    title="列表视图"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* 类型筛选 */}
-            <div className="flex items-center gap-1 bg-surface-800 rounded-lg p-1">
-              {filterButtons.map(({ type, label, icon: Icon }) => (
-                <button
-                  key={type}
-                  onClick={() => setTypeFilter(type)}
-                  className={`
-                    flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                    ${
-                      typeFilter === type
-                        ? 'bg-amber-400 text-surface-950'
-                        : 'text-surface-400 hover:text-surface-200 hover:bg-surface-700'
-                    }
-                  `}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* 视图切换 */}
-            <div className="flex items-center gap-1 bg-surface-800 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-surface-700 text-surface-100'
-                    : 'text-surface-500 hover:text-surface-300'
-                }`}
+            {/* 批量操作栏 */}
+            {selectedIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-between mt-3 p-3 bg-amber-400/10 border border-amber-400/30 rounded-lg"
               >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-surface-700 text-surface-100'
-                    : 'text-surface-500 hover:text-surface-300'
-                }`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
+                <span className="text-sm text-amber-400">已选择 {selectedIds.length} 个素材</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="xs" onClick={() => setSelectedIds([])}>
+                    取消选择
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="text-red-400 hover:text-red-300"
+                    onClick={handleBatchDelete}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    批量删除
+                  </Button>
+                </div>
+              </motion.div>
+            )}
           </div>
 
-          {/* 批量操作栏 */}
-          {selectedIds.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-between mt-3 p-3 bg-amber-400/10 border border-amber-400/30 rounded-lg"
-            >
-              <span className="text-sm text-amber-400">已选择 {selectedIds.length} 个素材</span>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="xs" onClick={() => setSelectedIds([])}>
-                  取消选择
-                </Button>
+          {/* 上传进度 */}
+          {uploadingFiles.length > 0 && (
+            <div className="flex-shrink-0 px-4 py-3 border-b border-surface-800">
+              <Card className="p-4">
+                <h3 className="text-sm font-medium text-surface-100 mb-3">上传中...</h3>
+                <div className="space-y-3">
+                  {uploadingFiles.map((upload) => (
+                    <div key={upload.id} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <p className="text-sm text-surface-200 truncate">{upload.name}</p>
+                        {upload.error ? (
+                          <p className="text-xs text-red-400">{upload.error}</p>
+                        ) : (
+                          <Progress value={upload.progress} size="sm" variant="primary" className="mt-1" />
+                        )}
+                      </div>
+                      <span className="text-xs text-surface-500">{upload.progress}%</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* 内容区 */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* 错误提示 */}
+            {error && (
+              <div className="flex items-center gap-2 p-4 mb-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {/* 加载状态 */}
+            {loading && mediaList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24">
+                <Spinner size="lg" />
+                <p className="mt-4 text-surface-500">加载中...</p>
+              </div>
+            ) : mediaList.length === 0 ? (
+              /* 空状态 */
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className={`w-24 h-24 rounded-3xl ${currentTypeConfig?.bgColor || 'bg-surface-800'} flex items-center justify-center mb-6`}>
+                  {currentTypeConfig ? (
+                    <currentTypeConfig.icon className={`w-12 h-12 ${currentTypeConfig.color}`} />
+                  ) : (
+                    <FolderOpen className="w-12 h-12 text-surface-600" />
+                  )}
+                </div>
+                <h2 className="text-xl font-semibold text-surface-200 mb-2">
+                  {typeFilter === 'ALL' ? '素材库为空' : `暂无${currentTypeConfig?.label}素材`}
+                </h2>
+                <p className="text-surface-500 mb-6">
+                  {typeFilter === 'ALL' 
+                    ? '上传你的第一个素材开始吧'
+                    : `上传或导入${currentTypeConfig?.label}素材`}
+                </p>
                 <Button
-                  variant="ghost"
-                  size="xs"
-                  className="text-red-400 hover:text-red-300"
-                  onClick={handleBatchDelete}
+                  variant="primary"
+                  leftIcon={<Upload className="w-4 h-4" />}
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  批量删除
+                  上传素材
                 </Button>
               </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
+            ) : viewMode === 'grid' ? (
+              /* 网格视图 */
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {mediaList.map((media) => {
+                  const Icon = getMediaIcon(media.type)
+                  const isSelected = selectedIds.includes(media.id)
+                  const typeConfig = MEDIA_TYPE_CONFIG.find((c) => c.type === media.type)
 
-      {/* 上传进度 */}
-      {uploadingFiles.length > 0 && (
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <Card className="p-4">
-            <h3 className="text-sm font-medium text-surface-100 mb-3">上传中...</h3>
-            <div className="space-y-3">
-              {uploadingFiles.map((upload) => (
-                <div key={upload.id} className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm text-surface-200 truncate">{upload.name}</p>
-                    {upload.error ? (
-                      <p className="text-xs text-red-400">{upload.error}</p>
-                    ) : (
-                      <Progress value={upload.progress} size="sm" variant="primary" className="mt-1" />
-                    )}
-                  </div>
-                  <span className="text-xs text-surface-500">{upload.progress}%</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* 内容区 */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* 错误提示 */}
-        {error && (
-          <div className="flex items-center gap-2 p-4 mb-6 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        {/* 加载状态 */}
-        {loading && mediaList.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <Spinner size="lg" />
-            <p className="mt-4 text-surface-500">加载中...</p>
-          </div>
-        ) : mediaList.length === 0 ? (
-          /* 空状态 */
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-24 h-24 rounded-3xl bg-surface-800 flex items-center justify-center mb-6">
-              <FolderOpen className="w-12 h-12 text-surface-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-surface-200 mb-2">素材库为空</h2>
-            <p className="text-surface-500 mb-6">上传你的第一个素材开始吧</p>
-            <Button
-              variant="primary"
-              leftIcon={<Upload className="w-4 h-4" />}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              上传素材
-            </Button>
-          </div>
-        ) : viewMode === 'grid' ? (
-          /* 网格视图 */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {mediaList.map((media) => {
-              const Icon = getMediaIcon(media.type)
-              const isSelected = selectedIds.includes(media.id)
-
-              return (
-                <motion.div
-                  key={media.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={`
-                    relative group rounded-xl overflow-hidden border-2 transition-all cursor-pointer
-                    ${
-                      isSelected
-                        ? 'border-amber-400 shadow-lg shadow-amber-400/20'
-                        : 'border-transparent hover:border-surface-600'
-                    }
-                  `}
-                  onClick={() => setPreviewMedia(media)}
-                >
-                  {/* 缩略图 */}
-                  <div className="relative aspect-video bg-surface-800">
-                    {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
-                      media.thumbnailPath || media.path ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={media.thumbnailPath || media.path}
-                          alt={media.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Icon className="w-8 h-8 text-surface-600" />
-                        </div>
-                      )
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                        <Music className="w-8 h-8 text-purple-400" />
-                      </div>
-                    )}
-
-                    {/* 选择框 */}
-                    <button
+                  return (
+                    <motion.div
+                      key={media.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       className={`
-                        absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all
+                        relative group rounded-xl overflow-hidden border-2 transition-all cursor-pointer
                         ${
                           isSelected
-                            ? 'bg-amber-400 border-amber-400'
-                            : 'bg-surface-900/60 border-surface-500 opacity-0 group-hover:opacity-100'
+                            ? 'border-amber-400 shadow-lg shadow-amber-400/20'
+                            : 'border-transparent hover:border-surface-600'
                         }
                       `}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleSelect(media.id)
-                      }}
+                      onClick={() => setPreviewMedia(media)}
                     >
-                      {isSelected && <Check className="w-4 h-4 text-surface-950" />}
-                    </button>
+                      {/* 缩略图 */}
+                      <div className="relative aspect-video bg-surface-800">
+                        {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
+                          media.thumbnailPath || media.path ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={media.thumbnailPath || media.path}
+                              alt={media.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icon className="w-8 h-8 text-surface-600" />
+                            </div>
+                          )
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center ${typeConfig?.bgColor || 'bg-surface-800'}`}>
+                            <Icon className={`w-8 h-8 ${typeConfig?.color || 'text-surface-500'}`} />
+                          </div>
+                        )}
 
-                    {/* 类型标识 */}
-                    <div className="absolute top-2 right-2">
-                      <Badge
-                        variant={
-                          media.type === 'VIDEO'
-                            ? 'primary'
-                            : media.type === 'IMAGE'
-                              ? 'success'
-                              : 'info'
-                        }
-                        size="sm"
-                      >
-                        <Icon className="w-3 h-3" />
-                      </Badge>
-                    </div>
-
-                    {/* 时长 */}
-                    {media.duration && (
-                      <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/70 rounded text-xs text-white font-mono">
-                        {formatDuration(media.duration)}
-                      </div>
-                    )}
-
-                    {/* 悬浮操作 */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        isIconOnly
-                        className="bg-surface-800/80 hover:bg-red-500/80 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteId(media.id)
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 信息 */}
-                  <div className="p-2 bg-surface-850">
-                    <p className="text-xs font-medium text-surface-200 truncate" title={media.name}>
-                      {media.name}
-                    </p>
-                    <p className="text-xs text-surface-500 mt-0.5">{formatFileSize(media.size)}</p>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        ) : (
-          /* 列表视图 */
-          <div className="space-y-2">
-            {mediaList.map((media) => {
-              const Icon = getMediaIcon(media.type)
-              const isSelected = selectedIds.includes(media.id)
-
-              return (
-                <Card
-                  key={media.id}
-                  className={`p-4 transition-all cursor-pointer ${
-                    isSelected ? 'border-amber-400' : ''
-                  }`}
-                  onClick={() => setPreviewMedia(media)}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* 选择框 */}
-                    <button
-                      className={`
-                        w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-                        ${
-                          isSelected
-                            ? 'bg-amber-400 border-amber-400'
-                            : 'border-surface-600 hover:border-surface-400'
-                        }
-                      `}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleSelect(media.id)
-                      }}
-                    >
-                      {isSelected && <Check className="w-3 h-3 text-surface-950" />}
-                    </button>
-
-                    {/* 缩略图 */}
-                    <div className="w-16 h-10 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0">
-                      {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={media.thumbnailPath || media.path}
-                          alt={media.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Music className="w-5 h-5 text-purple-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 信息 */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-surface-100 truncate">{media.name}</p>
-                      <div className="flex items-center gap-3 text-xs text-surface-500">
-                        <Badge
-                          variant={
-                            media.type === 'VIDEO'
-                              ? 'primary'
-                              : media.type === 'IMAGE'
-                                ? 'success'
-                                : 'info'
-                          }
-                          size="sm"
+                        {/* 选择框 */}
+                        <button
+                          className={`
+                            absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all
+                            ${
+                              isSelected
+                                ? 'bg-amber-400 border-amber-400'
+                                : 'bg-surface-900/60 border-surface-500 opacity-0 group-hover:opacity-100'
+                            }
+                          `}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSelect(media.id)
+                          }}
                         >
-                          <Icon className="w-3 h-3 mr-1" />
-                          {getMediaTypeName(media.type)}
-                        </Badge>
-                        <span>{formatFileSize(media.size)}</span>
-                        {media.duration && <span>{formatDuration(media.duration)}</span>}
+                          {isSelected && <Check className="w-4 h-4 text-surface-950" />}
+                        </button>
+
+                        {/* 类型标识 */}
+                        <div className="absolute top-2 right-2">
+                          <Badge
+                            variant="default"
+                            size="sm"
+                            className={`${typeConfig?.bgColor} ${typeConfig?.color} border-0`}
+                          >
+                            <Icon className="w-3 h-3" />
+                          </Badge>
+                        </div>
+
+                        {/* 时长 */}
+                        {media.duration && (
+                          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/70 rounded text-xs text-white font-mono">
+                            {formatDuration(media.duration)}
+                          </div>
+                        )}
+
+                        {/* 悬浮操作 */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            isIconOnly
+                            className="bg-surface-800/80 hover:bg-red-500/80 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteId(media.id)
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* 时间 */}
-                    <div className="text-xs text-surface-500">{formatDate(media.createdAt)}</div>
+                      {/* 信息 */}
+                      <div className="p-2 bg-surface-850">
+                        <p className="text-xs font-medium text-surface-200 truncate" title={media.name}>
+                          {media.name}
+                        </p>
+                        <p className="text-xs text-surface-500 mt-0.5">{formatFileSize(media.size)}</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            ) : (
+              /* 列表视图 */
+              <div className="space-y-2">
+                {mediaList.map((media) => {
+                  const Icon = getMediaIcon(media.type)
+                  const isSelected = selectedIds.includes(media.id)
+                  const typeConfig = MEDIA_TYPE_CONFIG.find((c) => c.type === media.type)
 
-                    {/* 操作 */}
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      isIconOnly
-                      className="text-surface-500 hover:text-red-400"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeleteId(media.id)
-                      }}
+                  return (
+                    <Card
+                      key={media.id}
+                      className={`p-4 transition-all cursor-pointer ${
+                        isSelected ? 'border-amber-400' : ''
+                      }`}
+                      onClick={() => setPreviewMedia(media)}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+                      <div className="flex items-center gap-4">
+                        {/* 选择框 */}
+                        <button
+                          className={`
+                            w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+                            ${
+                              isSelected
+                                ? 'bg-amber-400 border-amber-400'
+                                : 'border-surface-600 hover:border-surface-400'
+                            }
+                          `}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSelect(media.id)
+                          }}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-surface-950" />}
+                        </button>
 
-        {/* 分页 */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 mt-8">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pagination.page <= 1}
-              onClick={() => loadMedia(pagination.page - 1)}
-            >
-              上一页
-            </Button>
-            <span className="text-sm text-surface-400">
-              第 {pagination.page} 页，共 {pagination.totalPages} 页
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pagination.page >= pagination.totalPages}
-              onClick={() => loadMedia(pagination.page + 1)}
-            >
-              下一页
-            </Button>
+                        {/* 缩略图 */}
+                        <div className={`w-16 h-10 rounded-lg overflow-hidden flex-shrink-0 ${typeConfig?.bgColor || 'bg-surface-800'}`}>
+                          {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={media.thumbnailPath || media.path}
+                              alt={media.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icon className={`w-5 h-5 ${typeConfig?.color || 'text-surface-500'}`} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 信息 */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-surface-100 truncate">{media.name}</p>
+                          <div className="flex items-center gap-3 text-xs text-surface-500">
+                            <Badge
+                              variant="default"
+                              size="sm"
+                              className={`${typeConfig?.bgColor} ${typeConfig?.color} border-0`}
+                            >
+                              <Icon className="w-3 h-3 mr-1" />
+                              {getMediaTypeName(media.type)}
+                            </Badge>
+                            <span>{formatFileSize(media.size)}</span>
+                            {media.duration && <span>{formatDuration(media.duration)}</span>}
+                          </div>
+                        </div>
+
+                        {/* 时间 */}
+                        <div className="text-xs text-surface-500">{formatDate(media.createdAt)}</div>
+
+                        {/* 操作 */}
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          isIconOnly
+                          className="text-surface-500 hover:text-red-400"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteId(media.id)
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* 分页 */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page <= 1}
+                  onClick={() => loadMedia(pagination.page - 1)}
+                >
+                  上一页
+                </Button>
+                <span className="text-sm text-surface-400">
+                  第 {pagination.page} 页，共 {pagination.totalPages} 页
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page >= pagination.totalPages}
+                  onClick={() => loadMedia(pagination.page + 1)}
+                >
+                  下一页
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+        </main>
       </div>
 
       {/* 删除确认弹窗 */}
@@ -815,7 +878,6 @@ export default function LibraryPage() {
         src={previewMedia?.path || ''}
         title={previewMedia?.name}
       />
-    </main>
+    </div>
   )
 }
-

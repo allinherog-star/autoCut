@@ -102,6 +102,7 @@ export async function getMediaList(params?: {
   limit?: number
   type?: MediaType
   search?: string
+  categories?: string[] // 分类标签 ID 列表
 }): Promise<ApiResponse<MediaListResponse>> {
   try {
     const searchParams = new URLSearchParams()
@@ -110,6 +111,9 @@ export async function getMediaList(params?: {
     if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.type) searchParams.set('type', params.type)
     if (params?.search) searchParams.set('search', params.search)
+    if (params?.categories && params.categories.length > 0) {
+      searchParams.set('categories', params.categories.join(','))
+    }
 
     const url = `/api/media${searchParams.toString() ? `?${searchParams}` : ''}`
     const response = await fetch(url)

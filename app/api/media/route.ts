@@ -106,12 +106,11 @@ export async function GET(request: NextRequest) {
     // 筛选参数
     const type = searchParams.get('type') as MediaType | null
     const search = searchParams.get('search')
+    const categoryIds = searchParams.get('categories')?.split(',').filter(Boolean) || []
 
     // 构建查询条件
-    const where: {
-      type?: MediaType
-      name?: { contains: string }
-    } = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {}
 
     if (type && Object.values(MediaType).includes(type)) {
       where.type = type
@@ -121,6 +120,15 @@ export async function GET(request: NextRequest) {
       where.name = { contains: search }
     }
 
+    // 按分类标签筛选
+    if (categoryIds.length > 0) {
+      where.categories = {
+        some: {
+          categoryId: { in: categoryIds }
+        }
+      }
+    }
+
     // 并行查询数据和总数
     const [media, total] = await Promise.all([
       prisma.media.findMany({
@@ -128,6 +136,13 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
+        include: {
+          categories: {
+            include: {
+              category: true
+            }
+          }
+        }
       }),
       prisma.media.count({ where }),
     ])
