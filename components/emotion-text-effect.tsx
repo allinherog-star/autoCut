@@ -1469,6 +1469,516 @@ const getAnimationVariants = (preset: EmotionTextStyle, index: number, totalChar
         exit: { opacity: 0, scale: 2, transition: { duration: 0.2 } },
       }
 
+    // ========== 🎯 全新情绪动效动画 ==========
+    
+    // 棒棒哒 - 糖果弹跳
+    case 'candy-bounce-in':
+      return {
+        hidden: { opacity: 0, scale: 0, y: 80, rotate: -20 },
+        visible: {
+          opacity: 1,
+          scale: [0, 1.4, 0.8, 1.15, 0.95, 1.05, 1],
+          y: [80, -30, 15, -10, 5, 0],
+          rotate: [randomInRange(-30, 30), randomInRange(-15, 15), randomInRange(-5, 5), 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
+            type: 'spring',
+            stiffness: 450,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, scale: 0, y: -50, rotate: 20, transition: { duration: 0.25 } },
+      }
+
+    // 太棒了 - 金色爆发
+    case 'golden-explosion-in':
+      return {
+        hidden: { opacity: 0, scale: 0, filter: 'brightness(5) blur(20px)' },
+        visible: {
+          opacity: [0, 1, 1, 1],
+          scale: [0, 2, 0.75, 1.15, 1],
+          filter: ['brightness(5) blur(20px)', 'brightness(2.5) blur(5px)', 'brightness(1.5) blur(0px)', 'brightness(1) blur(0px)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.5,
+            times: [0, 0.3, 0.6, 0.8, 1],
+            ease: [0.34, 1.56, 0.64, 1],
+          },
+        },
+        exit: { opacity: 0, scale: 1.5, filter: 'brightness(3)', transition: { duration: 0.2 } },
+      }
+
+    // 牛逼 - 火焰爆发
+    case 'fire-explosion-in':
+      return {
+        hidden: { opacity: 0, scale: 0.1, y: 100, filter: 'brightness(3)' },
+        visible: {
+          opacity: 1,
+          scale: [0.1, 2.2, 0.7, 1.25, 0.95, 1.1, 1],
+          y: [100, -20, 10, -5, 0],
+          filter: ['brightness(3)', 'brightness(2)', 'brightness(1.3)', 'brightness(1)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.45,
+            times: [0, 0.2, 0.4, 0.55, 0.7, 0.85, 1],
+            type: 'spring',
+            stiffness: 700,
+            damping: 10,
+          },
+        },
+        exit: { opacity: 0, scale: 2, y: -30, filter: 'brightness(2)', transition: { duration: 0.15 } },
+      }
+
+    // 厉害了 - 力量冲击
+    case 'power-slam-in':
+      return {
+        hidden: { opacity: 0, scale: 3, y: -100, filter: 'blur(15px)' },
+        visible: {
+          opacity: 1,
+          scale: [3, 0.7, 1.3, 0.9, 1.1, 1],
+          y: [-100, 10, -5, 0],
+          filter: ['blur(15px)', 'blur(0px)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.4,
+            times: [0, 0.25, 0.45, 0.65, 0.85, 1],
+            ease: [0.25, 0.1, 0.25, 1],
+          },
+        },
+        exit: { opacity: 0, scale: 0.5, y: 50, transition: { duration: 0.15 } },
+      }
+
+    // 太绝了 - 魔法闪耀
+    case 'magic-sparkle-in':
+      return {
+        hidden: { opacity: 0, scale: 0.5, rotate: -10, filter: 'brightness(0.5)' },
+        visible: {
+          opacity: [0, 0.5, 1, 0.8, 1],
+          scale: [0.5, 1.3, 0.9, 1.1, 1],
+          rotate: [randomInRange(-15, 15), randomInRange(-5, 5), 0],
+          filter: ['brightness(0.5)', 'brightness(2)', 'brightness(1.5)', 'brightness(1)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.55,
+            times: [0, 0.3, 0.5, 0.75, 1],
+          },
+        },
+        exit: { opacity: 0, scale: 1.3, filter: 'brightness(2)', transition: { duration: 0.25 } },
+      }
+
+    // 无情 - 冷酷冲击
+    case 'cold-slam-in':
+      return {
+        hidden: { opacity: 0, scale: 2, x: 100 },
+        visible: {
+          opacity: 1,
+          scale: [2, 0.8, 1.15, 1],
+          x: [100, -10, 5, 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.35,
+            times: [0, 0.35, 0.7, 1],
+            type: 'spring',
+            stiffness: 800,
+            damping: 18,
+          },
+        },
+        exit: { opacity: 0, scale: 0.5, x: -50, transition: { duration: 0.15 } },
+      }
+
+    // 卧槽 - 震惊爆发
+    case 'shock-explosion-in':
+      return {
+        hidden: { opacity: 0, scale: 0, rotate: randomInRange(-30, 30) },
+        visible: {
+          opacity: 1,
+          scale: [0, 2.5, 0.6, 1.4, 0.85, 1.15, 1],
+          rotate: [randomInRange(-40, 40), randomInRange(-20, 20), randomInRange(-8, 8), 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.5,
+            times: [0, 0.15, 0.3, 0.45, 0.6, 0.8, 1],
+            type: 'spring',
+            stiffness: 600,
+            damping: 10,
+          },
+        },
+        exit: { opacity: 0, scale: 0, rotate: 45, transition: { duration: 0.15 } },
+      }
+
+    // 我的天 - 从天而降
+    case 'sky-drop-in':
+      return {
+        hidden: { opacity: 0, y: -150, scale: 0.5 },
+        visible: {
+          opacity: 1,
+          y: [-150, 20, -10, 5, 0],
+          scale: [0.5, 1.3, 0.9, 1.1, 1],
+          transition: {
+            ...commonTransition,
+            duration: 0.55,
+            times: [0, 0.35, 0.55, 0.75, 1],
+            type: 'spring',
+            stiffness: 400,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, y: -80, scale: 0.5, transition: { duration: 0.25 } },
+      }
+
+    // 不会吧 - 困惑弹出
+    case 'confusion-pop-in':
+      return {
+        hidden: { opacity: 0, scale: 0, rotate: 15 },
+        visible: {
+          opacity: 1,
+          scale: [0, 1.3, 0.85, 1.1, 1],
+          rotate: [15, -10, 5, -3, 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.3, 0.5, 0.7, 1],
+            type: 'spring',
+            stiffness: 400,
+            damping: 15,
+          },
+        },
+        exit: { opacity: 0, scale: 0, rotate: -15, transition: { duration: 0.2 } },
+      }
+
+    // 真的假的 - 怀疑滑入
+    case 'doubt-slide-in':
+      return {
+        hidden: { opacity: 0, x: -80, rotate: -10 },
+        visible: {
+          opacity: 1,
+          x: [-80, 10, -5, 0],
+          rotate: [-10, 5, -2, 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.4, 0.7, 1],
+            type: 'spring',
+            stiffness: 350,
+            damping: 18,
+          },
+        },
+        exit: { opacity: 0, x: 50, rotate: 10, transition: { duration: 0.2 } },
+      }
+
+    // 什么 - 惊叹爆发
+    case 'exclaim-burst-in':
+      return {
+        hidden: { opacity: 0, scale: 0.1, rotate: randomInRange(-20, 20) },
+        visible: {
+          opacity: 1,
+          scale: [0.1, 2, 0.7, 1.3, 1],
+          rotate: [randomInRange(-30, 30), randomInRange(-10, 10), 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.4,
+            times: [0, 0.25, 0.5, 0.75, 1],
+            type: 'spring',
+            stiffness: 700,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, scale: 2.5, transition: { duration: 0.15 } },
+      }
+
+    // 好可爱 - 可爱弹跳
+    case 'cute-bounce-in':
+      return {
+        hidden: { opacity: 0, scale: 0, y: 60 },
+        visible: {
+          opacity: 1,
+          scale: [0, 1.35, 0.85, 1.15, 0.95, 1.05, 1],
+          y: [60, -25, 12, -8, 4, 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
+            type: 'spring',
+            stiffness: 400,
+            damping: 10,
+          },
+        },
+        exit: { opacity: 0, scale: 0, y: -40, transition: { duration: 0.25 } },
+      }
+
+    // 萌萌哒 - 萌系弹出
+    case 'moe-pop-in':
+      return {
+        hidden: { opacity: 0, scale: 0, rotate: -15 },
+        visible: {
+          opacity: 1,
+          scale: [0, 1.4, 0.8, 1.15, 1],
+          rotate: [randomInRange(-20, 20), randomInRange(-8, 8), 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.3, 0.5, 0.75, 1],
+            type: 'spring',
+            stiffness: 450,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, scale: 0, rotate: 15, transition: { duration: 0.2 } },
+      }
+
+    // 太甜了 - 甜蜜洒落
+    case 'sweet-rain-in':
+      return {
+        hidden: { opacity: 0, y: -80, scale: 0.6 },
+        visible: {
+          opacity: 1,
+          y: [-80, 15, -8, 4, 0],
+          scale: [0.6, 1.2, 0.9, 1.1, 1],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.35, 0.55, 0.75, 1],
+            type: 'spring',
+            stiffness: 350,
+            damping: 15,
+          },
+        },
+        exit: { opacity: 0, y: 50, scale: 0.6, transition: { duration: 0.25 } },
+      }
+
+    // 爱你 - 心形爆发
+    case 'heart-burst-in':
+      return {
+        hidden: { opacity: 0, scale: 0 },
+        visible: {
+          opacity: 1,
+          scale: [0, 1.5, 0.75, 1.2, 0.9, 1.1, 1],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
+            ease: 'easeOut',
+          },
+        },
+        exit: { opacity: 0, scale: 1.5, filter: 'blur(10px)', transition: { duration: 0.3 } },
+      }
+
+    // 笑死我了 - 笑到抖动
+    case 'laugh-shake-in':
+      return {
+        hidden: { opacity: 0, y: 100, rotate: randomInRange(-25, 25) },
+        visible: {
+          opacity: 1,
+          y: [100, -20, 10, -5, 0],
+          rotate: [randomInRange(-35, 35), randomInRange(-15, 15), randomInRange(-5, 5), 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.3, 0.5, 0.75, 1],
+            type: 'spring',
+            stiffness: 400,
+            damping: 10,
+          },
+        },
+        exit: { opacity: 0, y: -50, rotate: 20, transition: { duration: 0.2 } },
+      }
+
+    // 绷不住了 - 崩溃入场
+    case 'collapse-in':
+      return {
+        hidden: { opacity: 0, scale: 1.5, y: -50 },
+        visible: {
+          opacity: 1,
+          scale: [1.5, 0.8, 1.2, 0.95, 1.05, 1],
+          y: [-50, 15, -8, 4, 0],
+          rotate: [0, randomInRange(-10, 10), randomInRange(-5, 5), 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.2, 0.4, 0.6, 0.8, 1],
+            type: 'spring',
+            stiffness: 350,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, scale: 0.5, y: 30, transition: { duration: 0.2 } },
+      }
+
+    // 阴吹丝汀 - 故障弹出
+    case 'glitch-pop-in':
+      return {
+        hidden: { opacity: 0, scale: 0.8, x: -20 },
+        visible: {
+          opacity: [0, 1, 0.8, 1, 0.9, 1],
+          scale: [0.8, 1.1, 0.95, 1.05, 1],
+          x: [-20, 10, -5, 3, 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.25, 0.4, 0.6, 0.8, 1],
+          },
+        },
+        exit: { opacity: 0, scale: 0.8, x: 20, transition: { duration: 0.2 } },
+      }
+
+    // 累了 - 疲惫下落
+    case 'tired-drop-in':
+      return {
+        hidden: { opacity: 0, y: -40, scale: 0.9 },
+        visible: {
+          opacity: [0, 0.7, 1],
+          y: [-40, 5, 0],
+          scale: [0.9, 1.02, 1],
+          transition: {
+            ...commonTransition,
+            duration: 0.7,
+            times: [0, 0.5, 1],
+            ease: 'easeOut',
+          },
+        },
+        exit: { opacity: 0, y: 30, transition: { duration: 0.3 } },
+      }
+
+    // 超燃 - 火焰爆发
+    case 'fire-burst-in':
+      return {
+        hidden: { opacity: 0, scale: 0, y: 80, filter: 'brightness(3)' },
+        visible: {
+          opacity: 1,
+          scale: [0, 2.5, 0.65, 1.35, 0.9, 1.15, 1],
+          y: [80, -15, 8, -4, 0],
+          filter: ['brightness(3)', 'brightness(2)', 'brightness(1.4)', 'brightness(1)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.45,
+            times: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
+            type: 'spring',
+            stiffness: 650,
+            damping: 10,
+          },
+        },
+        exit: { opacity: 0, scale: 2, filter: 'brightness(2)', transition: { duration: 0.15 } },
+      }
+
+    // 无敌 - 王者降临
+    case 'king-descend-in':
+      return {
+        hidden: { opacity: 0, y: -120, scale: 0.3, filter: 'brightness(3)' },
+        visible: {
+          opacity: 1,
+          y: [-120, 10, -5, 0],
+          scale: [0.3, 1.4, 0.9, 1.1, 1],
+          filter: ['brightness(3)', 'brightness(1.8)', 'brightness(1.2)', 'brightness(1)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.55,
+            times: [0, 0.4, 0.7, 0.9, 1],
+            ease: [0.34, 1.56, 0.64, 1],
+          },
+        },
+        exit: { opacity: 0, y: -60, scale: 0.5, transition: { duration: 0.25 } },
+      }
+
+    // 高能 - 能量爆发
+    case 'energy-burst-in':
+      return {
+        hidden: { opacity: 0, scale: 0, filter: 'brightness(4) blur(15px)' },
+        visible: {
+          opacity: 1,
+          scale: [0, 2.2, 0.7, 1.3, 1],
+          filter: ['brightness(4) blur(15px)', 'brightness(2) blur(5px)', 'brightness(1.3) blur(0px)', 'brightness(1) blur(0px)'],
+          transition: {
+            ...commonTransition,
+            duration: 0.4,
+            times: [0, 0.25, 0.5, 0.75, 1],
+            type: 'spring',
+            stiffness: 700,
+            damping: 12,
+          },
+        },
+        exit: { opacity: 0, scale: 2, filter: 'brightness(2)', transition: { duration: 0.15 } },
+      }
+
+    // 扎心了 - 心碎入场
+    case 'heartbreak-in':
+      return {
+        hidden: { opacity: 0, scale: 1.3, y: -30 },
+        visible: {
+          opacity: [0, 0.8, 1],
+          scale: [1.3, 0.9, 1.05, 1],
+          y: [-30, 8, -3, 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.6,
+            times: [0, 0.4, 0.7, 1],
+            ease: 'easeOut',
+          },
+        },
+        exit: { opacity: 0, scale: 0.8, y: 20, transition: { duration: 0.3 } },
+      }
+
+    // 难了 - 沉重下落
+    case 'heavy-drop-in':
+      return {
+        hidden: { opacity: 0, y: -60 },
+        visible: {
+          opacity: [0, 0.6, 1],
+          y: [-60, 8, 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.7,
+            times: [0, 0.5, 1],
+            ease: [0.4, 0, 0.2, 1],
+          },
+        },
+        exit: { opacity: 0, y: 40, transition: { duration: 0.35 } },
+      }
+
+    // 服了 - 翻白眼入场
+    case 'eye-roll-in':
+      return {
+        hidden: { opacity: 0, y: 40, rotate: 10 },
+        visible: {
+          opacity: 1,
+          y: [40, -10, 5, 0],
+          rotate: [10, -5, 2, 0],
+          transition: {
+            ...commonTransition,
+            times: [0, 0.4, 0.7, 1],
+            type: 'spring',
+            stiffness: 300,
+            damping: 18,
+          },
+        },
+        exit: { opacity: 0, y: -30, rotate: -10, transition: { duration: 0.25 } },
+      }
+
+    // 下头 - 向下滑落
+    case 'fall-down-in':
+      return {
+        hidden: { opacity: 0, y: -50 },
+        visible: {
+          opacity: [0, 1, 0.9, 1],
+          y: [-50, 15, -5, 0],
+          scale: [1, 0.95, 1.02, 1],
+          transition: {
+            ...commonTransition,
+            duration: 0.55,
+            times: [0, 0.45, 0.75, 1],
+            ease: 'easeOut',
+          },
+        },
+        exit: { opacity: 0, y: 50, transition: { duration: 0.3 } },
+      }
+
+    // 破防了 - 破裂入场
+    case 'crack-break-in':
+      return {
+        hidden: { opacity: 0, scale: 1.2 },
+        visible: {
+          opacity: [0, 0.7, 1, 0.85, 1],
+          scale: [1.2, 0.85, 1.1, 0.95, 1],
+          transition: {
+            ...commonTransition,
+            duration: 0.55,
+            times: [0, 0.3, 0.5, 0.75, 1],
+          },
+        },
+        exit: { opacity: 0, scale: 0.8, transition: { duration: 0.25 } },
+      }
+
     default:
       return {
         hidden: { opacity: 0, y: 30, scale: 0.8 },
@@ -1634,6 +2144,373 @@ const getLoopVariants = (loopType: string | undefined): Variants => {
         },
       }
 
+    // ========== 🎯 全新情绪动效循环动画 ==========
+    
+    // 棒棒哒 - 可爱摇摆
+    case 'cute-wiggle':
+      return {
+        animate: {
+          rotate: [-8, 8, -8],
+          y: [-3, 3, -3],
+          scale: [1, 1.03, 1, 1.02, 1],
+          transition: {
+            duration: 0.4,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 太棒了 - 金光闪烁
+    case 'golden-shimmer':
+      return {
+        animate: {
+          filter: ['brightness(1)', 'brightness(1.6)', 'brightness(1.2)', 'brightness(1.4)', 'brightness(1)'],
+          scale: [1, 1.04, 1, 1.03, 1],
+          transition: {
+            duration: 0.8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 牛逼 - 火焰闪烁
+    case 'fire-flicker':
+      return {
+        animate: {
+          x: [-3, 3, -2, 4, -3, 2, 0],
+          y: [-2, 2, -1, 3, -2, 1, 0],
+          scale: [1, 1.04, 1, 1.03, 1.02, 1],
+          filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1.1)', 'brightness(1.2)', 'brightness(1)'],
+          transition: {
+            duration: 0.25,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+        },
+      }
+
+    // 太绝了 - 魔法发光
+    case 'magic-glow':
+      return {
+        animate: {
+          filter: ['brightness(1)', 'brightness(1.4)', 'brightness(1.1)', 'brightness(1.3)', 'brightness(1)'],
+          scale: [1, 1.03, 1, 1.02, 1],
+          transition: {
+            duration: 1.2,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 无情 - 冷酷脉动
+    case 'cold-pulse':
+      return {
+        animate: {
+          scale: [1, 1.05, 1],
+          filter: ['brightness(1)', 'brightness(1.2)', 'brightness(1)'],
+          transition: {
+            duration: 0.6,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 卧槽 - 震惊颤抖
+    case 'shock-tremble':
+      return {
+        animate: {
+          x: [-5, 6, -4, 5, -6, 4, -3, 5, 0],
+          y: [-3, 4, -2, 3, -4, 2, 0],
+          rotate: [-2, 3, -1, 2, -3, 1, 0],
+          scale: [1, 1.03, 0.98, 1.02, 1],
+          transition: {
+            duration: 0.2,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+        },
+      }
+
+    // 我的天 - 浮动抖动
+    case 'float-shake':
+      return {
+        animate: {
+          y: [-4, 4, -4],
+          rotate: [-3, 3, -3],
+          transition: {
+            duration: 0.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 不会吧 - 摇摆抖动
+    case 'wobble-shake':
+      return {
+        animate: {
+          rotate: [-5, 5, -3, 4, -5],
+          x: [-2, 2, -1, 2, -2],
+          transition: {
+            duration: 0.4,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 真的假的 - 倾斜抖动
+    case 'tilt-shake':
+      return {
+        animate: {
+          rotate: [-4, 4, -2, 3, -4],
+          transition: {
+            duration: 0.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 好可爱 - 可爱漂浮
+    case 'cute-float':
+      return {
+        animate: {
+          y: [-5, 5, -5],
+          rotate: [-3, 3, -3],
+          scale: [1, 1.02, 1],
+          transition: {
+            duration: 0.6,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 萌萌哒 - 萌系摇摆
+    case 'moe-wiggle':
+      return {
+        animate: {
+          rotate: [-10, 10, -10],
+          y: [-3, 3, -3],
+          transition: {
+            duration: 0.35,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 太甜了 - 甜蜜弹跳
+    case 'sweet-bounce':
+      return {
+        animate: {
+          y: [-4, 4, -4],
+          scale: [1, 1.03, 1],
+          transition: {
+            duration: 0.45,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 爱你 - 强力心跳
+    case 'heartbeat-strong':
+      return {
+        animate: {
+          scale: [1, 1.15, 1, 1.2, 1],
+          filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)', 'brightness(1.4)', 'brightness(1)'],
+          transition: {
+            duration: 0.6,
+            repeat: Infinity,
+            times: [0, 0.25, 0.5, 0.75, 1],
+          },
+        },
+      }
+
+    // 笑死我了 - 笑到颤抖
+    case 'laugh-tremor':
+      return {
+        animate: {
+          x: [-4, 5, -3, 6, -5, 4, 0],
+          y: [-2, 3, -1, 4, -3, 2, 0],
+          rotate: [-6, 8, -4, 6, -8, 5, 0],
+          transition: {
+            duration: 0.18,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+        },
+      }
+
+    // 绷不住了 - 剧烈摇摆
+    case 'wobble-intense':
+      return {
+        animate: {
+          rotate: [-12, 12, -8, 10, -12],
+          y: [-4, 4, -2, 3, -4],
+          transition: {
+            duration: 0.25,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 阴吹丝汀 - 轻微故障
+    case 'subtle-glitch':
+      return {
+        animate: {
+          x: [0, -2, 0, 2, 0, -1, 0],
+          opacity: [1, 0.9, 1, 0.95, 1],
+          transition: {
+            duration: 0.3,
+            repeat: Infinity,
+            repeatDelay: 0.8,
+          },
+        },
+      }
+
+    // 累了 - 缓慢摇摆
+    case 'sway-slow':
+      return {
+        animate: {
+          rotate: [-2, 2, -2],
+          y: [-2, 2, -2],
+          transition: {
+            duration: 1.2,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 超燃 - 火焰舞动
+    case 'flame-dance':
+      return {
+        animate: {
+          x: [-4, 4, -3, 5, -4, 3, 0],
+          y: [-3, 3, -2, 4, -3, 2, 0],
+          scale: [1, 1.05, 1, 1.04, 1.02, 1],
+          filter: ['brightness(1)', 'brightness(1.4)', 'brightness(1.1)', 'brightness(1.3)', 'brightness(1)'],
+          transition: {
+            duration: 0.22,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+        },
+      }
+
+    // 无敌 - 王冠发光
+    case 'crown-glow':
+      return {
+        animate: {
+          filter: ['brightness(1)', 'brightness(1.5)', 'brightness(1.2)', 'brightness(1.4)', 'brightness(1)'],
+          scale: [1, 1.04, 1, 1.03, 1],
+          transition: {
+            duration: 1,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 高能 - 电流脉动
+    case 'electric-pulse':
+      return {
+        animate: {
+          filter: ['brightness(1)', 'brightness(1.5)', 'brightness(1)', 'brightness(1.3)', 'brightness(1)'],
+          scale: [1, 1.06, 1, 1.04, 1],
+          x: [-2, 2, -1, 2, 0],
+          transition: {
+            duration: 0.35,
+            repeat: Infinity,
+            ease: 'linear',
+          },
+        },
+      }
+
+    // 扎心了 - 悲伤脉动
+    case 'sad-pulse':
+      return {
+        animate: {
+          scale: [1, 0.98, 1, 0.99, 1],
+          opacity: [1, 0.9, 1, 0.95, 1],
+          transition: {
+            duration: 1,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 难了 - 忧郁摇摆
+    case 'melancholy-sway':
+      return {
+        animate: {
+          rotate: [-2, 2, -2],
+          y: [-1, 2, -1],
+          transition: {
+            duration: 1.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          },
+        },
+      }
+
+    // 服了 - 恼怒抖动
+    case 'annoyed-shake':
+      return {
+        animate: {
+          x: [-2, 2, -2],
+          rotate: [-1, 1, -1],
+          transition: {
+            duration: 0.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 下头 - 失望抖动
+    case 'disappointed-shake':
+      return {
+        animate: {
+          y: [0, 2, 0],
+          rotate: [-1, 1, -1],
+          transition: {
+            duration: 0.6,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 破防了 - 脆弱抖动
+    case 'vulnerable-shake':
+      return {
+        animate: {
+          x: [-2, 2, -1, 2, -2],
+          scale: [1, 0.99, 1, 0.995, 1],
+          transition: {
+            duration: 0.4,
+            repeat: Infinity,
+            repeatType: 'reverse',
+          },
+        },
+      }
+
     default:
       return {}
   }
@@ -1706,6 +2583,42 @@ function getBackgroundEffect(preset: EmotionTextStyle): {
     // 搞笑系列 - 2种
     'funny-wobble': 'comic-bubble',         // 漫画对话框
     'funny-cartoon': 'comic-bubble',        // 漫画对话框
+    
+    // ========== 🎯 全新情绪动效背景映射 ==========
+    // 赞美夸赞系列
+    'praise-bangbangda': 'rainbow-burst',   // 棒棒哒 - 彩虹爆发
+    'praise-taibangle': 'sparkle-field',    // 太棒了 - 星光场
+    'praise-niubi': 'fire-aura',            // 牛逼 - 火焰光环
+    'praise-lihai': 'explosion-lines',      // 厉害了 - 爆炸集中线
+    'praise-taijiule': 'sparkle-field',     // 太绝了 - 星光场
+    'praise-wuqing': 'speed-lines',         // 无情 - 速度线
+    // 震惊反应系列
+    'shock-wocao': 'radial-burst',          // 卧槽 - 放射光芒
+    'shock-wodetian': 'shockwave',          // 我的天 - 冲击波
+    'shock-buhuiba': 'radial-burst',        // 不会吧 - 放射光芒
+    'shock-zhende': 'radial-burst',         // 真的假的 - 放射光芒
+    'shock-shenme': 'explosion-lines',      // 什么 - 爆炸集中线
+    // 可爱萌系列
+    'cute-haokekei': 'heart-burst',         // 好可爱 - 心形爆发
+    'cute-mengmengda': 'sparkle-field',     // 萌萌哒 - 星光场
+    'cute-taitianle': 'heart-burst',        // 太甜了 - 心形爆发
+    'cute-aini': 'heart-burst',             // 爱你 - 心形爆发
+    // 搞笑爆笑系列
+    'funny-xiaosile': 'comic-bubble',       // 笑死我了 - 漫画对话框
+    'funny-bengbuzhule': 'comic-bubble',    // 绷不住了 - 漫画对话框
+    'funny-yinchui': 'speed-lines',         // 阴吹丝汀 - 速度线
+    'funny-leile': 'glow-aura',             // 累了 - 光晕
+    // 超燃系列
+    'fire-chaoran': 'fire-aura',            // 超燃 - 火焰光环
+    'fire-wudi': 'sparkle-field',           // 无敌 - 星光场
+    'fire-gaoneng': 'explosion-lines',      // 高能 - 爆炸集中线
+    // 扎心系列
+    'sad-zhaxin': 'glow-aura',              // 扎心了 - 光晕
+    'sad-nanle': 'glow-aura',               // 难了 - 光晕
+    // 吐槽系列
+    'roast-wule': 'glow-aura',              // 服了 - 光晕
+    'roast-xiatou': 'speed-lines',          // 下头 - 速度线
+    'roast-emole': 'glow-aura',             // 破防了 - 光晕
   }
 
   // 如果有精确匹配，使用它
