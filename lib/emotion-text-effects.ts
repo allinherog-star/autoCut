@@ -2830,6 +2830,111 @@ export const EMOTION_TEXT_PRESETS: EmotionTextStyle[] = [
       duration: 550,
     },
   },
+
+  // ============================================
+  // 🎬 综艺边框花字系列 - 带装饰边框的经典效果
+  // ============================================
+
+  // ========== 综艺边框花字系列 - 使用 Web 安全色 ==========
+  {
+    id: 'variety-frame-iron-man',
+    name: '🌟 铁打男主',
+    emotion: 'funny',
+    description: '红色边框+太阳装饰+多层描边，经典综艺效果（Web安全色）',
+    layout: {
+      randomRotation: { min: 0, max: 0 },
+      randomOffset: { x: 0, y: 0 },
+      randomScale: { min: 1, max: 1 },
+      stagger: false,
+      staggerDelay: 0,
+    },
+    text: {
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 72,
+      color: '#FFFFFF',
+      gradient: 'linear-gradient(180deg, #FFFFFF 0%, #CCCCFF 30%, #9999FF 50%, #6666CC 70%, #333399 100%)',
+      stroke: { color: '#6633CC', width: 6 },  // Web安全蓝紫色
+      shadow: '0 4px 0 #CC0000, 0 8px 0 rgba(0,0,0,0.3)',  // Web安全红色
+    },
+    decoration: {
+      type: 'emoji',
+      items: ['☀️'],
+      position: 'above',
+      animated: false,
+    },
+    animation: {
+      enter: 'variety-frame-in',
+      loop: 'subtle-bounce',
+      duration: 400,
+    },
+  },
+  {
+    id: 'variety-frame-classic',
+    name: '📺 经典边框',
+    emotion: 'excited',
+    description: '蓝紫渐变文字+红色边框+底部装饰线（Web安全色）',
+    layout: {
+      randomRotation: { min: 0, max: 0 },
+      randomOffset: { x: 0, y: 0 },
+      randomScale: { min: 1, max: 1 },
+      stagger: false,
+      staggerDelay: 0,
+    },
+    text: {
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 68,
+      color: '#FFFFFF',
+      gradient: 'linear-gradient(180deg, #FFFFFF 0%, #CCCCFF 25%, #9999FF 50%, #6666CC 75%, #333399 100%)',
+      stroke: { color: '#333399', width: 5 },  // Web安全深蓝紫
+      shadow: '0 3px 0 #CC0000, 0 6px 0 rgba(0,0,0,0.25)',  // Web安全红色
+    },
+    decoration: {
+      type: 'shape',
+      items: ['frame'],
+      position: 'around',
+      animated: false,
+    },
+    animation: {
+      enter: 'variety-frame-in',
+      loop: 'subtle-bounce',
+      duration: 350,
+    },
+  },
+  {
+    id: 'variety-frame-golden',
+    name: '👑 金色边框',
+    emotion: 'excited',
+    description: '金色渐变+黄色边框+皇冠装饰（Web安全色）',
+    layout: {
+      randomRotation: { min: 0, max: 0 },
+      randomOffset: { x: 0, y: 0 },
+      randomScale: { min: 1, max: 1 },
+      stagger: false,
+      staggerDelay: 0,
+    },
+    text: {
+      fontFamily: 'Noto Sans SC',
+      fontWeight: 900,
+      fontSize: 70,
+      color: '#FFCC00',  // Web安全金色
+      gradient: 'linear-gradient(180deg, #FFFFFF 0%, #FFFF99 30%, #FFCC00 60%, #FF9900 100%)',
+      stroke: { color: '#996633', width: 5 },  // Web安全棕色
+      shadow: '0 3px 0 #CC9900, 0 6px 0 rgba(0,0,0,0.3)',  // Web安全金色
+    },
+    decoration: {
+      type: 'emoji',
+      items: ['👑'],
+      position: 'above',
+      animated: false,
+    },
+    animation: {
+      enter: 'variety-frame-in',
+      loop: 'golden-glow',
+      duration: 400,
+    },
+  },
 ]
 
 // ============================================

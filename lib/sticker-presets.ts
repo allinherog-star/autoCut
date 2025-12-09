@@ -1045,3 +1045,4 @@ export function getStickerAnimationClass(sticker: StickerPreset): string {
 }
 
 
+

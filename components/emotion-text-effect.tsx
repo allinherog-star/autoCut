@@ -65,6 +65,241 @@ type BackgroundEffectType =
   | 'none'
 
 // ============================================
+// 综艺边框花字组件 - 经典综艺节目效果
+// ============================================
+
+interface VarietyFrameTextProps {
+  text: string
+  scale?: number
+  frameColor?: string
+  sunColor?: string
+  textGradient?: string
+  strokeColor?: string
+  outerStrokeColor?: string
+  className?: string
+}
+
+const VarietyFrameText = memo(function VarietyFrameText({
+  text,
+  scale = 1,
+  frameColor = '#CC0000',       // Web安全红色
+  sunColor = '#FFCC00',         // Web安全黄色
+  textGradient = 'linear-gradient(180deg, #FFFFFF 0%, #CCCCFF 30%, #9999FF 50%, #6666CC 70%, #333399 100%)',  // 白到蓝紫渐变
+  strokeColor = '#6633CC',      // Web安全蓝紫色描边
+  outerStrokeColor = '#CC0000', // Web安全红色外描边
+  className = '',
+}: VarietyFrameTextProps) {
+  const fontSize = 56 * scale
+  const strokeWidth = 5 * scale
+  const outerStrokeWidth = 3 * scale
+  const framePadding = { x: 24 * scale, y: 14 * scale }
+  const sunSize = 52 * scale
+
+  return (
+    <motion.div
+      className={`relative inline-flex items-center ${className}`}
+      initial={{ opacity: 0, scale: 0.3, y: -30 }}
+      animate={{ 
+        opacity: 1, 
+        scale: [0.3, 1.15, 0.95, 1.05, 1],
+        y: [-30, 5, -2, 0],
+      }}
+      transition={{
+        duration: 0.5,
+        times: [0, 0.35, 0.55, 0.75, 1],
+        type: 'spring',
+        stiffness: 500,
+        damping: 15,
+      }}
+    >
+      {/* 红色边框容器 */}
+      <div
+        className="relative flex items-center"
+        style={{
+          border: `${4 * scale}px solid ${frameColor}`,
+          borderRadius: `${4 * scale}px`,
+          padding: `${framePadding.y}px ${framePadding.x}px`,
+          background: 'rgba(0,0,0,0.1)',
+        }}
+      >
+        {/* 左侧太阳装饰 */}
+        <motion.div
+          className="absolute flex items-center justify-center"
+          style={{
+            left: -sunSize * 0.35,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: sunSize,
+            height: sunSize,
+            zIndex: 10,
+          }}
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.2, type: 'spring', stiffness: 400, damping: 12 }}
+        >
+          {/* 太阳爆炸形状 - 使用Web安全色 */}
+          <svg viewBox="0 0 100 100" width={sunSize} height={sunSize}>
+            <defs>
+              <linearGradient id="sunGradientSafe" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFFF00" />
+                <stop offset="50%" stopColor="#FFCC00" />
+                <stop offset="100%" stopColor="#FF9900" />
+              </linearGradient>
+              <filter id="sunGlowSafe">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feFlood floodColor="#FFCC00" floodOpacity="0.7" />
+                <feComposite in2="blur" operator="in" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            {/* 爆炸形状 - 尖角太阳 */}
+            <motion.path
+              d="M50 5 L58 30 L85 25 L65 45 L90 50 L65 55 L85 75 L58 70 L50 95 L42 70 L15 75 L35 55 L10 50 L35 45 L15 25 L42 30 Z"
+              fill="url(#sunGradientSafe)"
+              filter="url(#sunGlowSafe)"
+              stroke="#CC6600"
+              strokeWidth="2"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.3 }}
+            />
+            {/* 笑脸 */}
+            <circle cx="40" cy="42" r="5" fill="#333333" />
+            <circle cx="60" cy="42" r="5" fill="#333333" />
+            <path
+              d="M35 58 Q50 72 65 58"
+              fill="none"
+              stroke="#333333"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+          </svg>
+        </motion.div>
+
+        {/* 文字容器 */}
+        <div 
+          className="relative"
+          style={{ 
+            marginLeft: sunSize * 0.4,
+            paddingRight: 8 * scale,
+          }}
+        >
+          {/* 多层文字效果 - 从下到上依次叠加 */}
+          
+          {/* 第四层：阴影效果（最底层） */}
+          <span
+            className="absolute"
+            style={{
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontWeight: 900,
+              fontSize: `${fontSize}px`,
+              color: '#000000',
+              opacity: 0.3,
+              transform: `translate(${3 * scale}px, ${3 * scale}px)`,
+              whiteSpace: 'nowrap',
+              filter: `blur(${2 * scale}px)`,
+            }}
+          >
+            {text}
+          </span>
+
+          {/* 第三层：红色外描边 */}
+          <span
+            className="absolute"
+            style={{
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontWeight: 900,
+              fontSize: `${fontSize}px`,
+              color: 'transparent',
+              WebkitTextStroke: `${strokeWidth + outerStrokeWidth * 2}px ${outerStrokeColor}`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {text}
+          </span>
+
+          {/* 第二层：蓝紫色描边 */}
+          <span
+            className="absolute"
+            style={{
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontWeight: 900,
+              fontSize: `${fontSize}px`,
+              color: 'transparent',
+              WebkitTextStroke: `${strokeWidth}px ${strokeColor}`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {text}
+          </span>
+
+          {/* 第一层：白色渐变填充（最顶层） */}
+          <span
+            className="relative"
+            style={{
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontWeight: 900,
+              fontSize: `${fontSize}px`,
+              background: textGradient,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+            }}
+          >
+            {text}
+          </span>
+        </div>
+      </div>
+
+      {/* 底部白色装饰线 */}
+      <motion.div
+        className="absolute"
+        style={{
+          bottom: -10 * scale,
+          left: sunSize * 0.5,
+          right: 8 * scale,
+          height: 4 * scale,
+          background: 'linear-gradient(90deg, #FFFFFF 0%, #FFFFFF 60%, rgba(255,255,255,0.5) 85%, rgba(255,255,255,0) 100%)',
+          borderRadius: 2 * scale,
+          transformOrigin: 'left',
+        }}
+        initial={{ scaleX: 0, opacity: 0 }}
+        animate={{ scaleX: 1, opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.3, ease: 'easeOut' }}
+      />
+
+      {/* 底部红色小圆点装饰 */}
+      <motion.div
+        className="absolute"
+        style={{
+          bottom: -12 * scale,
+          left: sunSize * 0.25,
+          width: 10 * scale,
+          height: 10 * scale,
+          borderRadius: '50%',
+          background: outerStrokeColor,
+          boxShadow: `0 0 ${4 * scale}px ${outerStrokeColor}`,
+        }}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.35, type: 'spring', stiffness: 500 }}
+      />
+    </motion.div>
+  )
+})
+
+// ============================================
+// 综艺边框花字导出组件
+// ============================================
+
+export { VarietyFrameText }
+
+// ============================================
 // 背景特效组件 - 爆炸集中线
 // ============================================
 
@@ -1979,6 +2214,26 @@ const getAnimationVariants = (preset: EmotionTextStyle, index: number, totalChar
         exit: { opacity: 0, scale: 0.8, transition: { duration: 0.25 } },
       }
 
+    // 综艺边框 - 弹性入场
+    case 'variety-frame-in':
+      return {
+        hidden: { opacity: 0, scale: 0.3, y: -30 },
+        visible: {
+          opacity: 1,
+          scale: [0.3, 1.15, 0.95, 1.05, 1],
+          y: [-30, 5, -2, 0],
+          transition: {
+            ...commonTransition,
+            duration: 0.5,
+            times: [0, 0.35, 0.55, 0.75, 1],
+            type: 'spring',
+            stiffness: 500,
+            damping: 15,
+          },
+        },
+        exit: { opacity: 0, scale: 0.8, y: 20, transition: { duration: 0.2 } },
+      }
+
     default:
       return {
         hidden: { opacity: 0, y: 30, scale: 0.8 },
@@ -2507,6 +2762,21 @@ const getLoopVariants = (loopType: string | undefined): Variants => {
             duration: 0.4,
             repeat: Infinity,
             repeatType: 'reverse',
+          },
+        },
+      }
+
+    // 综艺边框 - 轻微弹跳
+    case 'subtle-bounce':
+      return {
+        animate: {
+          y: [0, -3, 0],
+          scale: [1, 1.02, 1],
+          transition: {
+            duration: 1.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
           },
         },
       }
