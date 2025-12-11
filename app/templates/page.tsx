@@ -29,14 +29,15 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner } from '@/components/ui'
 import { TemplateTypeSidebar, TEMPLATE_TYPE_CONFIG, type TemplateType } from '@/components/template-type-sidebar'
-import { SubcategoryTags } from '@/components/subcategory-tags'
+import { SubcategoryTags, type ExtraDimension } from '@/components/subcategory-tags'
+import { FANCY_TEXT_USAGE_ICONS, DIMENSION_ICONS, DIMENSION_COLORS } from '@/lib/icons'
 import { FancyTextRenderer, FancyTextPreviewCard } from '@/components/fancy-text-renderer'
 import {
   FANCY_TEXT_TEMPLATE_PRESETS,
   USAGE_LABELS,
   VISUAL_STYLE_PRESETS,
 } from '@/lib/fancy-text/presets'
-import type { FancyTextTemplate } from '@/lib/fancy-text/types'
+import type { FancyTextTemplate, FancyTextUsage } from '@/lib/fancy-text/types'
 import { addFavorite, removeFavorite, batchCheckFavorites } from '@/lib/api/favorites'
 
 // ============================================
@@ -55,6 +56,7 @@ const SOURCE_TABS: Array<{ id: TemplateSource; name: string; icon: typeof Layers
   { id: 'ai', name: 'AI模版', icon: Wand2, showFor: ['VIDEO', 'IMAGE'] },
   { id: 'creative', name: '我的想法', icon: Lightbulb, showFor: ['FANCY_TEXT'] },
 ]
+
 
 // ============================================
 // 工具函数
@@ -84,6 +86,24 @@ export default function TemplatesPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [templateSource, setTemplateSource] = useState<TemplateSource>('all')
 
+  // 花字用途维度（仅花字模版时显示）
+  const fancyTextUsageDimension: ExtraDimension = useMemo(() => ({
+    id: 'FANCY_TEXT_USAGE',
+    name: '用途',
+    icon: DIMENSION_ICONS['FANCY_TEXT_USAGE'],
+    color: DIMENSION_COLORS['FANCY_TEXT_USAGE'],
+    tags: (Object.entries(USAGE_LABELS) as [FancyTextUsage, typeof USAGE_LABELS[FancyTextUsage]][]).map(([usage, config]) => {
+      const iconConfig = FANCY_TEXT_USAGE_ICONS[usage]
+      return {
+        id: `usage:${usage}`,
+        name: config.label,
+        icon: iconConfig?.icon,
+        iconColor: iconConfig?.color,
+        count: FANCY_TEXT_TEMPLATE_PRESETS.filter(t => t.usage === usage).length,
+      }
+    }),
+  }), [])
+
   // 类型计数
   const [typeCounts, setTypeCounts] = useState<Record<string, number>>({
     VIDEO: 3,
@@ -101,9 +121,21 @@ export default function TemplatesPage() {
   // 获取当前类型配置
   const currentTypeConfig = TEMPLATE_TYPE_CONFIG.find((c) => c.type === typeFilter)
 
+  // 从 categoryTags 中提取用途筛选
+  const selectedUsages = useMemo(() => {
+    return categoryTags
+      .filter(tag => tag.startsWith('usage:'))
+      .map(tag => tag.replace('usage:', '') as FancyTextUsage)
+  }, [categoryTags])
+
   // 过滤后的花字模版
   const filteredFancyTextTemplates = useMemo(() => {
     let templates = FANCY_TEXT_TEMPLATE_PRESETS
+
+    // 按用途筛选
+    if (selectedUsages.length > 0) {
+      templates = templates.filter(t => t.usage && selectedUsages.includes(t.usage))
+    }
 
     // 按搜索词筛选
     if (searchQuery) {
@@ -122,7 +154,7 @@ export default function TemplatesPage() {
     }
 
     return templates
-  }, [searchQuery, templateSource, favoriteMap])
+  }, [selectedUsages, searchQuery, templateSource, favoriteMap])
 
   // 获取可用的 Source Tabs
   const availableSourceTabs = SOURCE_TABS.filter(
@@ -257,11 +289,12 @@ export default function TemplatesPage() {
           {/* 工具栏 - 标签筛选 */}
           <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
             <div className="flex items-center justify-between gap-4">
-              {/* 二级分类标签 */}
+              {/* 二级分类标签（花字类型时显示用途维度） */}
               <div className="flex-1 min-w-0">
                 <SubcategoryTags
                   selectedTags={categoryTags}
                   onTagsChange={setCategoryTags}
+                  extraDimensions={typeFilter === 'FANCY_TEXT' ? [fancyTextUsageDimension] : []}
                 />
               </div>
             </div>

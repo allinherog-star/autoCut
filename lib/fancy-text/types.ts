@@ -180,9 +180,7 @@ export type FancyTextUsage =
   | 'guide'
   | 'emphasis'
   | 'person_intro'
-  | 'dialogue'
-  | 'annotation'
-  | 'call_to_action'
+  | 'detail_description'
 
 /** 花字模版参数（整体） */
 export interface FancyTextGlobalParams {

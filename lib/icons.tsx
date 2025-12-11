@@ -59,6 +59,14 @@ import {
   HeartPulse,
   Glasses,
   
+  // 花字用途图标
+  Heading,
+  ListOrdered,
+  MousePointerClick,
+  User,
+  FileText,
+  Target,
+  
   // 通用图标
   type LucideIcon,
 } from 'lucide-react'
@@ -181,6 +189,19 @@ export const EMOTION_ICONS: Record<string, TagIconConfig> = {
 }
 
 // ============================================
+// 花字用途图标映射
+// ============================================
+
+export const FANCY_TEXT_USAGE_ICONS: Record<string, TagIconConfig> = {
+  'title': { icon: Heading, color: 'text-blue-400' },
+  'chapter_title': { icon: ListOrdered, color: 'text-emerald-400' },
+  'guide': { icon: MousePointerClick, color: 'text-orange-400' },
+  'emphasis': { icon: Zap, color: 'text-amber-400' },
+  'person_intro': { icon: User, color: 'text-violet-400' },
+  'detail_description': { icon: FileText, color: 'text-cyan-400' },
+}
+
+// ============================================
 // 维度图标映射
 // ============================================
 
@@ -192,6 +213,7 @@ export const DIMENSION_ICONS: Record<string, LucideIcon> = {
   EMOTION: Heart,
   TEMPO: AudioLines,
   MOOD: Sunrise,
+  FANCY_TEXT_USAGE: Target,
 }
 
 // ============================================
@@ -210,6 +232,8 @@ export function getTagIconConfig(dimension: string, tagName: string): TagIconCon
       return STYLE_ICONS[tagName] || null
     case 'EMOTION':
       return EMOTION_ICONS[tagName] || null
+    case 'FANCY_TEXT_USAGE':
+      return FANCY_TEXT_USAGE_ICONS[tagName] || null
     default:
       return null
   }
@@ -231,4 +255,5 @@ export const DIMENSION_COLORS: Record<string, { text: string; bg: string }> = {
   SCENE: { text: 'text-purple-400', bg: 'bg-purple-400/15' },
   STYLE: { text: 'text-amber-400', bg: 'bg-amber-400/15' },
   EMOTION: { text: 'text-rose-400', bg: 'bg-rose-400/15' },
+  FANCY_TEXT_USAGE: { text: 'text-pink-400', bg: 'bg-pink-400/15' },
 }

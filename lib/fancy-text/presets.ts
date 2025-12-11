@@ -637,12 +637,12 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     updatedAt: '2024-12-01',
   },
   
-  // ========== 互动引导类 ==========
+  // ========== 重点强调类 ==========
   {
     id: 'cta-like-subscribe',
     name: '点赞关注提示',
     description: '引导用户点赞关注的互动文字',
-    usage: 'call_to_action',
+    usage: 'emphasis',
     visualStyles: ['funny', 'variety-show'],
     globalParams: {
       text: '点赞关注！',
@@ -691,12 +691,12 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     updatedAt: '2024-12-01',
   },
   
-  // ========== 对话字幕类 ==========
+  // ========== 详细描述类 ==========
   {
     id: 'dialogue-bubble',
     name: '对话气泡',
     description: '带气泡背景的对话字幕',
-    usage: 'dialogue',
+    usage: 'detail_description',
     visualStyles: ['cute'],
     globalParams: {
       text: '你好呀~',
@@ -759,12 +759,10 @@ export function getTemplatesByStyle(style: string): FancyTextTemplate[] {
  */
 export const USAGE_LABELS: Record<FancyTextUsage, { label: string; icon: string; description: string }> = {
   title: { label: '标题', icon: '📌', description: '视频开头主标题' },
-  chapter_title: { label: '章节步骤', icon: '📋', description: '教程步骤分隔' },
-  guide: { label: '操作指引', icon: '👉', description: '操作提示引导' },
-  emphasis: { label: '强调特写', icon: '⚡', description: '重点内容强调' },
+  chapter_title: { label: '章节段落', icon: '📋', description: '章节段落分隔' },
+  guide: { label: '操作步骤', icon: '👉', description: '操作步骤引导' },
+  emphasis: { label: '重点强调', icon: '⚡', description: '重点内容强调' },
   person_intro: { label: '人物介绍', icon: '👤', description: '人物出场介绍' },
-  dialogue: { label: '对话字幕', icon: '💬', description: '对话内容展示' },
-  annotation: { label: '旁白注释', icon: '📝', description: '补充说明文字' },
-  call_to_action: { label: '互动引导', icon: '🔔', description: '点赞关注提示' },
+  detail_description: { label: '详细描述', icon: '📝', description: '详细说明文字' },
 }
 
