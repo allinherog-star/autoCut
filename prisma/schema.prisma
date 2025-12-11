@@ -183,3 +183,168 @@ model ProjectMedia {
   @@index([mediaId])
   @@map("project_media")
 }
+
+// ============================================
+// 模版系统
+// ============================================
+
+// 模版类型枚举
+enum TemplateType {
+  VIDEO_TEMPLATE      // 视频模版
+  IMAGE_TEMPLATE      // 图片模版
+  FANCY_TEXT_TEMPLATE // 花字模版
+}
+
+// 素材/模版来源枚举
+enum AssetSource {
+  SYSTEM       // 系统预设
+  USER         // 用户创建
+  AI_CRAWL     // AI 召唤
+  AI_GENERATED // AI 生成
+}
+
+// 花字用途枚举
+enum FancyTextUsage {
+  TITLE          // 标题
+  CHAPTER_TITLE  // 章节步骤标题
+  GUIDE          // 操作指引
+  EMPHASIS       // 强调特写
+  PERSON_INTRO   // 人物介绍
+  DIALOGUE       // 对话字幕
+  ANNOTATION     // 旁白注释
+  CALL_TO_ACTION // 互动引导
+}
+
+// 模版表
+model Template {
+  id          String       @id @default(uuid())
+  type        TemplateType // 模版类型
+  name        String       // 模版名称
+  description String?      @db.Text // 描述
+  thumbnail   String?      // 缩略图路径
+  previewUrl  String?      // 预览视频路径
+  
+  // 参数定义（JSON）
+  parameters  Json         // 存储 TemplateParameters 结构
+  
+  // 元数据
+  source      AssetSource  @default(SYSTEM) // 来源
+  userId      String?      // 用户创建时关联用户ID
+  isPublic    Boolean      @default(true) // 是否公开
+  usageCount  Int          @default(0) // 使用次数
+  likes       Int          @default(0) // 点赞数
+  views       Int          @default(0) // 浏览次数
+  downloads   Int          @default(0) // 下载次数
+  
+  // 花字专用字段
+  fancyTextUsage FancyTextUsage? // 花字用途
+  duration       Float?          // 动画时长（秒）
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // 关联
+  tags      TemplateTag[]
+  favorites UserFavorite[]
+  
+  @@index([type])
+  @@index([source])
+  @@index([usageCount])
+  @@index([fancyTextUsage])
+  @@map("templates")
+}
+
+// 模版标签关联表
+model TemplateTag {
+  id         String @id @default(uuid())
+  templateId String
+  tagName    String // 标签名称
+  
+  createdAt DateTime @default(now())
+  
+  // 关联
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  @@unique([templateId, tagName])
+  @@index([templateId])
+  @@index([tagName])
+  @@map("template_tags")
+}
+
+// ============================================
+// 用户收藏系统
+// ============================================
+
+// 收藏目标类型
+enum FavoriteTargetType {
+  MEDIA    // 素材
+  TEMPLATE // 模版
+}
+
+// 用户收藏表
+model UserFavorite {
+  id         String             @id @default(uuid())
+  userId     String             // 用户ID（预留，当前使用默认值）
+  targetId   String             // 目标ID
+  targetType FavoriteTargetType // 目标类型
+  
+  createdAt DateTime @default(now())
+  
+  // 关联（可选，根据 targetType 动态关联）
+  template Template? @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "fk_favorite_template")
+  
+  @@unique([userId, targetId, targetType])
+  @@index([userId])
+  @@index([targetId])
+  @@index([targetType])
+  @@map("user_favorites")
+}
+
+// ============================================
+// 表情包系统
+// ============================================
+
+// 表情包表
+model StickerPack {
+  id          String      @id @default(uuid())
+  name        String      // 表情包名称
+  description String?     // 描述
+  thumbnail   String?     // 封面图
+  source      AssetSource @default(SYSTEM) // 来源
+  userId      String?     // 用户导入时关联
+  
+  // 元数据（JSON）
+  metadata    Json?       // 作者、版本、许可证等
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // 关联
+  stickers Sticker[]
+  
+  @@index([source])
+  @@map("sticker_packs")
+}
+
+// 表情表
+model Sticker {
+  id       String  @id @default(uuid())
+  packId   String  // 所属表情包
+  name     String  // 表情名称
+  url      String  // 文件路径
+  format   String  // 格式：gif, png, apng, lottie, webp
+  width    Int     // 宽度
+  height   Int     // 高度
+  duration Float?  // 动图时长（秒）
+  
+  // 标签（JSON数组）
+  tags     Json    @default("[]")
+  
+  createdAt DateTime @default(now())
+  
+  // 关联
+  pack StickerPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  
+  @@index([packId])
+  @@map("stickers")
+}

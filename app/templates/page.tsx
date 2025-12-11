@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -8,7 +8,6 @@ import {
   Video,
   ImageIcon,
   Search,
-  Upload,
   RefreshCw,
   AlertCircle,
   ArrowLeft,
@@ -22,187 +21,40 @@ import {
   Download,
   Eye,
   Sparkles,
+  Upload,
+  Lightbulb,
+  Wand2,
+  RotateCcw,
+  Bookmark,
 } from 'lucide-react'
-import { Button, Card, Badge, Spinner, Progress } from '@/components/ui'
+import { Button, Card, Badge, Spinner } from '@/components/ui'
 import { TemplateTypeSidebar, TEMPLATE_TYPE_CONFIG, type TemplateType } from '@/components/template-type-sidebar'
 import { SubcategoryTags } from '@/components/subcategory-tags'
+import { FancyTextRenderer, FancyTextPreviewCard } from '@/components/fancy-text-renderer'
+import {
+  FANCY_TEXT_TEMPLATE_PRESETS,
+  USAGE_LABELS,
+  FONT_STYLE_PRESETS,
+  VISUAL_STYLE_PRESETS,
+} from '@/lib/fancy-text/presets'
+import type { FancyTextTemplate, FancyTextUsage } from '@/lib/fancy-text/types'
+import { addFavorite, removeFavorite, batchCheckFavorites } from '@/lib/api/favorites'
 
 // ============================================
 // 类型定义
 // ============================================
 
-type ViewMode = 'grid' | 'list'
-
 // 模版来源
-type TemplateSource = 'all' | 'system' | 'user'
+type TemplateSource = 'all' | 'system' | 'user' | 'favorite' | 'ai' | 'creative'
 
 // 模版来源配置
-const SOURCE_TABS = [
-  { id: 'all' as TemplateSource, name: '全部', icon: Layers },
-  { id: 'system' as TemplateSource, name: '官方模版', icon: Star },
-  { id: 'user' as TemplateSource, name: '我的模版', icon: Upload },
-]
-
-// 模版数据类型
-interface Template {
-  id: string
-  name: string
-  description: string
-  type: TemplateType
-  thumbnail: string
-  previewUrl?: string
-  duration?: number
-  likes: number
-  views: number
-  downloads: number
-  isSystem: boolean
-  isFavorite: boolean
-  createdAt: string
-  tags: string[]
-}
-
-// ============================================
-// 模拟数据
-// ============================================
-
-const MOCK_TEMPLATES: Template[] = [
-  // 视频模版
-  {
-    id: 'v1',
-    name: '抖音热门开场',
-    description: '适合抖音短视频的炫酷开场效果，3秒抓住观众眼球',
-    type: 'VIDEO',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 3,
-    likes: 2345,
-    views: 45678,
-    downloads: 1234,
-    isSystem: true,
-    isFavorite: false,
-    createdAt: '2024-12-01',
-    tags: ['抖音', '开场', '炫酷'],
-  },
-  {
-    id: 'v2',
-    name: 'Vlog 片头模版',
-    description: '清新文艺风格的 Vlog 片头，展示标题和日期',
-    type: 'VIDEO',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 5,
-    likes: 1892,
-    views: 32145,
-    downloads: 876,
-    isSystem: true,
-    isFavorite: true,
-    createdAt: '2024-11-28',
-    tags: ['Vlog', '文艺', '清新'],
-  },
-  {
-    id: 'v3',
-    name: '产品展示模版',
-    description: '专业的产品展示模版，支持多角度展示',
-    type: 'VIDEO',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 15,
-    likes: 987,
-    views: 18234,
-    downloads: 543,
-    isSystem: true,
-    isFavorite: false,
-    createdAt: '2024-11-25',
-    tags: ['产品', '电商', '展示'],
-  },
-  // 图片模版
-  {
-    id: 'i1',
-    name: '小红书封面',
-    description: '小红书爆款封面设计，多种文字布局',
-    type: 'IMAGE',
-    thumbnail: '/api/placeholder/400/500',
-    likes: 3456,
-    views: 67890,
-    downloads: 2345,
-    isSystem: true,
-    isFavorite: true,
-    createdAt: '2024-12-05',
-    tags: ['小红书', '封面', '爆款'],
-  },
-  {
-    id: 'i2',
-    name: '朋友圈九宫格',
-    description: '微信朋友圈九宫格拼图模版',
-    type: 'IMAGE',
-    thumbnail: '/api/placeholder/400/400',
-    likes: 2134,
-    views: 45321,
-    downloads: 1567,
-    isSystem: true,
-    isFavorite: false,
-    createdAt: '2024-11-30',
-    tags: ['朋友圈', '九宫格', '拼图'],
-  },
-  // 花字模版
-  {
-    id: 'f1',
-    name: '综艺弹幕花字',
-    description: '仿综艺节目风格的弹幕花字效果',
-    type: 'FANCY_TEXT',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 2,
-    likes: 4567,
-    views: 89012,
-    downloads: 3456,
-    isSystem: true,
-    isFavorite: true,
-    createdAt: '2024-12-03',
-    tags: ['综艺', '弹幕', '搞笑'],
-  },
-  {
-    id: 'f2',
-    name: '文艺引用花字',
-    description: '适合引用名言、歌词的文艺花字',
-    type: 'FANCY_TEXT',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 3,
-    likes: 2345,
-    views: 34567,
-    downloads: 1234,
-    isSystem: true,
-    isFavorite: false,
-    createdAt: '2024-11-29',
-    tags: ['文艺', '引用', '名言'],
-  },
-  // 花字模版（炫酷风格）
-  {
-    id: 'd1',
-    name: '抖音热点炫字',
-    description: '配合抖音热点话题的炫酷文字效果',
-    type: 'FANCY_TEXT',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 2,
-    likes: 5678,
-    views: 123456,
-    downloads: 4567,
-    isSystem: true,
-    isFavorite: true,
-    createdAt: '2024-12-06',
-    tags: ['抖音', '热点', '炫酷'],
-  },
-  {
-    id: 'd2',
-    name: '霓虹发光炫字',
-    description: '赛博朋克风格的霓虹发光文字',
-    type: 'FANCY_TEXT',
-    thumbnail: '/api/placeholder/400/225',
-    duration: 3,
-    likes: 3456,
-    views: 67890,
-    downloads: 2345,
-    isSystem: true,
-    isFavorite: false,
-    createdAt: '2024-12-02',
-    tags: ['霓虹', '赛博朋克', '发光'],
-  },
+const SOURCE_TABS: Array<{ id: TemplateSource; name: string; icon: typeof Layers; showFor?: TemplateType[] }> = [
+  { id: 'all', name: '全部', icon: Layers },
+  { id: 'system', name: '系统模版', icon: Star },
+  { id: 'user', name: '我的模版', icon: Upload },
+  { id: 'favorite', name: '我的收藏', icon: Bookmark },
+  { id: 'ai', name: 'AI模版', icon: Wand2, showFor: ['VIDEO', 'IMAGE'] },
+  { id: 'creative', name: '灵感创意', icon: Lightbulb, showFor: ['FANCY_TEXT'] },
 ]
 
 // ============================================
@@ -215,27 +67,6 @@ function formatNumber(num: number): string {
   return String(num)
 }
 
-function formatDuration(seconds: number | undefined): string {
-  if (!seconds) return ''
-  if (seconds < 60) return `${seconds}秒`
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return secs > 0 ? `${mins}分${secs}秒` : `${mins}分钟`
-}
-
-function getTemplateIcon(type: TemplateType) {
-  switch (type) {
-    case 'VIDEO':
-      return Video
-    case 'IMAGE':
-      return ImageIcon
-    case 'FANCY_TEXT':
-      return Sparkles
-    default:
-      return LayoutTemplate
-  }
-}
-
 // ============================================
 // 模版库页面
 // ============================================
@@ -244,88 +75,97 @@ export default function TemplatesPage() {
   const router = useRouter()
 
   // 状态
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // 视图状态
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [typeFilter, setTypeFilter] = useState<TemplateType>('ALL')
+  const [typeFilter, setTypeFilter] = useState<TemplateType>('FANCY_TEXT')
   const [searchQuery, setSearchQuery] = useState('')
-  const [categoryTags, setCategoryTags] = useState<string[]>([])
+  const [usageTags, setUsageTags] = useState<FancyTextUsage[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [templateSource, setTemplateSource] = useState<TemplateSource>('all')
 
   // 类型计数
-  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({})
+  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({
+    VIDEO: 3,
+    IMAGE: 2,
+    FANCY_TEXT: FANCY_TEXT_TEMPLATE_PRESETS.length,
+  })
 
   // 预览状态
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
+  const [previewTemplate, setPreviewTemplate] = useState<FancyTextTemplate | null>(null)
+  const [previewKey, setPreviewKey] = useState(0)
+
+  // 收藏状态
+  const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({})
 
   // 获取当前类型配置
   const currentTypeConfig = TEMPLATE_TYPE_CONFIG.find((c) => c.type === typeFilter)
 
-  // 加载模版列表（模拟）
-  const loadTemplates = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  // 过滤后的花字模版
+  const filteredFancyTextTemplates = useMemo(() => {
+    let templates = FANCY_TEXT_TEMPLATE_PRESETS
 
-    // 模拟加载延迟
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // 根据筛选条件过滤
-    let filtered = MOCK_TEMPLATES
-
-    // 类型筛选
-    if (typeFilter !== 'ALL') {
-      filtered = filtered.filter((t) => t.type === typeFilter)
+    // 按用途筛选
+    if (usageTags.length > 0) {
+      templates = templates.filter(t => t.usage && usageTags.includes(t.usage))
     }
 
-    // 来源筛选
-    if (templateSource === 'system') {
-      filtered = filtered.filter((t) => t.isSystem)
-    } else if (templateSource === 'user') {
-      filtered = filtered.filter((t) => !t.isSystem)
-    }
-
-    // 搜索筛选
+    // 按搜索词筛选
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (t) =>
+      templates = templates.filter(
+        t =>
           t.name.toLowerCase().includes(query) ||
           t.description.toLowerCase().includes(query) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(query))
+          t.visualStyles.some(s => s.toLowerCase().includes(query))
       )
     }
 
-    setTemplates(filtered)
-    setLoading(false)
-  }, [typeFilter, templateSource, searchQuery, categoryTags])
+    // 按收藏筛选
+    if (templateSource === 'favorite') {
+      templates = templates.filter(t => favoriteMap[`TEMPLATE:${t.id}`])
+    }
 
-  // 计算类型计数
-  const calculateCounts = useCallback(() => {
-    const counts: Record<string, number> = {}
-    
-    TEMPLATE_TYPE_CONFIG.forEach((config) => {
-      if (config.type === 'ALL') return
-      counts[config.type] = MOCK_TEMPLATES.filter((t) => t.type === config.type).length
-    })
-    
-    setTypeCounts(counts)
+    return templates
+  }, [usageTags, searchQuery, templateSource, favoriteMap])
+
+  // 获取可用的 Source Tabs
+  const availableSourceTabs = SOURCE_TABS.filter(
+    tab => !tab.showFor || tab.showFor.includes(typeFilter)
+  )
+
+  // 初始化收藏状态
+  useEffect(() => {
+    const checkFavorites = async () => {
+      const items = FANCY_TEXT_TEMPLATE_PRESETS.map(t => ({
+        targetId: t.id,
+        targetType: 'TEMPLATE' as const,
+      }))
+      const result = await batchCheckFavorites(items)
+      if (result.success && result.data) {
+        setFavoriteMap(result.data.favoriteMap)
+      }
+    }
+    checkFavorites()
   }, [])
 
-  // 初始加载
-  useEffect(() => {
-    loadTemplates()
-    calculateCounts()
-  }, [loadTemplates, calculateCounts])
-
   // 切换收藏
-  const toggleFavorite = (id: string) => {
-    setTemplates((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isFavorite: !t.isFavorite } : t))
-    )
+  const toggleFavorite = async (templateId: string) => {
+    const key = `TEMPLATE:${templateId}`
+    const isFavorite = favoriteMap[key]
+
+    if (isFavorite) {
+      const result = await removeFavorite(templateId, 'TEMPLATE')
+      if (result.success) {
+        setFavoriteMap(prev => ({ ...prev, [key]: false }))
+      }
+    } else {
+      const result = await addFavorite(templateId, 'TEMPLATE')
+      if (result.success) {
+        setFavoriteMap(prev => ({ ...prev, [key]: true }))
+      }
+    }
   }
 
   return (
@@ -387,7 +227,7 @@ export default function TemplatesPage() {
                 variant="ghost"
                 size="sm"
                 isIconOnly
-                onClick={() => loadTemplates()}
+                onClick={() => setLoading(true)}
                 disabled={loading}
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -404,7 +244,14 @@ export default function TemplatesPage() {
           selectedType={typeFilter}
           onTypeChange={(type) => {
             setTypeFilter(type)
-            setCategoryTags([]) // 切换大类时清空细分分类
+            setUsageTags([])
+            // 重置 source 如果当前 source 不可用
+            if (type !== 'FANCY_TEXT' && templateSource === 'creative') {
+              setTemplateSource('all')
+            }
+            if (type !== 'VIDEO' && type !== 'IMAGE' && templateSource === 'ai') {
+              setTemplateSource('all')
+            }
           }}
           counts={typeCounts}
           collapsed={sidebarCollapsed}
@@ -413,23 +260,46 @@ export default function TemplatesPage() {
 
         {/* 右侧内容区 */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* 工具栏 - 二级分类标签 */}
-          <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
-            <div className="flex items-center justify-between gap-4">
-              {/* 二级分类标签 */}
-              <div className="flex-1 min-w-0">
-                <SubcategoryTags
-                  selectedTags={categoryTags}
-                  onTagsChange={setCategoryTags}
-                />
+          {/* 工具栏 - 花字用途筛选（仅花字类型显示） */}
+          {typeFilter === 'FANCY_TEXT' && (
+            <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-surface-500 mr-2">用途筛选:</span>
+                {(Object.entries(USAGE_LABELS) as [FancyTextUsage, typeof USAGE_LABELS[FancyTextUsage]][]).map(([usage, config]) => {
+                  const isSelected = usageTags.includes(usage)
+                  const count = FANCY_TEXT_TEMPLATE_PRESETS.filter(t => t.usage === usage).length
+                  return (
+                    <button
+                      key={usage}
+                      onClick={() => {
+                        if (isSelected) {
+                          setUsageTags(usageTags.filter(t => t !== usage))
+                        } else {
+                          setUsageTags([...usageTags, usage])
+                        }
+                      }}
+                      className={`
+                        flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-all
+                        ${isSelected
+                          ? 'bg-pink-500/20 text-pink-400 border-pink-500/50'
+                          : 'border-surface-700 text-surface-400 hover:text-surface-200 hover:border-surface-500'
+                        }
+                      `}
+                    >
+                      <span>{config.icon}</span>
+                      <span>{config.label}</span>
+                      <span className="text-xs opacity-60">({count})</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
-          </div>
+          )}
 
           {/* 模版来源页签 */}
           <div className="flex-shrink-0 bg-surface-900/50 border-b border-surface-800">
             <div className="flex items-center px-4">
-              {SOURCE_TABS.map((tab) => {
+              {availableSourceTabs.map((tab) => {
                 const TabIcon = tab.icon
                 const isActive = templateSource === tab.id
                 return (
@@ -470,13 +340,165 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            {loading && templates.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24">
-                <Spinner size="lg" />
-                <p className="mt-4 text-surface-500">加载中...</p>
+            {/* 花字模版展示 */}
+            {typeFilter === 'FANCY_TEXT' && templateSource !== 'creative' && (
+              <div className="space-y-6">
+                {/* 标题 */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-pink-400" />
+                    花字模版
+                    <Badge variant="default" size="sm" className="bg-pink-500/20 text-pink-400 border-0">
+                      {filteredFancyTextTemplates.length} 个
+                    </Badge>
+                  </h3>
+                  {usageTags.length > 0 && (
+                    <button
+                      onClick={() => setUsageTags([])}
+                      className="flex items-center gap-1 text-sm text-surface-400 hover:text-surface-200"
+                    >
+                      <X className="w-4 h-4" />
+                      清除筛选
+                    </button>
+                  )}
+                </div>
+
+                {/* 模版网格 */}
+                {filteredFancyTextTemplates.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-24 h-24 rounded-3xl bg-pink-400/15 flex items-center justify-center mb-6">
+                      <Sparkles className="w-12 h-12 text-pink-400" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-surface-200 mb-2">
+                      {templateSource === 'favorite' ? '暂无收藏的模版' : '没有找到匹配的模版'}
+                    </h2>
+                    <p className="text-surface-500">
+                      {templateSource === 'favorite' ? '收藏你喜欢的模版，方便随时使用' : '尝试调整筛选条件或搜索词'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {filteredFancyTextTemplates.map((template) => {
+                      const isFavorite = favoriteMap[`TEMPLATE:${template.id}`]
+                      const usageConfig = template.usage ? USAGE_LABELS[template.usage] : null
+
+                      return (
+                        <motion.div
+                          key={template.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative group"
+                        >
+                          <FancyTextPreviewCard
+                            template={template}
+                            scale={0.35}
+                            onClick={() => {
+                              setPreviewTemplate(template)
+                              setPreviewKey(k => k + 1)
+                            }}
+                          />
+
+                          {/* 收藏按钮 */}
+                          <button
+                            className={`
+                              absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                              ${isFavorite
+                                ? 'bg-rose-500 text-white'
+                                : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+                              }
+                            `}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleFavorite(template.id)
+                            }}
+                          >
+                            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                          </button>
+
+                          {/* 用途标签 */}
+                          {usageConfig && (
+                            <div className="absolute top-2 left-2 z-10">
+                              <Badge
+                                variant="default"
+                                size="sm"
+                                className="bg-surface-900/80 text-surface-300 border-0 backdrop-blur-sm"
+                              >
+                                {usageConfig.icon} {usageConfig.label}
+                              </Badge>
+                            </div>
+                          )}
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            ) : templates.length === 0 ? (
-              /* 空状态 */
+            )}
+
+            {/* 灵感创意 Tab */}
+            {typeFilter === 'FANCY_TEXT' && templateSource === 'creative' && (
+              <div className="space-y-6">
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
+                    <Lightbulb className="w-12 h-12 text-purple-400" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-surface-100 mb-3">灵感创意</h2>
+                  <p className="text-surface-400 max-w-md mx-auto mb-8">
+                    通过选择字体风格、视觉风格、动画效果等参数，AI 将为你生成独特的花字模版
+                  </p>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    leftIcon={<Wand2 className="w-5 h-5" />}
+                    onClick={() => {
+                      // TODO: 打开灵感创意编辑器
+                      alert('灵感创意功能即将上线！')
+                    }}
+                  >
+                    开始创作
+                  </Button>
+                </div>
+
+                {/* 风格预览 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {VISUAL_STYLE_PRESETS.slice(0, 8).map((style) => (
+                    <Card
+                      key={style.preset}
+                      className="p-4 text-center hover:border-purple-500/50 cursor-pointer transition-all"
+                      onClick={() => alert(`选择 ${style.label} 风格`)}
+                    >
+                      <span className="text-3xl">{style.emoji}</span>
+                      <p className="text-sm font-medium text-surface-200 mt-2">{style.label}</p>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI 模版 Tab */}
+            {(typeFilter === 'VIDEO' || typeFilter === 'IMAGE') && templateSource === 'ai' && (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-6">
+                  <Wand2 className="w-12 h-12 text-cyan-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-surface-100 mb-3">AI 生成模版</h2>
+                <p className="text-surface-400 max-w-md mx-auto mb-8">
+                  上传参考图片或视频，输入提示词，AI 将为你生成专属的{typeFilter === 'VIDEO' ? '视频' : '图片'}模版
+                </p>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  leftIcon={<Wand2 className="w-5 h-5" />}
+                  onClick={() => alert('AI 生成功能即将上线！')}
+                >
+                  开始生成
+                </Button>
+              </div>
+            )}
+
+            {/* 其他类型的占位 */}
+            {(typeFilter === 'VIDEO' || typeFilter === 'IMAGE' || typeFilter === 'ALL') && templateSource !== 'ai' && (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className={`w-24 h-24 rounded-3xl ${currentTypeConfig?.bgColor || 'bg-surface-800'} flex items-center justify-center mb-6`}>
                   {currentTypeConfig ? (
@@ -486,128 +508,11 @@ export default function TemplatesPage() {
                   )}
                 </div>
                 <h2 className="text-xl font-semibold text-surface-200 mb-2">
-                  {templateSource === 'system' 
-                    ? '暂无官方模版' 
-                    : templateSource === 'user'
-                    ? '暂无我的模版'
-                    : typeFilter === 'ALL' 
-                    ? '模版库为空' 
-                    : `暂无${currentTypeConfig?.label}`}
+                  {templateSource === 'user' ? '暂无我的模版' : '敬请期待'}
                 </h2>
-                <p className="text-surface-500 mb-6">
-                  {templateSource === 'user'
-                    ? '创建你的第一个模版开始吧'
-                    : '敬请期待更多精彩模版'}
+                <p className="text-surface-500">
+                  {typeFilter === 'VIDEO' ? '视频模版' : typeFilter === 'IMAGE' ? '图片模版' : '更多模版'}功能即将上线
                 </p>
-              </div>
-            ) : (
-              /* 网格视图 */
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {templates.map((template) => {
-                  const Icon = getTemplateIcon(template.type)
-                  const typeConfig = TEMPLATE_TYPE_CONFIG.find((c) => c.type === template.type)
-
-                  return (
-                    <motion.div
-                      key={template.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-rose-500/50 transition-all cursor-pointer bg-surface-800/50"
-                      onClick={() => setPreviewTemplate(template)}
-                    >
-                      {/* 缩略图 */}
-                      <div className="relative aspect-video bg-surface-800 overflow-hidden">
-                        <div className={`w-full h-full flex items-center justify-center ${typeConfig?.bgColor || 'bg-surface-800'}`}>
-                          <Icon className={`w-12 h-12 ${typeConfig?.color || 'text-surface-500'} opacity-50`} />
-                        </div>
-
-                        {/* 收藏按钮 */}
-                        <button
-                          className={`
-                            absolute top-2 right-2 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                            ${template.isFavorite
-                              ? 'bg-rose-500 text-white'
-                              : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
-                            }
-                          `}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleFavorite(template.id)
-                          }}
-                        >
-                          <Heart className={`w-4 h-4 ${template.isFavorite ? 'fill-current' : ''}`} />
-                        </button>
-
-                        {/* 类型标识 */}
-                        <div className="absolute top-2 left-2">
-                          <Badge
-                            variant="default"
-                            size="sm"
-                            className={`${typeConfig?.bgColor} ${typeConfig?.color} border-0`}
-                          >
-                            <Icon className="w-3 h-3" />
-                          </Badge>
-                        </div>
-
-                        {/* 时长 */}
-                        {template.duration && (
-                          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/70 rounded text-xs text-white font-mono">
-                            {formatDuration(template.duration)}
-                          </div>
-                        )}
-
-                        {/* 悬浮预览按钮 */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
-                          >
-                            <Play className="w-4 h-4 mr-1.5" />
-                            预览
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* 信息 */}
-                      <div className="p-3 bg-surface-850">
-                        <p className="text-sm font-medium text-surface-200 truncate" title={template.name}>
-                          {template.name}
-                        </p>
-                        <p className="text-xs text-surface-500 mt-1 line-clamp-1">{template.description}</p>
-                        
-                        {/* 统计数据 */}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-surface-500">
-                          <span className="flex items-center gap-1">
-                            <Heart className="w-3 h-3" />
-                            {formatNumber(template.likes)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Eye className="w-3 h-3" />
-                            {formatNumber(template.views)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Download className="w-3 h-3" />
-                            {formatNumber(template.downloads)}
-                          </span>
-                        </div>
-
-                        {/* 标签 */}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {template.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 text-[10px] bg-surface-700 text-surface-400 rounded"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
               </div>
             )}
           </div>
@@ -634,17 +539,9 @@ export default function TemplatesPage() {
               {/* 顶部工具栏 */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-surface-800">
                 <div className="flex items-center gap-3">
-                  {(() => {
-                    const Icon = getTemplateIcon(previewTemplate.type)
-                    const typeConfig = TEMPLATE_TYPE_CONFIG.find((c) => c.type === previewTemplate.type)
-                    return (
-                      <div 
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${typeConfig?.bgColor}`}
-                      >
-                        <Icon className={`w-5 h-5 ${typeConfig?.color}`} />
-                      </div>
-                    )
-                  })()}
+                  <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-pink-400" />
+                  </div>
                   <div>
                     <h3 className="text-lg font-semibold text-surface-100">{previewTemplate.name}</h3>
                     <p className="text-sm text-surface-400">{previewTemplate.description}</p>
@@ -654,10 +551,18 @@ export default function TemplatesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => setPreviewKey(k => k + 1)}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1.5" />
+                    重播动画
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => toggleFavorite(previewTemplate.id)}
                   >
-                    <Heart className={`w-4 h-4 mr-1.5 ${previewTemplate.isFavorite ? 'fill-rose-400 text-rose-400' : ''}`} />
-                    {previewTemplate.isFavorite ? '已收藏' : '收藏'}
+                    <Heart className={`w-4 h-4 mr-1.5 ${favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? 'fill-rose-400 text-rose-400' : ''}`} />
+                    {favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? '已收藏' : '收藏'}
                   </Button>
                   <Button
                     variant="primary"
@@ -679,42 +584,66 @@ export default function TemplatesPage() {
 
               {/* 预览区域 */}
               <div 
-                className="relative aspect-video flex items-center justify-center overflow-hidden bg-surface-950"
+                className="relative aspect-video flex items-center justify-center overflow-hidden"
+                style={{
+                  background: `
+                    radial-gradient(ellipse at center, ${
+                      previewTemplate.globalParams.color.type === 'solid'
+                        ? previewTemplate.globalParams.color.value + '20'
+                        : '#FFD70020'
+                    } 0%, transparent 60%), 
+                    linear-gradient(180deg, #1a1a2e 0%, #0d0d15 100%)
+                  `,
+                }}
               >
-                {(() => {
-                  const Icon = getTemplateIcon(previewTemplate.type)
-                  const typeConfig = TEMPLATE_TYPE_CONFIG.find((c) => c.type === previewTemplate.type)
-                  return (
-                    <div className="text-center">
-                      <Icon className={`w-24 h-24 mx-auto ${typeConfig?.color} opacity-30`} />
-                      <p className="mt-4 text-surface-500">模版预览区域</p>
-                    </div>
-                  )
-                })()}
+                {/* 网格背景 */}
+                <div 
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    backgroundImage: `
+                      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '30px 30px',
+                  }}
+                />
+                
+                {/* 花字效果 */}
+                <div className="relative z-10">
+                  <FancyTextRenderer
+                    key={previewKey}
+                    template={previewTemplate}
+                    scale={0.8}
+                    autoPlay={true}
+                    showDecorations={true}
+                  />
+                </div>
               </div>
 
               {/* 底部信息 */}
               <div className="px-6 py-4 border-t border-surface-800 bg-surface-850">
                 <div className="grid grid-cols-4 gap-4 text-sm">
                   <div>
-                    <span className="text-surface-500">类型</span>
+                    <span className="text-surface-500">用途</span>
                     <p className="text-surface-200 mt-0.5">
-                      {TEMPLATE_TYPE_CONFIG.find((c) => c.type === previewTemplate.type)?.label}
+                      {previewTemplate.usage ? USAGE_LABELS[previewTemplate.usage].label : '-'}
                     </p>
                   </div>
                   <div>
-                    <span className="text-surface-500">时长</span>
+                    <span className="text-surface-500">入场动画</span>
                     <p className="text-surface-200 mt-0.5">
-                      {previewTemplate.duration ? formatDuration(previewTemplate.duration) : '-'}
+                      {previewTemplate.globalParams.animation.entrance.replace(/-/g, ' ')}
                     </p>
                   </div>
                   <div>
-                    <span className="text-surface-500">下载量</span>
-                    <p className="text-surface-200 mt-0.5">{formatNumber(previewTemplate.downloads)}</p>
+                    <span className="text-surface-500">循环动画</span>
+                    <p className="text-surface-200 mt-0.5">
+                      {previewTemplate.globalParams.animation.loop === 'none' ? '无' : previewTemplate.globalParams.animation.loop}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-surface-500">标签</span>
-                    <p className="text-surface-200 mt-0.5">{previewTemplate.tags.join('、')}</p>
+                    <span className="text-surface-500">总时长</span>
+                    <p className="text-surface-200 mt-0.5">{previewTemplate.globalParams.totalDuration}秒</p>
                   </div>
                 </div>
               </div>
@@ -725,4 +654,3 @@ export default function TemplatesPage() {
     </div>
   )
 }
-
