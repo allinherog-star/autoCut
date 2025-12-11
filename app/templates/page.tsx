@@ -34,10 +34,9 @@ import { FancyTextRenderer, FancyTextPreviewCard } from '@/components/fancy-text
 import {
   FANCY_TEXT_TEMPLATE_PRESETS,
   USAGE_LABELS,
-  FONT_STYLE_PRESETS,
   VISUAL_STYLE_PRESETS,
 } from '@/lib/fancy-text/presets'
-import type { FancyTextTemplate, FancyTextUsage } from '@/lib/fancy-text/types'
+import type { FancyTextTemplate } from '@/lib/fancy-text/types'
 import { addFavorite, removeFavorite, batchCheckFavorites } from '@/lib/api/favorites'
 
 // ============================================
@@ -54,7 +53,7 @@ const SOURCE_TABS: Array<{ id: TemplateSource; name: string; icon: typeof Layers
   { id: 'user', name: '我的模版', icon: Upload },
   { id: 'favorite', name: '我的收藏', icon: Bookmark },
   { id: 'ai', name: 'AI模版', icon: Wand2, showFor: ['VIDEO', 'IMAGE'] },
-  { id: 'creative', name: '灵感创意', icon: Lightbulb, showFor: ['FANCY_TEXT'] },
+  { id: 'creative', name: '我的想法', icon: Lightbulb, showFor: ['FANCY_TEXT'] },
 ]
 
 // ============================================
@@ -81,7 +80,7 @@ export default function TemplatesPage() {
   // 视图状态
   const [typeFilter, setTypeFilter] = useState<TemplateType>('FANCY_TEXT')
   const [searchQuery, setSearchQuery] = useState('')
-  const [usageTags, setUsageTags] = useState<FancyTextUsage[]>([])
+  const [categoryTags, setCategoryTags] = useState<string[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [templateSource, setTemplateSource] = useState<TemplateSource>('all')
 
@@ -106,11 +105,6 @@ export default function TemplatesPage() {
   const filteredFancyTextTemplates = useMemo(() => {
     let templates = FANCY_TEXT_TEMPLATE_PRESETS
 
-    // 按用途筛选
-    if (usageTags.length > 0) {
-      templates = templates.filter(t => t.usage && usageTags.includes(t.usage))
-    }
-
     // 按搜索词筛选
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
@@ -128,7 +122,7 @@ export default function TemplatesPage() {
     }
 
     return templates
-  }, [usageTags, searchQuery, templateSource, favoriteMap])
+  }, [searchQuery, templateSource, favoriteMap])
 
   // 获取可用的 Source Tabs
   const availableSourceTabs = SOURCE_TABS.filter(
@@ -244,7 +238,7 @@ export default function TemplatesPage() {
           selectedType={typeFilter}
           onTypeChange={(type) => {
             setTypeFilter(type)
-            setUsageTags([])
+            setCategoryTags([])
             // 重置 source 如果当前 source 不可用
             if (type !== 'FANCY_TEXT' && templateSource === 'creative') {
               setTemplateSource('all')
@@ -260,41 +254,18 @@ export default function TemplatesPage() {
 
         {/* 右侧内容区 */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* 工具栏 - 花字用途筛选（仅花字类型显示） */}
-          {typeFilter === 'FANCY_TEXT' && (
-            <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-surface-500 mr-2">用途筛选:</span>
-                {(Object.entries(USAGE_LABELS) as [FancyTextUsage, typeof USAGE_LABELS[FancyTextUsage]][]).map(([usage, config]) => {
-                  const isSelected = usageTags.includes(usage)
-                  const count = FANCY_TEXT_TEMPLATE_PRESETS.filter(t => t.usage === usage).length
-                  return (
-                    <button
-                      key={usage}
-                      onClick={() => {
-                        if (isSelected) {
-                          setUsageTags(usageTags.filter(t => t !== usage))
-                        } else {
-                          setUsageTags([...usageTags, usage])
-                        }
-                      }}
-                      className={`
-                        flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-all
-                        ${isSelected
-                          ? 'bg-pink-500/20 text-pink-400 border-pink-500/50'
-                          : 'border-surface-700 text-surface-400 hover:text-surface-200 hover:border-surface-500'
-                        }
-                      `}
-                    >
-                      <span>{config.icon}</span>
-                      <span>{config.label}</span>
-                      <span className="text-xs opacity-60">({count})</span>
-                    </button>
-                  )
-                })}
+          {/* 工具栏 - 标签筛选 */}
+          <div className="flex-shrink-0 px-4 py-3 bg-surface-900/30 border-b border-surface-800/50">
+            <div className="flex items-center justify-between gap-4">
+              {/* 二级分类标签 */}
+              <div className="flex-1 min-w-0">
+                <SubcategoryTags
+                  selectedTags={categoryTags}
+                  onTagsChange={setCategoryTags}
+                />
               </div>
             </div>
-          )}
+          </div>
 
           {/* 模版来源页签 */}
           <div className="flex-shrink-0 bg-surface-900/50 border-b border-surface-800">
@@ -352,15 +323,6 @@ export default function TemplatesPage() {
                       {filteredFancyTextTemplates.length} 个
                     </Badge>
                   </h3>
-                  {usageTags.length > 0 && (
-                    <button
-                      onClick={() => setUsageTags([])}
-                      className="flex items-center gap-1 text-sm text-surface-400 hover:text-surface-200"
-                    >
-                      <X className="w-4 h-4" />
-                      清除筛选
-                    </button>
-                  )}
                 </div>
 
                 {/* 模版网格 */}
@@ -443,7 +405,7 @@ export default function TemplatesPage() {
                   <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
                     <Lightbulb className="w-12 h-12 text-purple-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-surface-100 mb-3">灵感创意</h2>
+                  <h2 className="text-2xl font-bold text-surface-100 mb-3">我的想法</h2>
                   <p className="text-surface-400 max-w-md mx-auto mb-8">
                     通过选择字体风格、视觉风格、动画效果等参数，AI 将为你生成独特的花字模版
                   </p>
@@ -452,8 +414,8 @@ export default function TemplatesPage() {
                     size="lg"
                     leftIcon={<Wand2 className="w-5 h-5" />}
                     onClick={() => {
-                      // TODO: 打开灵感创意编辑器
-                      alert('灵感创意功能即将上线！')
+                      // TODO: 打开我的想法编辑器
+                      alert('我的想法功能即将上线！')
                     }}
                   >
                     开始创作
