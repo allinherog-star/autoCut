@@ -58,6 +58,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push('/library')}>素材库</Button>
+          <Button variant="ghost" size="sm" onClick={() => router.push('/templates')}>模版库</Button>
           <Button variant="ghost" size="sm">我的偏好</Button>
           <Button variant="ghost" size="sm">我的项目</Button>
           <Button 

@@ -1,31 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  FolderOpen,
+  LayoutTemplate,
   Video,
   ImageIcon,
-  Music,
-  Volume2,
-  Type,
-  Smile,
-  Heart,
   Sparkles,
-  Layers,
   ChevronRight,
 } from 'lucide-react'
 import { Badge } from '@/components/ui'
-import type { MediaType } from '@/lib/api/media'
 
 // ============================================
 // 类型定义
 // ============================================
 
-export type MediaTypeFilter = 'ALL' | MediaType
+export type TemplateType = 
+  | 'ALL'
+  | 'VIDEO'
+  | 'IMAGE'
+  | 'FANCY_TEXT'
 
-interface MediaTypeItem {
-  type: MediaTypeFilter
+interface TemplateTypeItem {
+  type: TemplateType
   label: string
   labelEn: string
   icon: React.ComponentType<{ className?: string }>
@@ -34,9 +30,9 @@ interface MediaTypeItem {
   description: string
 }
 
-interface MediaTypeSidebarProps {
-  selectedType: MediaTypeFilter
-  onTypeChange: (type: MediaTypeFilter) => void
+interface TemplateTypeSidebarProps {
+  selectedType: TemplateType
+  onTypeChange: (type: TemplateType) => void
   counts?: Record<string, number>
   className?: string
   collapsed?: boolean
@@ -47,105 +43,42 @@ interface MediaTypeSidebarProps {
 // 常量配置
 // ============================================
 
-export const MEDIA_TYPE_CONFIG: MediaTypeItem[] = [
+export const TEMPLATE_TYPE_CONFIG: TemplateTypeItem[] = [
   {
     type: 'ALL',
-    label: '全部素材',
-    labelEn: 'All Media',
-    icon: FolderOpen,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-400/15',
-    description: '浏览所有类型的素材',
+    label: '全部模版',
+    labelEn: 'All Templates',
+    icon: LayoutTemplate,
+    color: 'text-rose-400',
+    bgColor: 'bg-rose-400/15',
+    description: '浏览所有类型的模版',
   },
   {
     type: 'VIDEO',
-    label: '视频',
-    labelEn: 'Video',
+    label: '视频模版',
+    labelEn: 'Video Template',
     icon: Video,
     color: 'text-blue-400',
     bgColor: 'bg-blue-400/15',
-    description: '视频素材和片段',
+    description: '完整视频制作模版',
   },
   {
     type: 'IMAGE',
-    label: '图片',
-    labelEn: 'Image',
+    label: '图片模版',
+    labelEn: 'Image Template',
     icon: ImageIcon,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-400/15',
-    description: '照片和图像素材',
-  },
-  {
-    type: 'AUDIO',
-    label: '音乐',
-    labelEn: 'Music',
-    icon: Music,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-400/15',
-    description: '背景音乐和配乐',
-  },
-  {
-    type: 'SOUND_EFFECT',
-    label: '音效',
-    labelEn: 'Sound Effect',
-    icon: Volume2,
-    color: 'text-orange-400',
-    bgColor: 'bg-orange-400/15',
-    description: '特效音和环境音',
+    description: '图片排版设计模版',
   },
   {
     type: 'FANCY_TEXT',
-    label: '花字',
-    labelEn: 'Fancy Text',
+    label: '花字模版',
+    labelEn: 'Fancy Text Template',
     icon: Sparkles,
     color: 'text-pink-400',
     bgColor: 'bg-pink-400/15',
-    description: '装饰文字和炫酷特效',
-  },
-  {
-    type: 'STICKER',
-    label: '表情',
-    labelEn: 'Emoji',
-    icon: Smile,
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-400/15',
-    description: '表情贴纸和贴图',
-  },
-  {
-    type: 'EMOTION',
-    label: '情绪',
-    labelEn: 'Emotion',
-    icon: Heart,
-    color: 'text-red-400',
-    bgColor: 'bg-red-400/15',
-    description: '情绪氛围素材',
-  },
-  {
-    type: 'FONT',
-    label: '字体',
-    labelEn: 'Font',
-    icon: Type,
-    color: 'text-slate-400',
-    bgColor: 'bg-slate-400/15',
-    description: '字体文件资源',
-  },
-  {
-    type: 'EFFECT',
-    label: '特效',
-    labelEn: 'Effect',
-    icon: Sparkles,
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-400/15',
-    description: '视觉特效滤镜',
-  },
-  {
-    type: 'TRANSITION',
-    label: '转场',
-    labelEn: 'Transition',
-    icon: Layers,
-    color: 'text-indigo-400',
-    bgColor: 'bg-indigo-400/15',
-    description: '场景转换效果',
+    description: '装饰文字和炫酷特效模版',
   },
 ]
 
@@ -153,14 +86,14 @@ export const MEDIA_TYPE_CONFIG: MediaTypeItem[] = [
 // 组件
 // ============================================
 
-export function MediaTypeSidebar({
+export function TemplateTypeSidebar({
   selectedType,
   onTypeChange,
   counts = {},
   className = '',
   collapsed = false,
   onCollapsedChange,
-}: MediaTypeSidebarProps) {
+}: TemplateTypeSidebarProps) {
   // 计算总数
   const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0)
 
@@ -177,7 +110,7 @@ export function MediaTypeSidebar({
       <div className="flex items-center justify-between px-4 py-4 border-b border-surface-800">
         {!collapsed && (
           <h2 className="text-sm font-semibold text-surface-300 uppercase tracking-wider">
-            素材类型
+            模版类型
           </h2>
         )}
         <button
@@ -194,7 +127,7 @@ export function MediaTypeSidebar({
       {/* 类型列表 */}
       <nav className="flex-1 overflow-y-auto py-2 scrollbar-thin">
         <ul className="space-y-0.5 px-2">
-          {MEDIA_TYPE_CONFIG.map((item) => {
+          {TEMPLATE_TYPE_CONFIG.map((item) => {
             const Icon = item.icon
             const isSelected = selectedType === item.type
             const count = item.type === 'ALL' ? totalCount : (counts[item.type] || 0)
@@ -216,7 +149,7 @@ export function MediaTypeSidebar({
                   {/* 选中指示器 */}
                   {isSelected && (
                     <motion.div
-                      layoutId="sidebar-indicator"
+                      layoutId="template-sidebar-indicator"
                       className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full ${item.color.replace('text-', 'bg-')}`}
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
@@ -261,8 +194,8 @@ export function MediaTypeSidebar({
       {!collapsed && (
         <div className="px-4 py-3 border-t border-surface-800">
           <div className="flex items-center justify-between text-xs text-surface-500">
-            <span>共 {totalCount} 个素材</span>
-            <span>{MEDIA_TYPE_CONFIG.length - 1} 个类型</span>
+            <span>共 {totalCount} 个模版</span>
+            <span>{TEMPLATE_TYPE_CONFIG.length - 1} 个类型</span>
           </div>
         </div>
       )}
@@ -270,5 +203,5 @@ export function MediaTypeSidebar({
   )
 }
 
-export default MediaTypeSidebar
+export default TemplateTypeSidebar
 

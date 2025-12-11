@@ -13,7 +13,6 @@ export type MediaType =
   | 'EMOTION'
   | 'EFFECT' 
   | 'TRANSITION'
-  | 'TEMPLATE'
 
 export interface Media {
   id: string

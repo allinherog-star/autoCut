@@ -28,7 +28,6 @@ import {
   Sparkles,
   Smile,
   Wand2,
-  LayoutTemplate,
   Volume2,
   Layers,
   Filter,
@@ -64,7 +63,16 @@ import {
   type StickerCategory,
   type StickerPreset,
 } from '@/lib/sticker-presets'
+import {
+  DAZZLE_TEXT_PRESETS,
+  DAZZLE_CATEGORY_CONFIG,
+  DAZZLE_ALL_ANIMATIONS_CSS,
+  dazzlePresetToCSS,
+  type DazzleTextPreset,
+  type DazzleTextCategory,
+} from '@/lib/dazzle-text-presets'
 import { EmotionTextEffect } from '@/components/emotion-text-effect'
+import { DazzleTextEffect, DazzlePreviewCard } from '@/components/dazzle-text-effect'
 
 // ============================================
 // 类型定义
@@ -136,8 +144,6 @@ function getMediaIcon(type: Media['type']) {
       return Sparkles
     case 'TRANSITION':
       return Layers
-    case 'TEMPLATE':
-      return LayoutTemplate
     default:
       return FolderOpen
   }
@@ -163,8 +169,6 @@ function getMediaTypeName(type: Media['type']): string {
       return '特效'
     case 'TRANSITION':
       return '转场'
-    case 'TEMPLATE':
-      return '模版'
     default:
       return '未知'
   }
@@ -213,6 +217,9 @@ export default function LibraryPage() {
   const [previewEmotion, setPreviewEmotion] = useState<EmotionTextStyle | null>(null)
   const [emotionPreviewKey, setEmotionPreviewKey] = useState(0)
 
+  // 炫字悬浮预览状态
+  const [hoveredDazzleId, setHoveredDazzleId] = useState<string | null>(null)
+
   // 用户标签管理
   const [showTagModal, setShowTagModal] = useState(false)
   const [userTags, setUserTags] = useState<CategoryTag[]>([])
@@ -253,7 +260,7 @@ export default function LibraryPage() {
     const counts: Record<string, number> = {}
     
     // 并行获取各类型的数量
-    const types: MediaType[] = ['VIDEO', 'IMAGE', 'AUDIO', 'SOUND_EFFECT', 'FANCY_TEXT', 'FONT', 'STICKER', 'EMOTION', 'EFFECT', 'TRANSITION', 'TEMPLATE']
+    const types: MediaType[] = ['VIDEO', 'IMAGE', 'AUDIO', 'SOUND_EFFECT', 'FANCY_TEXT', 'FONT', 'STICKER', 'EMOTION', 'EFFECT', 'TRANSITION']
     
     await Promise.all(
       types.map(async (type) => {
@@ -264,12 +271,13 @@ export default function LibraryPage() {
       })
     )
     
-    // 花字类型特殊处理：系统素材来源于代码预设
+    // 花字类型特殊处理：系统素材来源于代码预设（包含情绪花字+炫字预设）
     if (mediaSource === 'system' || mediaSource === 'all') {
       const dbCount = counts['FANCY_TEXT'] || 0
+      const systemPresetCount = EMOTION_TEXT_PRESETS.length + DAZZLE_TEXT_PRESETS.length
       counts['FANCY_TEXT'] = mediaSource === 'system' 
-        ? EMOTION_TEXT_PRESETS.length 
-        : dbCount + EMOTION_TEXT_PRESETS.length
+        ? systemPresetCount 
+        : dbCount + systemPresetCount
     }
     
     // 表情类型特殊处理：系统素材来源于代码预设
@@ -665,60 +673,230 @@ export default function LibraryPage() {
               </div>
             )}
 
-            {/* 花字系统预设 - 当选择花字类型且来源是系统素材时显示 */}
+            {/* 花字系统预设 - 当选择花字类型且来源是系统素材时显示（包含情绪花字+炫字） */}
             {typeFilter === 'FANCY_TEXT' && (mediaSource === 'system' || mediaSource === 'all') ? (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
-                    <Type className="w-5 h-5 text-cyan-400" />
-                    系统花字预设
-                    <Badge variant="default" size="sm" className="bg-cyan-500/20 text-cyan-400 border-0">
-                      {EMOTION_TEXT_PRESETS.length} 个
-                    </Badge>
-                  </h3>
+              <div className="space-y-8">
+                {/* 注入炫字动画样式 */}
+                <style dangerouslySetInnerHTML={{ __html: DAZZLE_ALL_ANIMATIONS_CSS }} />
+                
+                {/* 情绪花字预设区块 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-pink-400" />
+                      情绪花字
+                      <Badge variant="default" size="sm" className="bg-pink-500/20 text-pink-400 border-0">
+                        {EMOTION_TEXT_PRESETS.length} 个
+                      </Badge>
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {EMOTION_TEXT_PRESETS.map((preset) => (
+                      <motion.div
+                        key={preset.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-pink-500/50 transition-all cursor-pointer bg-surface-800/50"
+                      >
+                        {/* 预览区域 */}
+                        <div className="relative aspect-video bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center justify-center p-4 overflow-hidden">
+                          {/* 网格背景 */}
+                          <div className="absolute inset-0 bg-grid opacity-20" />
+                          {/* 花字预览 */}
+                          <div 
+                            style={{
+                              ...presetToCSS(preset, 0.35),
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            className="relative z-10"
+                          >
+                            花字
+                          </div>
+                          {/* 类型标签 */}
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="default" size="sm" className="bg-pink-500/20 text-pink-400 border-0">
+                              <Heart className="w-3 h-3" />
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* 信息 */}
+                        <div className="p-3 bg-surface-850">
+                          <p className="text-sm font-medium text-surface-200 truncate" title={preset.name}>
+                            {preset.name}
+                          </p>
+                          <p className="text-xs text-surface-500 mt-0.5 truncate">{preset.description}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {EMOTION_TEXT_PRESETS.map((preset) => (
-                    <motion.div
-                      key={preset.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-cyan-500/50 transition-all cursor-pointer bg-surface-800/50"
-                    >
-                      {/* 预览区域 */}
-                      <div className="relative aspect-video bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center justify-center p-4 overflow-hidden">
-                        {/* 网格背景 */}
-                        <div className="absolute inset-0 bg-grid opacity-20" />
-                        {/* 花字预览 */}
-                        <div 
-                          style={{
-                            ...presetToCSS(preset, 0.35),
-                            maxWidth: '100%',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+
+                {/* 分隔线 */}
+                <div className="border-t border-surface-700" />
+
+                {/* 炫字预设区块 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-fuchsia-400" />
+                      综艺炫字
+                      <Badge variant="default" size="sm" className="bg-fuchsia-500/20 text-fuchsia-400 border-0">
+                        {DAZZLE_TEXT_PRESETS.length} 个
+                      </Badge>
+                    </h3>
+                    <p className="text-sm text-surface-500">
+                      参考《一见你就笑》视觉风格
+                    </p>
+                  </div>
+
+                  {/* 类别筛选 */}
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(DAZZLE_CATEGORY_CONFIG) as DazzleTextCategory[]).map((category) => {
+                      const config = DAZZLE_CATEGORY_CONFIG[category]
+                      const count = DAZZLE_TEXT_PRESETS.filter(p => p.category === category).length
+                      const isSelected = categoryTags.includes(category)
+                      return (
+                        <button
+                          key={category}
+                          className={`px-3 py-1.5 text-sm rounded-lg border transition-all flex items-center gap-1.5
+                            ${isSelected 
+                              ? `${config.bgColor} ${config.color} border-current` 
+                              : 'border-surface-700 text-surface-400 hover:text-surface-200 hover:border-surface-500'
+                            }`}
+                          onClick={() => {
+                            if (isSelected) {
+                              setCategoryTags(categoryTags.filter(t => t !== category))
+                            } else {
+                              setCategoryTags([...categoryTags, category])
+                            }
                           }}
-                          className="relative z-10"
                         >
-                          花字
-                        </div>
-                        {/* 类型标签 */}
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="default" size="sm" className="bg-cyan-500/20 text-cyan-400 border-0">
-                            <Type className="w-3 h-3" />
-                          </Badge>
-                        </div>
-                      </div>
-                      {/* 信息 */}
-                      <div className="p-3 bg-surface-850">
-                        <p className="text-sm font-medium text-surface-200 truncate" title={preset.name}>
-                          {preset.name}
-                        </p>
-                        <p className="text-xs text-surface-500 mt-0.5 truncate">{preset.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
+                          <span>{config.icon}</span>
+                          <span>{config.label}</span>
+                          <span className="text-xs opacity-60">({count})</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* 炫字网格 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {DAZZLE_TEXT_PRESETS
+                      .filter(preset => categoryTags.length === 0 || categoryTags.includes(preset.category))
+                      .map((preset) => {
+                        const categoryConfig = DAZZLE_CATEGORY_CONFIG[preset.category]
+                        const previewText = preset.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').slice(0, 4) || '炫字'
+                        const isHovered = hoveredDazzleId === preset.id
+                        return (
+                          <motion.div
+                            key={preset.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ scale: 1.02 }}
+                            className="relative group rounded-xl overflow-hidden border border-surface-700 hover:border-fuchsia-500/50 transition-all cursor-pointer bg-surface-800/50"
+                            onMouseEnter={() => setHoveredDazzleId(preset.id)}
+                            onMouseLeave={() => setHoveredDazzleId(null)}
+                          >
+                            {/* 预览区域 */}
+                            <div 
+                              className="relative aspect-video flex items-center justify-center p-4 overflow-hidden"
+                              style={{
+                                background: `
+                                  radial-gradient(ellipse at center, ${preset.color.primary}15 0%, transparent 70%), 
+                                  linear-gradient(135deg, #1a1a2e 0%, #0d0d15 100%)
+                                `,
+                              }}
+                            >
+                              {/* 网格背景 */}
+                              <div 
+                                className="absolute inset-0 opacity-15"
+                                style={{
+                                  backgroundImage: `
+                                    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                                    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
+                                  `,
+                                  backgroundSize: '20px 20px',
+                                }}
+                              />
+                              
+                              {/* 悬浮时显示动画预览，否则显示静态文字 */}
+                              {isHovered ? (
+                                <div className="relative z-10">
+                                  <DazzleTextEffect
+                                    text={previewText}
+                                    preset={preset}
+                                    scale={0.35}
+                                    autoPlay={true}
+                                    showDecorations={true}
+                                  />
+                                </div>
+                              ) : (
+                                <div 
+                                  className="relative z-10 text-center"
+                                  style={{
+                                    ...dazzlePresetToCSS(preset, 0.32),
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {previewText}
+                                </div>
+                              )}
+
+                              {/* 类别标签 */}
+                              <div className="absolute top-2 right-2 z-20">
+                                <span 
+                                  className={`
+                                    inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full
+                                    ${categoryConfig.bgColor} ${categoryConfig.color}
+                                  `}
+                                >
+                                  <span>{categoryConfig.icon}</span>
+                                </span>
+                              </div>
+
+                              {/* 时长标签 */}
+                              <div className="absolute bottom-2 left-2 z-20">
+                                <span className="text-xs text-surface-400 bg-black/50 px-1.5 py-0.5 rounded">
+                                  {(preset.duration / 1000).toFixed(1)}s
+                                </span>
+                              </div>
+
+                              {/* 悬浮时显示动画播放中提示 */}
+                              {isHovered && (
+                                <div className="absolute top-2 left-2 z-20">
+                                  <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-fuchsia-500/30 text-fuchsia-300 backdrop-blur-sm">
+                                    <span className="w-1.5 h-1.5 bg-fuchsia-400 rounded-full animate-pulse" />
+                                    播放中
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* 信息 */}
+                            <div className="p-3 bg-surface-850">
+                              <p className="text-sm font-medium text-surface-200 truncate" title={preset.name}>
+                                {preset.name}
+                              </p>
+                              <p className="text-xs text-surface-500 mt-0.5 truncate">{preset.description}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-surface-600">
+                                <span>🎬 {preset.animation.enter.replace(/_/g, ' ')}</span>
+                                {preset.animation.loop !== 'none' && (
+                                  <span>🔄 {preset.animation.loop}</span>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                  </div>
                 </div>
               </div>
             ) : typeFilter === 'STICKER' && (mediaSource === 'system' || mediaSource === 'all') ? (
@@ -754,12 +932,26 @@ export default function LibraryPage() {
                         {/* 网格背景 */}
                         <div className="absolute inset-0 bg-grid opacity-10" />
                         {/* 表情预览 */}
-                        <span 
-                          style={stickerToCSS(sticker, 0.55)}
-                          className="relative z-10"
-                        >
-                          {sticker.content.value}
-                        </span>
+                        {sticker.content.type === 'image' ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={sticker.content.value}
+                            alt={sticker.name}
+                            className="relative z-10 object-contain"
+                            style={{
+                              width: `${sticker.content.size * 0.55}px`,
+                              height: `${sticker.content.size * 0.55}px`,
+                              borderRadius: sticker.style.borderRadius ? `${sticker.style.borderRadius}px` : undefined,
+                            }}
+                          />
+                        ) : (
+                          <span 
+                            style={stickerToCSS(sticker, 0.55)}
+                            className="relative z-10"
+                          >
+                            {sticker.content.value}
+                          </span>
+                        )}
                       </div>
                       {/* 信息 - 悬浮显示 */}
                       <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">

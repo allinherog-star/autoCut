@@ -40,6 +40,8 @@ import {
   getEmotionLabel,
   getPresetById,
 } from '@/lib/emotion-text-effects'
+import { VarietyAnimatedText, ANIMATION_PRESETS } from '@/components/variety-animated-text'
+import { FunnyText } from '@/components/variety-text-system'
 
 // ============================================
 // 类型定义
@@ -55,6 +57,7 @@ interface EmotionPoint {
   effects: string[]
   textEffect?: string // 文字特效预设 ID
   customText?: string // 自定义文字
+  varietyEffect?: string // 综艺花字特效类型: 'animated' | 'funny-yellow' | 'funny-pink' | 'funny-rainbow'
 }
 
 interface EmotionPreset {
@@ -209,6 +212,28 @@ const mockEmotionPoints: EmotionPoint[] = [
     textEffect: 'funny-wobble',
     customText: '笑死我了哈哈！',
   },
+  {
+    id: '6',
+    time: 22,
+    duration: 3,
+    emotion: 'funny',
+    intensity: 95,
+    suggestion: '综艺花字效果演示',
+    effects: ['彩纸', '速度线', '表情飞入'],
+    varietyEffect: 'animated',
+    customText: '一见你就笑',
+  },
+  {
+    id: '7',
+    time: 26,
+    duration: 2.5,
+    emotion: 'excited',
+    intensity: 88,
+    suggestion: '爆笑大字效果',
+    effects: ['弹跳动画', '彩色粒子'],
+    varietyEffect: 'funny-rainbow',
+    customText: '绝了绝了',
+  },
 ]
 
 // ============================================
@@ -343,7 +368,7 @@ function VideoPreviewWithEffects({
 
         {/* 情绪文字特效叠加层 */}
         <AnimatePresence mode="wait">
-          {activeEffect && activeEffect.textEffect && activeEffect.customText && (
+          {activeEffect && activeEffect.customText && (
             <motion.div
               key={`effect-${activeEffect.id}-${effectKey}`}
               initial={{ opacity: 0 }}
@@ -351,11 +376,39 @@ function VideoPreviewWithEffects({
               exit={{ opacity: 0 }}
               className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
             >
-              <EmotionTextEffect
-                text={activeEffect.customText}
-                preset={activeEffect.textEffect}
-                scale={0.7}
-              />
+              {/* 综艺花字特效 */}
+              {activeEffect.varietyEffect === 'animated' && (
+                <div className="w-full h-full">
+                  <VarietyAnimatedText
+                    text={activeEffect.customText}
+                    fontSize={48}
+                    config={ANIMATION_PRESETS['狂欢庆祝']}
+                  />
+                </div>
+              )}
+              {activeEffect.varietyEffect === 'funny-yellow' && (
+                <div className="w-full h-full">
+                  <FunnyText text={activeEffect.customText} variant="yellow" scale={0.8} />
+                </div>
+              )}
+              {activeEffect.varietyEffect === 'funny-pink' && (
+                <div className="w-full h-full">
+                  <FunnyText text={activeEffect.customText} variant="pink" scale={0.8} />
+                </div>
+              )}
+              {activeEffect.varietyEffect === 'funny-rainbow' && (
+                <div className="w-full h-full">
+                  <FunnyText text={activeEffect.customText} variant="rainbow" scale={0.8} />
+                </div>
+              )}
+              {/* 原有花字特效 */}
+              {!activeEffect.varietyEffect && activeEffect.textEffect && (
+                <EmotionTextEffect
+                  text={activeEffect.customText}
+                  preset={activeEffect.textEffect}
+                  scale={0.7}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -378,7 +431,11 @@ function VideoPreviewWithEffects({
                 }}
               >
                 <Wand2 className="w-3 h-3 mr-1" />
-                {getEmotionLabel(activeEffect.emotion)} · {getPresetById(activeEffect.textEffect || '')?.name}
+                {getEmotionLabel(activeEffect.emotion)} · {
+                  activeEffect.varietyEffect 
+                    ? `综艺花字 (${activeEffect.varietyEffect})` 
+                    : getPresetById(activeEffect.textEffect || '')?.name
+                }
               </Badge>
             </motion.div>
           )}
@@ -712,14 +769,32 @@ export default function EmotionPage() {
                   {textEffectEnabled && (
                     <div className="space-y-4">
                       {/* 预览 */}
-                      {selectedPoint.textEffect && selectedPoint.customText && (
-                        <div className="bg-surface-900/50 rounded-lg p-6 flex items-center justify-center min-h-[100px] overflow-hidden">
-                          <EmotionTextEffect
-                            key={previewKey}
-                            text={selectedPoint.customText}
-                            preset={selectedPoint.textEffect}
-                            scale={0.6}
-                          />
+                      {selectedPoint.customText && (selectedPoint.textEffect || selectedPoint.varietyEffect) && (
+                        <div className="bg-surface-900/50 rounded-lg flex items-center justify-center min-h-[120px] overflow-hidden">
+                          {selectedPoint.varietyEffect === 'animated' ? (
+                            <div key={previewKey} className="w-full h-full min-h-[150px]">
+                              <VarietyAnimatedText
+                                text={selectedPoint.customText}
+                                fontSize={36}
+                                config={ANIMATION_PRESETS['狂欢庆祝']}
+                              />
+                            </div>
+                          ) : selectedPoint.varietyEffect?.startsWith('funny-') ? (
+                            <div key={previewKey} className="w-full h-full min-h-[150px]">
+                              <FunnyText 
+                                text={selectedPoint.customText} 
+                                variant={selectedPoint.varietyEffect.replace('funny-', '') as 'yellow' | 'pink' | 'cyan' | 'rainbow'} 
+                                scale={0.6} 
+                              />
+                            </div>
+                          ) : selectedPoint.textEffect ? (
+                            <EmotionTextEffect
+                              key={previewKey}
+                              text={selectedPoint.customText}
+                              preset={selectedPoint.textEffect}
+                              scale={0.6}
+                            />
+                          ) : null}
                         </div>
                       )}
 
@@ -735,19 +810,67 @@ export default function EmotionPage() {
                         />
                       </div>
 
-                      {/* 特效选择 */}
+                      {/* 综艺花字特效选择 */}
                       <div>
-                        <label className="text-sm text-surface-400 mb-2 block">文字特效</label>
+                        <label className="text-sm text-surface-400 mb-2 block">🎬 综艺花字特效</label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          {[
+                            { id: 'animated', name: '🎉 狂欢庆祝', desc: '弹跳+彩纸+表情飞入' },
+                            { id: 'funny-yellow', name: '💛 经典黄', desc: '综艺明黄色大字' },
+                            { id: 'funny-pink', name: '💗 可爱粉', desc: '可爱粉色大字' },
+                            { id: 'funny-rainbow', name: '🌈 彩虹色', desc: '多彩渐变大字' },
+                          ].map(effect => (
+                            <button
+                              key={effect.id}
+                              onClick={() => {
+                                setEmotionPoints(prev => 
+                                  prev.map(p => p.id === selectedPoint.id 
+                                    ? { ...p, varietyEffect: effect.id, textEffect: undefined } 
+                                    : p
+                                  )
+                                )
+                                setPreviewKey(k => k + 1)
+                              }}
+                              className={`
+                                p-3 rounded-lg border text-left transition-all
+                                ${selectedPoint.varietyEffect === effect.id
+                                  ? 'border-amber-500 bg-amber-500/10'
+                                  : 'border-surface-700 hover:border-surface-500 bg-surface-800/50'
+                                }
+                              `}
+                            >
+                              <div className="font-medium text-surface-200 text-sm">
+                                {effect.name}
+                              </div>
+                              <div className="text-xs text-surface-500 mt-1">
+                                {effect.desc}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 原有特效选择 */}
+                      <div>
+                        <label className="text-sm text-surface-400 mb-2 block">✨ 情绪文字特效</label>
                         <div className="grid grid-cols-3 gap-2">
                           {EMOTION_TEXT_PRESETS
                             .filter(p => p.emotion === selectedPoint.emotion)
                             .map(preset => (
                               <button
                                 key={preset.id}
-                                onClick={() => updatePointTextEffect(selectedPoint.id, preset.id)}
+                                onClick={() => {
+                                  setEmotionPoints(prev => 
+                                    prev.map(p => p.id === selectedPoint.id 
+                                      ? { ...p, textEffect: preset.id, varietyEffect: undefined } 
+                                      : p
+                                    )
+                                  )
+                                  setPreviewKey(k => k + 1)
+                                }}
                                 className={`
                                   p-3 rounded-lg border text-left transition-all
-                                  ${selectedPoint.textEffect === preset.id
+                                  ${selectedPoint.textEffect === preset.id && !selectedPoint.varietyEffect
                                     ? 'border-amber-500 bg-amber-500/10'
                                     : 'border-surface-700 hover:border-surface-500 bg-surface-800/50'
                                   }
@@ -841,10 +964,10 @@ export default function EmotionPage() {
                             >
                               {point.intensity}%
                             </span>
-                            {point.textEffect && (
+                            {(point.textEffect || point.varietyEffect) && (
                               <Badge variant="secondary" size="sm">
                                 <Wand2 className="w-3 h-3 mr-1" />
-                                花字
+                                {point.varietyEffect ? '综艺花字' : '花字'}
                               </Badge>
                             )}
                           </div>

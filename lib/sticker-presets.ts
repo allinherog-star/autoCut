@@ -16,6 +16,7 @@ export type StickerCategory =
   | 'decoration'  // 装饰贴纸
   | 'text'        // 文字贴纸
   | 'popular'     // 热门表情
+  | 'meme'        // 斗图表情包
 
 export interface StickerPreset {
   id: string
@@ -99,6 +100,13 @@ export const STICKER_CATEGORY_CONFIG: Record<StickerCategory, {
     icon: '🔥',
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/15',
+  },
+  meme: {
+    label: '斗图',
+    labelEn: 'Meme',
+    icon: '🤪',
+    color: 'text-lime-400',
+    bgColor: 'bg-lime-400/15',
   },
 }
 
@@ -955,6 +963,167 @@ export const STICKER_PRESETS: StickerPreset[] = [
     style: { glow: '0 0 15px rgba(255,71,87,0.5)' },
     animation: { type: 'pulse', duration: 800, loop: true },
     tags: ['目标', '命中', '准确', '精准'],
+  },
+
+  // ============================================
+  // 🤪 斗图表情包系列 - 微信表情包
+  // ============================================
+  // 注意：图片类型的斗图表情包使用 image 类型，图片文件存放在 /public/stickers/meme/ 目录下
+  // 添加新表情包步骤：
+  // 1. 将表情包图片（gif/png/jpg）放到 /public/stickers/meme/ 目录
+  // 2. 在下方添加预设配置，content.value 填写图片路径（如 '/stickers/meme/xxx.gif'）
+  
+  {
+    id: 'meme-panda-speechless',
+    name: '熊猫头无语',
+    category: 'meme',
+    description: '一脸无语的熊猫',
+    content: { type: 'image', value: '/stickers/meme/20251209170947.gif', size: 120 },
+    style: { borderRadius: 8 },
+    animation: { type: 'none', duration: 0, loop: false },
+    tags: ['斗图', '熊猫头', '无语', '微信'],
+  },
+  {
+    id: 'meme-doge',
+    name: '狗头保命',
+    category: 'meme',
+    description: '说完赶紧加个狗头',
+    content: { type: 'emoji', value: '🐕', size: 80 },
+    style: { 
+      backgroundColor: '#FFF3CD',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #D4A017',
+    },
+    animation: { type: 'wobble', duration: 800, loop: true },
+    tags: ['斗图', '狗头', '保命', '微信'],
+  },
+  {
+    id: 'meme-rage',
+    name: '气到变形',
+    category: 'meme',
+    description: '气得脸都歪了',
+    content: { type: 'emoji', value: '🤬', size: 80 },
+    style: { 
+      backgroundColor: '#FFCDD2',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #C62828',
+      glow: '0 0 20px rgba(255,0,0,0.4)',
+    },
+    animation: { type: 'shake', duration: 200, loop: true },
+    tags: ['斗图', '生气', '愤怒', '骂人'],
+  },
+  {
+    id: 'meme-fake-smile',
+    name: '假笑',
+    category: 'meme',
+    description: '微笑中透露着无奈',
+    content: { type: 'emoji', value: '🙂', size: 80 },
+    style: { 
+      backgroundColor: '#E3F2FD',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #1565C0',
+    },
+    animation: { type: 'pulse', duration: 2000, loop: true },
+    tags: ['斗图', '假笑', '无奈', '微笑'],
+  },
+  {
+    id: 'meme-lie-flat',
+    name: '躺平',
+    category: 'meme',
+    description: '不想努力了',
+    content: { type: 'emoji', value: '🛌', size: 80 },
+    style: { 
+      backgroundColor: '#E8F5E9',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #2E7D32',
+    },
+    animation: { type: 'float', duration: 2000, loop: true },
+    tags: ['斗图', '躺平', '摆烂', '不想动'],
+  },
+  {
+    id: 'meme-rich',
+    name: '暴富',
+    category: 'meme',
+    description: '一夜暴富',
+    content: { type: 'emoji', value: '💰', size: 80 },
+    style: { 
+      backgroundColor: '#FFF8E1',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #F9A825',
+      glow: '0 0 25px rgba(255,215,0,0.6)',
+    },
+    animation: { type: 'bounce', duration: 500, loop: true },
+    tags: ['斗图', '暴富', '有钱', '发财'],
+  },
+  {
+    id: 'meme-emo',
+    name: 'emo了',
+    category: 'meme',
+    description: '我emo了',
+    content: { type: 'emoji', value: '😞', size: 80 },
+    style: { 
+      backgroundColor: '#ECEFF1',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #546E7A',
+    },
+    animation: { type: 'float', duration: 3000, loop: true },
+    tags: ['斗图', 'emo', '难过', '伤心'],
+  },
+  {
+    id: 'meme-question',
+    name: '黑人问号',
+    category: 'meme',
+    description: '满脸问号',
+    content: { type: 'emoji', value: '❓', size: 80 },
+    style: { 
+      backgroundColor: '#F3E5F5',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #7B1FA2',
+    },
+    animation: { type: 'wobble', duration: 1000, loop: true },
+    tags: ['斗图', '问号', '疑惑', '什么'],
+  },
+  {
+    id: 'meme-awesome',
+    name: '绝绝子',
+    category: 'meme',
+    description: '太绝了',
+    content: { type: 'emoji', value: '🤌', size: 80 },
+    style: { 
+      backgroundColor: '#FCE4EC',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #C2185B',
+    },
+    animation: { type: 'bounce', duration: 600, loop: true },
+    tags: ['斗图', '绝绝子', '厉害', 'yyds'],
+  },
+  {
+    id: 'meme-salute',
+    name: '敬礼',
+    category: 'meme',
+    description: '向大佬致敬',
+    content: { type: 'emoji', value: '🫡', size: 80 },
+    style: { 
+      backgroundColor: '#E8EAF6',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #3F51B5',
+    },
+    animation: { type: 'bounce', duration: 800, loop: false },
+    tags: ['斗图', '敬礼', '大佬', '致敬'],
+  },
+  {
+    id: 'meme-clown',
+    name: '小丑竟是我',
+    category: 'meme',
+    description: '原来我才是小丑',
+    content: { type: 'emoji', value: '🤡', size: 80 },
+    style: { 
+      backgroundColor: '#FFF9C4',
+      borderRadius: 12,
+      shadow: '3px 3px 0 #F57F17',
+    },
+    animation: { type: 'swing', duration: 1000, loop: true },
+    tags: ['斗图', '小丑', '尴尬', '自嘲'],
   },
 ]
 
