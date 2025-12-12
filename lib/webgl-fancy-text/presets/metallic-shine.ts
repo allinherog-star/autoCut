@@ -52,7 +52,7 @@ export const METALLIC_SHINE_PRESET: WebGLFancyTextScene = {
   text3D: {
     text: '一见你就笑',
     fontUrl: '/fonts/Noto_Sans_SC_Black_Regular.json',
-    size: 2,
+    size: 1.5,  // 增大字体
     height: 0.5,
     curveSegments: 12,
     bevelEnabled: true,
@@ -67,7 +67,7 @@ export const METALLIC_SHINE_PRESET: WebGLFancyTextScene = {
     metalness: 0.95,
     roughness: 0.15,
     emissive: '#FFA500',
-    emissiveIntensity: 0.3,
+    emissiveIntensity: 1.5,  // 增加发光强度
   },
   
   textAnimation: {
@@ -160,12 +160,8 @@ export const METALLIC_SHINE_PRESET: WebGLFancyTextScene = {
 }
 
 export function createMetallicShine(text: string): WebGLFancyTextScene {
-  return {
-    ...METALLIC_SHINE_PRESET,
-    text3D: {
-      ...METALLIC_SHINE_PRESET.text3D,
-      text,
-    },
-  }
+  const preset = JSON.parse(JSON.stringify(METALLIC_SHINE_PRESET))
+  preset.text3D.text = text
+  return preset
 }
 

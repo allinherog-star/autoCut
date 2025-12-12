@@ -150,16 +150,9 @@ export const NEON_GLOW_PRESET: WebGLFancyTextScene = {
 }
 
 export function createNeonGlow(text: string, color: string = '#00FFFF'): WebGLFancyTextScene {
-  return {
-    ...NEON_GLOW_PRESET,
-    text3D: {
-      ...NEON_GLOW_PRESET.text3D,
-      text,
-    },
-    textMaterial: {
-      ...NEON_GLOW_PRESET.textMaterial,
-      emissive: color,
-    },
-  }
+  const preset = JSON.parse(JSON.stringify(NEON_GLOW_PRESET))
+  preset.text3D.text = text
+  preset.textMaterial.emissive = color
+  return preset
 }
 

@@ -39,6 +39,7 @@
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.4",
     "three": "^0.182.0",
+    "troika-three-text": "^0.52.4",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

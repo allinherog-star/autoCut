@@ -16,10 +16,15 @@ type PresetType = 'metallic' | 'neon'
 export default function WebGLFancyTextTest() {
   const [customText, setCustomText] = useState('一见你就笑')
   const [preset, setPreset] = useState<PresetType>('metallic')
-  const [scene, setScene] = useState<WebGLFancyTextScene>(METALLIC_SHINE_PRESET)
+  const [scene, setScene] = useState<WebGLFancyTextScene>(() => createMetallicShine('一见你就笑'))
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
+    setCustomText(text)
+    updateScene(text, preset)
+  }
+
+  const handleQuickText = (text: string) => {
     setCustomText(text)
     updateScene(text, preset)
   }
@@ -119,8 +124,8 @@ export default function WebGLFancyTextTest() {
                 {['一见你就笑', '笑死我了', '赛博朋克', '绝绝子'].map((text) => (
                   <button
                     key={text}
-                    onClick={() => handleTextChange({ target: { value: text } } as any)}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm"
+                    onClick={() => handleQuickText(text)}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium"
                   >
                     {text}
                   </button>
@@ -135,12 +140,21 @@ export default function WebGLFancyTextTest() {
           <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
             ▶️ 实时 3D 预览
           </h2>
-          <div className="bg-black rounded-lg overflow-hidden">
-            <WebGLFancyTextRenderer
-              scene={scene}
-              autoPlay={true}
-              className="w-full"
-            />
+          <div className="bg-black rounded-lg overflow-hidden" style={{ minHeight: '650px' }}>
+            {scene ? (
+              <WebGLFancyTextRenderer
+                scene={scene}
+                autoPlay={true}
+                className="w-full"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                  <p className="text-gray-400">加载 3D 场景...</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

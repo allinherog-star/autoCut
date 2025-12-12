@@ -8,10 +8,11 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
 import * as React from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Text3D, Center, Environment, PerspectiveCamera, OrbitControls } from '@react-three/drei'
+import { Center, Environment, PerspectiveCamera, OrbitControls } from '@react-three/drei'
 import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import type { WebGLFancyTextScene } from './types'
+import { ChineseText3D } from './components/ChineseText3D'
 
 // ============================================
 // 3D 文字组件
@@ -23,13 +24,15 @@ interface Text3DObjectProps {
 }
 
 function Text3DObject({ config, currentTime }: Text3DObjectProps) {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const groupRef = useRef<THREE.Group>(null)
   const { text3D, textMaterial, textAnimation } = config
 
   // 计算动画进度
   const progress = useMemo(() => {
-    if (!textAnimation) return 0
-    return Math.min(1, currentTime / textAnimation.duration)
+    if (!textAnimation) return 1  // 无动画时显示最终状态
+    const p = Math.min(1, currentTime / textAnimation.duration)
+    console.log('Animation progress:', p, 'currentTime:', currentTime)
+    return p
   }, [currentTime, textAnimation])
 
   // 插值关键帧
@@ -39,9 +42,31 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
     }
 
     const keyframes = textAnimation.keyframes
+    
+    // 找到当前进度对应的关键帧区间
     let startFrame = keyframes[0]
-    let endFrame = keyframes[keyframes.length - 1]
+    let endFrame = keyframes[0]
+    
+    // 如果进度为0，返回第一帧
+    if (progress === 0) {
+      return {
+        position: startFrame.position || [0, 0, 0],
+        rotation: startFrame.rotation || [0, 0, 0],
+        scale: startFrame.scale ?? 1,
+      }
+    }
+    
+    // 如果进度为1，返回最后一帧
+    if (progress >= 1) {
+      const lastFrame = keyframes[keyframes.length - 1]
+      return {
+        position: lastFrame.position || [0, 0, 0],
+        rotation: lastFrame.rotation || [0, 0, 0],
+        scale: lastFrame.scale ?? 1,
+      }
+    }
 
+    // 找到进度所在的关键帧区间
     for (let i = 0; i < keyframes.length - 1; i++) {
       if (progress >= keyframes[i].time && progress <= keyframes[i + 1].time) {
         startFrame = keyframes[i]
@@ -56,7 +81,7 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
     // 插值
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-    return {
+    const result = {
       position: [
         lerp(startFrame.position?.[0] ?? 0, endFrame.position?.[0] ?? 0, segmentProgress),
         lerp(startFrame.position?.[1] ?? 0, endFrame.position?.[1] ?? 0, segmentProgress),
@@ -67,60 +92,55 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
         lerp(startFrame.rotation?.[1] ?? 0, endFrame.rotation?.[1] ?? 0, segmentProgress),
         lerp(startFrame.rotation?.[2] ?? 0, endFrame.rotation?.[2] ?? 0, segmentProgress),
       ],
-      scale: typeof endFrame.scale === 'number'
-        ? lerp(typeof startFrame.scale === 'number' ? startFrame.scale : 1, endFrame.scale, segmentProgress)
-        : 1,
+      scale: lerp(
+        typeof startFrame.scale === 'number' ? startFrame.scale : 1, 
+        typeof endFrame.scale === 'number' ? endFrame.scale : 1, 
+        segmentProgress
+      ),
     }
+
+    console.log('Animated props:', { progress, segmentProgress, result })
+    return result
   }, [progress, textAnimation])
 
   // 创建材质
   const material = useMemo(() => {
-    switch (textMaterial.type) {
-      case 'standard':
-        return new THREE.MeshStandardMaterial({
-          color: textMaterial.color || '#ffffff',
-          metalness: textMaterial.metalness ?? 0.5,
-          roughness: textMaterial.roughness ?? 0.5,
-          emissive: textMaterial.emissive || '#000000',
-          emissiveIntensity: textMaterial.emissiveIntensity ?? 0,
-        })
-      case 'phong':
-        return new THREE.MeshPhongMaterial({
-          color: textMaterial.color || '#ffffff',
-          emissive: textMaterial.emissive || '#000000',
-          specular: '#ffffff',
-          shininess: 100,
-        })
-      case 'toon':
-        return new THREE.MeshToonMaterial({
-          color: textMaterial.color || '#ffffff',
-        })
-      default:
-        return new THREE.MeshStandardMaterial({
-          color: textMaterial.color || '#ffffff',
-        })
-    }
+    return new THREE.MeshStandardMaterial({
+      color: textMaterial.color || '#ffffff',
+      metalness: textMaterial.metalness ?? 0.5,
+      roughness: textMaterial.roughness ?? 0.5,
+      emissive: textMaterial.emissive || '#000000',
+      emissiveIntensity: textMaterial.emissiveIntensity ?? 0,
+    })
   }, [textMaterial])
+
+  // 调试信息
+  useEffect(() => {
+    console.log('Text3DObject mounted, text:', text3D.text)
+    console.log('Material:', textMaterial)
+    console.log('Animation:', textAnimation)
+  }, [text3D.text, textMaterial, textAnimation])
 
   return (
     <Center>
-      <Text3D
-        ref={meshRef}
-        font="https://threejs.org/examples/fonts/helvetiker_bold.typeface.json"
-        size={text3D.size}
-        height={text3D.height}
-        curveSegments={text3D.curveSegments}
-        bevelEnabled={text3D.bevelEnabled}
-        bevelThickness={text3D.bevelThickness}
-        bevelSize={text3D.bevelSize}
-        bevelSegments={text3D.bevelSegments}
+      <group
+        ref={groupRef}
         position={animatedProps.position as [number, number, number]}
         rotation={animatedProps.rotation as [number, number, number]}
         scale={animatedProps.scale}
       >
-        {config.text3D.text}
-        <primitive object={material} attach="material" />
-      </Text3D>
+        <ChineseText3D
+          text={text3D.text}
+          fontSize={text3D.size}
+          color={textMaterial.color || '#FFD700'}
+          emissive={textMaterial.emissive || '#FFA500'}
+          emissiveIntensity={textMaterial.emissiveIntensity ?? 1.5}
+          metalness={textMaterial.metalness ?? 0.9}
+          roughness={textMaterial.roughness ?? 0.1}
+          outlineWidth={text3D.bevelEnabled ? text3D.bevelThickness * 0.5 : 0}
+          outlineColor="#000000"
+        />
+      </group>
     </Center>
   )
 }
@@ -307,45 +327,71 @@ export function WebGLFancyTextRenderer({
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(autoPlay)
 
+  // 当场景改变时，重新开始动画
   useEffect(() => {
-    if (!isPlaying) return
+    console.log('Scene changed, restarting animation')
+    setCurrentTime(0)
+    setIsPlaying(true)
+  }, [scene])
 
+  useEffect(() => {
+    if (!isPlaying || !scene) return
+
+    console.log('Starting animation, duration:', scene.duration, 'loop:', scene.loop)
     let startTime = Date.now()
     let animationFrameId: number
 
     const animate = () => {
       const elapsed = (Date.now() - startTime) / 1000
-      setCurrentTime(elapsed % scene.duration)
+      const time = scene.loop ? elapsed % scene.duration : Math.min(elapsed, scene.duration)
+      setCurrentTime(time)
       
       if (scene.loop || elapsed < scene.duration) {
         animationFrameId = requestAnimationFrame(animate)
       } else {
         setIsPlaying(false)
+        console.log('Animation ended')
       }
     }
 
     animationFrameId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animationFrameId)
-  }, [isPlaying, scene.duration, scene.loop])
+    return () => {
+      console.log('Cleaning up animation')
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [isPlaying, scene?.duration, scene?.loop])
+
+  // 防御性检查
+  if (!scene || !scene.renderConfig) {
+    return (
+      <div className={`webgl-fancy-text-renderer ${className}`}>
+        <div className="bg-gray-800 rounded-lg p-8 text-center">
+          <p className="text-gray-400">加载中...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`webgl-fancy-text-renderer ${className}`}>
-      <Canvas
-        shadows
-        camera={{ position: scene.camera.position, fov: scene.camera.fov || 75 }}
-        gl={{
-          antialias: scene.renderConfig.antialias,
-          alpha: scene.renderConfig.alpha,
-          toneMapping: THREE.ACESFilmicToneMapping,
-        }}
-        style={{
-          width: '100%',
-          height: 600,
-          background: scene.environment.backgroundColor || 'transparent',
-        }}
-      >
-        <Scene config={scene} currentTime={currentTime} />
-      </Canvas>
+      <div style={{ width: '100%', height: '600px', position: 'relative', background: '#0a0a0a', borderRadius: '8px', overflow: 'hidden' }}>
+        <Canvas
+          shadows
+          camera={{ position: scene.camera.position, fov: scene.camera.fov || 75 }}
+          gl={{
+            antialias: scene.renderConfig.antialias,
+            alpha: scene.renderConfig.alpha,
+            toneMapping: THREE.ACESFilmicToneMapping,
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+          }}
+        >
+          <Scene config={scene} currentTime={currentTime} />
+        </Canvas>
+      </div>
 
       {/* 控制器 */}
       <div className="mt-4 flex items-center gap-4">
@@ -357,6 +403,10 @@ export function WebGLFancyTextRenderer({
         </button>
         <span className="text-sm text-gray-400">
           {currentTime.toFixed(2)}s / {scene.duration.toFixed(2)}s
+        </span>
+        <div className="flex-1"></div>
+        <span className="text-xs text-gray-500">
+          💡 鼠标拖动旋转 | 滚轮缩放
         </span>
       </div>
     </div>
