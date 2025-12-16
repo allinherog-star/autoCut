@@ -246,3 +246,4 @@ export interface ICanvasFancyTextRenderer {
   destroy(): void
 }
 
+

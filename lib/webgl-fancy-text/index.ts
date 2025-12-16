@@ -10,3 +10,4 @@ export { WebGLFancyTextRenderer } from './renderer'
 export { METALLIC_SHINE_PRESET, createMetallicShine } from './presets/metallic-shine'
 export { NEON_GLOW_PRESET, createNeonGlow } from './presets/neon-glow'
 
+
