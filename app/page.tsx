@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Palette,
   Clock,
+  Brain,
 } from 'lucide-react'
 import { Button, Card, Badge } from '@/components/ui'
 
@@ -61,9 +62,9 @@ export default function HomePage() {
           <Button variant="ghost" size="sm" onClick={() => router.push('/templates')}>模版库</Button>
           <Button variant="ghost" size="sm">我的偏好</Button>
           <Button variant="ghost" size="sm">我的项目</Button>
-          <Button 
-            variant="primary" 
-            size="sm" 
+          <Button
+            variant="primary"
+            size="sm"
             leftIcon={<Sparkles className="w-4 h-4" />}
             onClick={() => handleStartCreate()}
           >
@@ -80,9 +81,27 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <Badge variant="gradient" size="lg" className="mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
-              AI 驱动 · 一键成片
+            <Badge
+              variant="outline"
+              size="lg"
+              className="mb-6 border-amber-500/50 text-amber-400 shadow-glow-amber bg-amber-500/10"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.25, 1],
+                  rotate: [0, 10, -10, 0],
+                  filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="mr-2 flex items-center justify-center"
+              >
+                <Brain className="w-3.5 h-3.5" />
+              </motion.div>
+              重新定义视频剪辑，剪到点上，才有流量
             </Badge>
           </motion.div>
 
