@@ -122,6 +122,16 @@ export default function TemplatesPage() {
   const [previewKey, setPreviewKey] = useState(0)
   const [previewText, setPreviewText] = useState('')
   const [previewColor, setPreviewColor] = useState<ColorValue | undefined>(undefined)
+  const [isModalReady, setIsModalReady] = useState(false)
+
+  // 更新预览状态时重置 modal ready 状态
+  useEffect(() => {
+    if (previewTemplate) {
+      setPreviewText(previewTemplate.globalParams.text)
+      setPreviewColor(previewTemplate.globalParams.color)
+      setIsModalReady(false)
+    }
+  }, [previewTemplate])
 
   // 收藏状态
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({})
@@ -571,6 +581,7 @@ export default function TemplatesPage() {
               className="relative w-full max-w-5xl bg-surface-900 rounded-2xl overflow-hidden border border-surface-700 flex flex-col md:flex-row"
               style={{ height: 'min(600px, 85vh)' }}
               onClick={(e) => e.stopPropagation()}
+              onAnimationComplete={() => setIsModalReady(true)}
             >
               {/* 左侧预览区域 */}
               <div
@@ -602,8 +613,8 @@ export default function TemplatesPage() {
                     template={previewTemplate}
                     text={previewText || undefined}
                     color={previewColor}
-                    scale={1}
-                    autoPlay={true}
+                    scale={previewTemplate.renderer === 'canvas' ? 0.45 : 1}
+                    autoPlay={isModalReady}
                     showDecorations={true}
                   />
                 </div>

@@ -3,10 +3,10 @@
  * "一见你就笑"片头 LOGO 效果
  */
 
-import type { CanvasFancyTextScene } from '../types'
+import type { CanvasFancyTextScene } from '@/lib/canvas-fancy-text/types'
 
 export const VARIETY_MAIN_TITLE_PRESET: CanvasFancyTextScene = {
-  id: 'variety-main-title-yijiannijuxiao',
+  id: 'variety-main-title',
   name: '综艺主标题 - 一见你就笑',
   description: '搞笑综艺片头主标题，包含放射线、速度线、爆炸底板、弹性文字、彩纸粒子、表情装饰',
   
@@ -276,7 +276,7 @@ export function createVarietyMainTitle(text: string, customColors?: {
   text?: string[]
   plate?: string[]
 }): CanvasFancyTextScene {
-  const preset = { ...VARIETY_MAIN_TITLE_PRESET }
+  const preset = JSON.parse(JSON.stringify(VARIETY_MAIN_TITLE_PRESET)) as CanvasFancyTextScene
   
   // 修改文字
   const textLayer = preset.layers.find(l => l.id === 'main-title-text')
@@ -293,7 +293,7 @@ export function createVarietyMainTitle(text: string, customColors?: {
     
     if (customColors.text) {
       const textLayer = preset.layers.find(l => l.id === 'main-title-text')
-      if (textLayer) textLayer.config.fillGradient.colors = customColors.text
+      if (textLayer) textLayer.config.fillGradient!.colors = customColors.text
     }
     
     // 更多自定义...
@@ -301,6 +301,4 @@ export function createVarietyMainTitle(text: string, customColors?: {
   
   return preset
 }
-
-
 

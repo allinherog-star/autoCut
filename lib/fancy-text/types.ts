@@ -240,6 +240,8 @@ export interface FancyTextTemplate {
   
   // 元数据
   source: 'system' | 'user' | 'ai'
+  renderer?: 'css' | 'canvas' // 渲染引擎
+  canvasPresetId?: string // Canvas 预设 ID
   createdAt: string
   updatedAt: string
 }

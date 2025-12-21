@@ -114,12 +114,12 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
   private ctx!: CanvasRenderingContext2D
   private config!: CanvasRenderConfig
   private scene: CanvasFancyTextScene | null = null
-  
+
   private isPlaying = false
   private currentTime = 0
   private startTime = 0
   private animationFrameId: number | null = null
-  
+
   // 粒子系统
   private particles: Particle[] = []
 
@@ -564,21 +564,90 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
   // ============================================
 
   private renderParticles(config: any, currentTime: number): void {
-    // 粒子生成逻辑...
-    // 这里简化实现，实际需要完整的粒子系统
+    const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
+
+    // 默认值
+    const shapes = config.shapes || ['circle']
+    const colors = config.colors || ['#ffffff']
+    const count = config.count || 10
+    const minSize = config.minSize || 5
+    const maxSize = config.maxSize || 15
+
+    // 确定粒子形状绘制函数
+    const drawShape = (x: number, y: number, size: number, color: string, shape: string) => {
+      ctx.fillStyle = color
+      ctx.beginPath()
+      if (shape === 'circle') {
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2)
+      } else {
+        ctx.rect(x - size / 2, y - size / 2, size, size)
+      }
+      ctx.fill()
+    }
+
+    for (let i = 0; i < count; i++) {
+      // 确定性随机生成
+      const seed = i * 13
+      const shape = shapes[i % shapes.length]
+      const color = colors[i % colors.length]
+
+      // 随机参数
+      const speed = 100 + (seed % 200)
+      const angle = (seed % 360) * (Math.PI / 180)
+      const size = minSize + (seed % (maxSize - minSize || 1))
+
+      // 运动计算 (基于时间的确定性位置)
+      // 假设从中心向外发射
+      const loopDuration = 2 // 粒子循环周期
+      const timeOffset = (seed % 100) / 100 * loopDuration
+      const t = (currentTime + timeOffset) % loopDuration
+      const progress = t / loopDuration
+
+      // 缓动
+      const easeProgress = 1 - Math.pow(1 - progress, 3) // easeOutCubic
+
+      const distance = speed * easeProgress * 2 // 扩散距离
+      const x = centerX + Math.cos(angle) * distance
+      const y = centerY + Math.sin(angle) * distance
+
+      // 旋转
+      const rotation = (seed + currentTime * 90) * (Math.PI / 180)
+
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(rotation)
+      ctx.globalAlpha = ctx.globalAlpha * (1 - progress) // 逐渐消失
+      drawShape(0, 0, size, color, shape)
+      ctx.restore()
+    }
   }
 
   private renderEmojiDecoration(config: any): void {
     const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
     const { emojis, positions } = config
 
     emojis.forEach((emoji: string, i: number) => {
-      const pos = positions[i]
+      // 循环使用位置配置
+      const pos = positions[i % positions.length]
+
+      // 计算位置（相对于中心）
+      const x = centerX + pos.x
+      const y = centerY + pos.y
+
       ctx.save()
-      ctx.font = `${pos.size}px Arial`
+      ctx.font = `${pos.size}px "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(emoji, pos.x, pos.y)
+
+      // 简单的入场延迟效果（如果需要的话，也可以在 layer animation 中做）
+      // 这里直接绘制
+      ctx.fillText(emoji, x, y)
       ctx.restore()
     })
   }
@@ -612,6 +681,7 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
     this.particles = []
   }
 }
+
 
 
 

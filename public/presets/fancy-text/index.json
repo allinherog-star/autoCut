@@ -27,5 +27,53 @@
     ],
     "thumbnail": "/presets/fancy-text/variety/hilarious-burst/thumbnail.png",
     "path": "/presets/fancy-text/variety/hilarious-burst"
+  },
+  {
+    "id": "variety-main-title",
+    "category": "variety",
+    "name": "综艺主标题-一见你就笑",
+    "level": "advanced",
+    "tags": [
+      "title",
+      "variety",
+      "opening",
+      "funny",
+      "canvas",
+      "high-quality"
+    ],
+    "thumbnail": "/presets/fancy-text/variety/variety-main-title/thumbnail.png",
+    "path": "/presets/fancy-text/variety/variety-main-title"
+  },
+  {
+    "id": "variety-title-bounce",
+    "category": "variety",
+    "name": "笑翻全场",
+    "level": "advanced",
+    "tags": [
+      "title",
+      "variety",
+      "opening",
+      "bounce",
+      "candy",
+      "colorful"
+    ],
+    "thumbnail": "/presets/fancy-text/variety/variety-title-bounce/thumbnail.png",
+    "path": "/presets/fancy-text/variety/variety-title-bounce"
+  },
+  {
+    "id": "variety-title-burst",
+    "category": "variety",
+    "name": "一见你就笑",
+    "level": "advanced",
+    "tags": [
+      "title",
+      "variety",
+      "opening",
+      "cartoon",
+      "explosion",
+      "colorful"
+    ],
+    "thumbnail": "/presets/fancy-text/variety/variety-title-burst/thumbnail.png",
+    "path": "/presets/fancy-text/variety/variety-title-burst"
   }
 ]

@@ -98,23 +98,35 @@ async function buildPresets() {
                 // 3. Copy meta.json
                 fs.copyFileSync(metaPath, path.join(distPresetPath, 'meta.json'));
 
-                // 4. Compile motion.ts → motion.plan.json
-                const motionScriptPath = path.join(presetPath, 'motion.ts');
-                if (fs.existsSync(motionScriptPath)) {
-                    console.log(`   ⚙️  Compiling motion.ts...`);
-                    const motionPlan = await compileMotionScript(motionScriptPath);
+                // 4. Handle Animation Logic (Script vs Canvas)
+                if (meta.compat?.renderer === 'canvas-fancy-text') {
+                    const scenePath = path.join(presetPath, 'scene.ts');
+                    if (fs.existsSync(scenePath)) {
+                         console.log(`   ✅ Canvas scene detected (scene.ts)`);
+                         // We don't compile scene.ts here as it's imported at build time by the app.
+                         // But we could verify it exports the right symbols if we wanted to be strict.
+                    } else {
+                        console.warn(`   ⚠️  Canvas template missing scene.ts`);
+                    }
+                } else {
+                    // Compile motion.ts → motion.plan.json
+                    const motionScriptPath = path.join(presetPath, 'motion.ts');
+                    if (fs.existsSync(motionScriptPath)) {
+                        console.log(`   ⚙️  Compiling motion.ts...`);
+                        const motionPlan = await compileMotionScript(motionScriptPath);
 
-                    // Validate the compiled plan
-                    const validatedPlan = MotionPlanSchema.parse(motionPlan);
+                        // Validate the compiled plan
+                        const validatedPlan = MotionPlanSchema.parse(motionPlan);
 
-                    // Write motion.plan.json
-                    fs.writeFileSync(
-                        path.join(distPresetPath, 'motion.plan.json'),
-                        JSON.stringify(validatedPlan, null, 2)
-                    );
-                    console.log(`   ✅ motion.plan.json generated`);
-                } else if (meta.level === 'advanced') {
-                    console.warn(`   ⚠️  Advanced template missing motion.ts`);
+                        // Write motion.plan.json
+                        fs.writeFileSync(
+                            path.join(distPresetPath, 'motion.plan.json'),
+                            JSON.stringify(validatedPlan, null, 2)
+                        );
+                        console.log(`   ✅ motion.plan.json generated`);
+                    } else if (meta.level === 'advanced') {
+                        console.warn(`   ⚠️  Advanced template missing motion.ts`);
+                    }
                 }
 
                 // 5. Copy SFX files

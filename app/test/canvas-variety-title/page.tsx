@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
-import { VARIETY_MAIN_TITLE_PRESET, createVarietyMainTitle } from '@/lib/canvas-fancy-text/presets/variety-main-title'
+import { VARIETY_MAIN_TITLE_PRESET, createVarietyMainTitle } from '@/assets/fancy-text-presets/variety/variety-main-title/scene'
 
 export default function CanvasVarietyTitleTest() {
   const [customText, setCustomText] = useState('一见你就笑')
@@ -178,6 +178,7 @@ const scene = createVarietyMainTitle('一见你就笑', {
     </div>
   )
 }
+
 
 
 

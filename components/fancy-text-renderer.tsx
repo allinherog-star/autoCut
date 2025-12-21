@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useAnimationControls, Variants } from 'framer-motion'
+import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
+import { createVarietyMainTitle, VARIETY_MAIN_TITLE_PRESET } from '@/assets/fancy-text-presets/variety/variety-main-title/scene'
 import type {
   FancyTextTemplate,
   FancyTextGlobalParams,
@@ -475,7 +477,48 @@ export function FancyTextRenderer({
   className = '',
   onAnimationComplete,
 }: FancyTextRendererProps) {
+  // Canvas 渲染逻辑
+  if (template.renderer === 'canvas' && template.canvasPresetId) {
+    let scene = null
+    const displayText = text || template.globalParams.text
+
+    if (template.canvasPresetId === 'variety-main-title') {
+      // 如果文字不同，重新创建场景
+      const defaultText = VARIETY_MAIN_TITLE_PRESET.layers.find(l => l.id === 'main-title-text')?.config.text
+      if (displayText !== defaultText) {
+        scene = createVarietyMainTitle(displayText)
+      } else {
+        scene = VARIETY_MAIN_TITLE_PRESET
+      }
+    }
+
+    if (scene) {
+      return (
+        <div className={className} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CanvasFancyTextPlayer
+              scene={scene}
+              autoPlay={autoPlay}
+              loop={loop}
+              showControls={false}
+              className="w-full h-full"
+              onComplete={onAnimationComplete}
+            />
+          </div>
+        </div>
+      )
+    }
+  }
+
   const [isVisible, setIsVisible] = useState(autoPlay)
+
+  // 监听 autoPlay 变化
+  useEffect(() => {
+    if (autoPlay) {
+      setIsVisible(true)
+    }
+  }, [autoPlay])
+
   const [textBounds, setTextBounds] = useState({ width: 0, height: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -625,7 +668,7 @@ interface FancyTextPreviewCardProps {
 export function FancyTextPreviewCard({
   template,
   text,
-  scale = 0.4,
+  scale,
   className = '',
   onClick,
   onHover,
@@ -645,6 +688,9 @@ export function FancyTextPreviewCard({
   }
 
   const displayText = text || template.globalParams.text
+
+  // 智能计算默认缩放比例
+  const effectiveScale = scale ?? (template.renderer === 'canvas' ? 0.15 : 0.4)
 
   return (
     <motion.div
@@ -684,31 +730,43 @@ export function FancyTextPreviewCard({
         />
 
         {/* 花字预览 */}
-        <div className="relative z-10">
+        <div className="relative z-10 w-full h-full flex items-center justify-center">
           {isHovered ? (
             <FancyTextRenderer
               key={previewKey}
               template={template}
               text={displayText.slice(0, 6)}
-              scale={scale}
+              scale={effectiveScale}
               autoPlay={true}
               showDecorations={true}
             />
           ) : (
-            // 静态预览
-            <span
-              style={{
-                ...getTextGradientStyle(template.globalParams.color),
-                fontFamily: template.globalParams.fontFamily,
-                fontSize: template.globalParams.fontSize * scale,
-                fontWeight: template.globalParams.fontWeight,
-                letterSpacing: template.globalParams.letterSpacing * scale,
-                textShadow: getShadowStyle(template.globalParams),
-                WebkitTextStroke: getStrokeStyle(template.globalParams),
-              }}
-            >
-              {displayText.slice(0, 6)}
-            </span>
+            template.renderer === 'canvas' ? (
+              // Canvas 静态预览（这里用 renderer 渲染第一帧，或者简化处理）
+              <FancyTextRenderer
+                key={`static-${previewKey}`}
+                template={template}
+                text={displayText.slice(0, 6)}
+                scale={effectiveScale}
+                autoPlay={false} // 不自动播放
+                showDecorations={true}
+              />
+            ) : (
+              // 静态预览 (CSS)
+              <span
+                style={{
+                  ...getTextGradientStyle(template.globalParams.color),
+                  fontFamily: template.globalParams.fontFamily,
+                  fontSize: template.globalParams.fontSize * effectiveScale,
+                  fontWeight: template.globalParams.fontWeight,
+                  letterSpacing: template.globalParams.letterSpacing * effectiveScale,
+                  textShadow: getShadowStyle(template.globalParams),
+                  WebkitTextStroke: getStrokeStyle(template.globalParams),
+                }}
+              >
+                {displayText.slice(0, 6)}
+              </span>
+            )
           )}
         </div>
 
@@ -748,6 +806,7 @@ export function FancyTextPreviewCard({
 }
 
 export default FancyTextRenderer
+
 
 
 

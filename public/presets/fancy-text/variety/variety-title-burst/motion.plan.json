@@ -1,0 +1,232 @@
+{
+  "dslVersion": 1,
+  "durationMs": 2500,
+  "sections": {
+    "in": {
+      "startMs": 0,
+      "durationMs": 800,
+      "animations": [
+        {
+          "property": "fill",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": "#ffffff"
+            },
+            {
+              "time": 1,
+              "value": "#ffd600"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 0.1
+            },
+            {
+              "time": 1,
+              "value": 1.15,
+              "easing": "easeOutBack"
+            }
+          ]
+        },
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 0
+            },
+            {
+              "time": 1,
+              "value": 1,
+              "easing": "easeOut"
+            }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": -8
+            },
+            {
+              "time": 1,
+              "value": 0,
+              "easing": "easeOutElastic"
+            }
+          ]
+        }
+      ]
+    },
+    "loop": {
+      "startMs": 800,
+      "durationMs": 600,
+      "animations": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 1
+            },
+            {
+              "time": 0.5,
+              "value": 1.12,
+              "easing": "easeInOut"
+            },
+            {
+              "time": 1,
+              "value": 1,
+              "easing": "easeInOut"
+            }
+          ]
+        },
+        {
+          "property": "fill",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 1
+            },
+            {
+              "time": 0.5,
+              "value": 0.9,
+              "easing": "easeInOut"
+            },
+            {
+              "time": 1,
+              "value": 1,
+              "easing": "easeInOut"
+            }
+          ]
+        },
+        {
+          "property": "rotation",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": -2
+            },
+            {
+              "time": 0.5,
+              "value": 2,
+              "easing": "easeInOut"
+            },
+            {
+              "time": 1,
+              "value": -2,
+              "easing": "easeInOut"
+            }
+          ]
+        }
+      ]
+    },
+    "out": {
+      "startMs": 2100,
+      "durationMs": 400,
+      "animations": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 1
+            },
+            {
+              "time": 1,
+              "value": 0,
+              "easing": "easeIn"
+            }
+          ]
+        },
+        {
+          "property": "scale",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 1
+            },
+            {
+              "time": 1,
+              "value": 0.5,
+              "easing": "easeIn"
+            }
+          ]
+        },
+        {
+          "property": "blur",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 0
+            },
+            {
+              "time": 1,
+              "value": 10
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "effects": [
+    {
+      "type": "glow",
+      "params": {
+        "strength": 1,
+        "color": "#ffeb3b",
+        "blur": 40
+      },
+      "section": "in"
+    },
+    {
+      "type": "outline",
+      "params": {
+        "color": "#1a237e",
+        "width": 6
+      },
+      "section": "in"
+    },
+    {
+      "type": "particle",
+      "params": {
+        "count": 20,
+        "color": "#ff5722",
+        "speed": 3
+      },
+      "section": "in"
+    },
+    {
+      "type": "particle",
+      "params": {
+        "count": 15,
+        "color": "#e91e63",
+        "speed": 2.5
+      },
+      "section": "in"
+    },
+    {
+      "type": "particle",
+      "params": {
+        "count": 10,
+        "color": "#00bcd4",
+        "speed": 2
+      },
+      "section": "in"
+    },
+    {
+      "type": "glow",
+      "params": {
+        "strength": 0.7,
+        "color": "#ffeb3b",
+        "blur": 25
+      },
+      "section": "loop"
+    }
+  ]
+}

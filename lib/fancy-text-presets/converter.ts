@@ -82,6 +82,8 @@ export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTempl
         description: meta.description || '',
         visualStyles: meta.tags,
         source: 'system',
+        renderer: meta.compat?.renderer === 'canvas-fancy-text' ? 'canvas' : 'css',
+        canvasPresetId: meta.compat?.renderer === 'canvas-fancy-text' ? meta.id : undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         globalParams,

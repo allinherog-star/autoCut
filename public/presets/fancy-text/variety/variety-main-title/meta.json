@@ -1,0 +1,34 @@
+{
+    "id": "variety-main-title",
+    "name": "综艺主标题-一见你就笑",
+    "description": "搞笑综艺片头主标题，包含放射线、速度线、爆炸底板、弹性文字、彩纸粒子、表情装饰",
+    "level": "advanced",
+    "tags": [
+        "title",
+        "variety",
+        "opening",
+        "funny",
+        "canvas",
+        "high-quality"
+    ],
+    "category": "variety",
+    "language": "zh",
+    "textDefaults": {
+        "text": "一见你就笑",
+        "fontSizeRange": [
+            80,
+            150
+        ],
+        "recommendLines": 1,
+        "fontFamily": [
+            "Noto Sans SC",
+            "SimHei",
+            "sans-serif"
+        ]
+    },
+    "compat": {
+        "renderer": "canvas-fancy-text",
+        "motionType": "none",
+        "scriptApiVersion": 1
+    }
+}
