@@ -55,7 +55,7 @@ export default function HomePage() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <Scissors className="w-5 h-5 text-surface-950" />
           </div>
-          <span className="text-xl font-display font-bold text-surface-100">AutoCut</span>
+          <span className="text-xl font-display font-bold text-surface-100">懂剪</span>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push('/library')}>素材库</Button>
@@ -106,25 +106,99 @@ export default function HomePage() {
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-tight"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.3,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+            className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-tight tracking-tight"
           >
-            <span className="text-surface-100">让 AI 帮你剪出</span>
-            <br />
-            <span className="text-gradient-primary">爆款视频</span>
+            <motion.span
+              className="inline-block text-surface-100 mr-3"
+              variants={{
+                hidden: { opacity: 0, y: 20, filter: 'blur(10px)' },
+                visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5 } }
+              }}
+            >
+              懂流量，
+            </motion.span>
+            <motion.span
+              className="inline-block text-surface-100 mr-3"
+              variants={{
+                hidden: { opacity: 0, y: 20, filter: 'blur(10px)' },
+                visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5 } }
+              }}
+            >
+              懂用户，
+            </motion.span>
+            <motion.span
+              className="inline-block"
+              variants={{
+                hidden: { opacity: 0, y: 20, filter: 'blur(10px)' },
+                visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5 } }
+              }}
+            >
+              <motion.span
+                className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto]"
+                animate={{
+                  backgroundPosition: ["0% 50%", "200% 50%"],
+                  filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"],
+                }}
+                transition={{
+                  backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" },
+                  filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
+              >
+                更懂你
+              </motion.span>
+            </motion.span>
           </motion.h1>
 
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-surface-400 max-w-2xl mx-auto mb-12"
+            className="max-w-4xl mx-auto mb-16"
           >
-            上传素材，AI 自动理解内容、智能分割、推荐字幕标题、音乐卡点、特效渲染，
-            一站式完成高质量视频创作
-          </motion.p>
+            {/* 主标语 - 更加优雅的衬线/非衬线混合或极简风格 */}
+            <div className="mt-12 mb-8 relative">
+              <div className="absolute left-1/2 -translate-x-1/2 -top-6 w-12 h-1 bg-gradient-to-r from-transparent via-surface-700/50 to-transparent blur-[1px]" />
+              <p className="text-xs md:text-sm text-surface-400 font-light leading-relaxed tracking-widest">
+                <span className="opacity-80">不是不会剪，是没时间剪，</span>
+                <span className="opacity-80">不知道剪哪里，</span>
+                <span className="text-amber-500 font-normal glow-text-sm">
+                  剪了也没流量
+                </span>
+              </p>
+            </div>
+
+            {/* 关键词 - 极简分割线风格 */}
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+              {[
+                '吸引用户',
+                '内容价值',
+                '情绪共鸣',
+                '互动意愿',
+                '节奏卡点',
+              ].map((label, i) => (
+                <div key={label} className="flex items-center group cursor-default">
+                  {i > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-6 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                  )}
+                  <span className="text-base md:text-lg tracking-[0.1em] text-surface-200 transition-all duration-300 hover:text-surface-50 hover:-translate-y-0.5">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -164,7 +238,7 @@ export default function HomePage() {
               选择你的创作方式
             </h2>
             <p className="text-surface-400">
-              无论你手里有什么素材，AutoCut 都能帮你快速创作
+              无论你手里有什么素材，懂剪 都能帮你快速创作
             </p>
           </motion.div>
 
@@ -312,7 +386,7 @@ export default function HomePage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-display font-bold text-surface-100 mb-4">
-              为什么选择 AutoCut
+              为什么选择 懂剪
             </h2>
             <p className="text-surface-400 max-w-2xl mx-auto">
               强大的 AI 能力加上丰富的素材库，让你的创作更高效
@@ -366,7 +440,7 @@ export default function HomePage() {
                 准备好创作爆款视频了吗？
               </h2>
               <p className="text-surface-400 mb-8 max-w-lg mx-auto">
-                无论你是视频新手还是专业创作者，AutoCut 都能帮你更高效地完成创作
+                无论你是视频新手还是专业创作者，懂剪 都能帮你更高效地完成创作
               </p>
               <Button
                 size="xl"
@@ -388,14 +462,14 @@ export default function HomePage() {
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <Scissors className="w-4 h-4 text-surface-950" />
             </div>
-            <span className="font-display font-semibold text-surface-300">AutoCut</span>
+            <span className="font-display font-semibold text-surface-300">懂剪</span>
           </div>
           <p className="text-sm text-surface-500">
-            © 2024 AutoCut. AI 驱动的视频剪辑工具
+            © 2024 aicut. AI 驱动的视频剪辑工具
           </p>
         </div>
       </footer>
-    </main>
+    </main >
   )
 }
 
