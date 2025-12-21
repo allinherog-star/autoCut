@@ -21,6 +21,7 @@ import { ENTRANCE_ANIMATIONS, LOOP_ANIMATIONS, EXIT_ANIMATIONS } from '@/lib/fan
 interface FancyTextRendererProps {
   template: FancyTextTemplate
   text?: string // 覆盖模版文字
+  color?: ColorValue // 覆盖模版颜色
   scale?: number // 缩放比例
   autoPlay?: boolean // 自动播放动画
   loop?: boolean // 循环播放
@@ -57,20 +58,20 @@ function getTextGradientStyle(color: ColorValue): React.CSSProperties {
 /** 生成阴影 CSS */
 function getShadowStyle(params: FancyTextGlobalParams): string {
   const shadows: string[] = []
-  
+
   if (params.shadow.enabled) {
     shadows.push(
       `${params.shadow.offsetX}px ${params.shadow.offsetY}px ${params.shadow.blur}px ${params.shadow.color}`
     )
   }
-  
+
   if (params.glow.enabled) {
     shadows.push(
       `0 0 ${params.glow.blur}px ${params.glow.color}`,
       `0 0 ${params.glow.blur * 2}px ${params.glow.color}`
     )
   }
-  
+
   return shadows.join(', ') || 'none'
 }
 
@@ -427,7 +428,7 @@ function CharacterRenderer({
   // 计算样式
   const fontSize = globalParams.fontSize * scale * fontSizeMultiplier
   const textStyle: React.CSSProperties = {
-    ...getTextGradientStyle(charParams?.colorOverride 
+    ...getTextGradientStyle(charParams?.colorOverride
       ? { type: 'solid', value: charParams.colorOverride }
       : globalParams.color
     ),
@@ -658,21 +659,20 @@ export function FancyTextPreviewCard({
       onMouseLeave={handleMouseLeave}
     >
       {/* 预览区域 */}
-      <div 
+      <div
         className="relative aspect-video flex items-center justify-center p-4 overflow-hidden"
         style={{
           background: `
-            radial-gradient(ellipse at center, ${
-              template.globalParams.color.type === 'solid' 
-                ? template.globalParams.color.value + '15' 
-                : '#FFD70015'
+            radial-gradient(ellipse at center, ${template.globalParams.color.type === 'solid'
+              ? template.globalParams.color.value + '15'
+              : '#FFD70015'
             } 0%, transparent 70%), 
             linear-gradient(135deg, #1a1a2e 0%, #0d0d15 100%)
           `,
         }}
       >
         {/* 网格背景 */}
-        <div 
+        <div
           className="absolute inset-0 opacity-15"
           style={{
             backgroundImage: `
@@ -682,7 +682,7 @@ export function FancyTextPreviewCard({
             backgroundSize: '20px 20px',
           }}
         />
-        
+
         {/* 花字预览 */}
         <div className="relative z-10">
           {isHovered ? (
@@ -729,7 +729,7 @@ export function FancyTextPreviewCard({
           </span>
         </div>
       </div>
-      
+
       {/* 信息 */}
       <div className="p-3 bg-surface-850">
         <p className="text-sm font-medium text-surface-200 truncate" title={template.name}>
@@ -748,6 +748,7 @@ export function FancyTextPreviewCard({
 }
 
 export default FancyTextRenderer
+
 
 
 

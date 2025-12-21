@@ -9,7 +9,8 @@
     "lint": "next lint",
     "format": "prettier --write .",
     "db:seed": "npx ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
-    "db:reset": "npx prisma migrate reset --force"
+    "db:reset": "npx prisma migrate reset --force",
+    "build:presets": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/build-fancy-text-presets.ts"
   },
   "prisma": {
     "seed": "npx ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -40,7 +41,8 @@
     "tailwind-merge": "^2.5.4",
     "three": "^0.182.0",
     "troika-three-text": "^0.52.4",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

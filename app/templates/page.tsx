@@ -27,7 +27,7 @@ import {
   RotateCcw,
   Bookmark,
 } from 'lucide-react'
-import { Button, Card, Badge, Spinner } from '@/components/ui'
+import { Button, Card, Badge, Spinner, Input } from '@/components/ui'
 import { TemplateTypeSidebar, TEMPLATE_TYPE_CONFIG, type TemplateType } from '@/components/template-type-sidebar'
 import { SubcategoryTags, type ExtraDimension } from '@/components/subcategory-tags'
 import { FANCY_TEXT_USAGE_ICONS, DIMENSION_ICONS, DIMENSION_COLORS } from '@/lib/icons'
@@ -37,7 +37,9 @@ import {
   USAGE_LABELS,
   VISUAL_STYLE_PRESETS,
 } from '@/lib/fancy-text/presets'
-import type { FancyTextTemplate, FancyTextUsage } from '@/lib/fancy-text/types'
+import type { FancyTextTemplate, FancyTextUsage, ColorValue } from '@/lib/fancy-text/types'
+import { loadPresets, getPreset, type PresetRegistryItem } from '@/lib/fancy-text-presets/registry'
+import { convertPresetToTemplate } from '@/lib/fancy-text-presets/converter'
 import { addFavorite, removeFavorite, batchCheckFavorites } from '@/lib/api/favorites'
 
 // ============================================
@@ -76,8 +78,12 @@ export default function TemplatesPage() {
   const router = useRouter()
 
   // 状态
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 动态加载的花字模版
+  const [fancyTextTemplates, setFancyTextTemplates] = useState<FancyTextTemplate[]>([])
+  const [presetRegistry, setPresetRegistry] = useState<PresetRegistryItem[]>([])
 
   // 视图状态
   const [typeFilter, setTypeFilter] = useState<TemplateType>('FANCY_TEXT')
@@ -99,21 +105,23 @@ export default function TemplatesPage() {
         name: config.label,
         icon: iconConfig?.icon,
         iconColor: iconConfig?.color,
-        count: FANCY_TEXT_TEMPLATE_PRESETS.filter(t => t.usage === usage).length,
+        count: fancyTextTemplates.filter((t: FancyTextTemplate) => t.usage === usage).length,
       }
     }),
-  }), [])
+  }), [fancyTextTemplates])
 
   // 类型计数
   const [typeCounts, setTypeCounts] = useState<Record<string, number>>({
     VIDEO: 3,
     IMAGE: 2,
-    FANCY_TEXT: FANCY_TEXT_TEMPLATE_PRESETS.length,
+    FANCY_TEXT: 0,
   })
 
   // 预览状态
   const [previewTemplate, setPreviewTemplate] = useState<FancyTextTemplate | null>(null)
   const [previewKey, setPreviewKey] = useState(0)
+  const [previewText, setPreviewText] = useState('')
+  const [previewColor, setPreviewColor] = useState<ColorValue | undefined>(undefined)
 
   // 收藏状态
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({})
@@ -130,41 +138,71 @@ export default function TemplatesPage() {
 
   // 过滤后的花字模版
   const filteredFancyTextTemplates = useMemo(() => {
-    let templates = FANCY_TEXT_TEMPLATE_PRESETS
+    let templates = fancyTextTemplates
 
     // 按用途筛选
     if (selectedUsages.length > 0) {
-      templates = templates.filter(t => t.usage && selectedUsages.includes(t.usage))
+      templates = templates.filter((t: FancyTextTemplate) => t.usage && selectedUsages.includes(t.usage))
     }
 
     // 按搜索词筛选
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       templates = templates.filter(
-        t =>
+        (t: FancyTextTemplate) =>
           t.name.toLowerCase().includes(query) ||
           t.description.toLowerCase().includes(query) ||
-          t.visualStyles.some(s => s.toLowerCase().includes(query))
+          t.visualStyles.some((s: string) => s.toLowerCase().includes(query))
       )
     }
 
     // 按收藏筛选
     if (templateSource === 'favorite') {
-      templates = templates.filter(t => favoriteMap[`TEMPLATE:${t.id}`])
+      templates = templates.filter((t: FancyTextTemplate) => favoriteMap[`TEMPLATE:${t.id}`])
     }
 
     return templates
-  }, [selectedUsages, searchQuery, templateSource, favoriteMap])
+  }, [fancyTextTemplates, selectedUsages, searchQuery, templateSource, favoriteMap])
 
   // 获取可用的 Source Tabs
   const availableSourceTabs = SOURCE_TABS.filter(
     tab => !tab.showFor || tab.showFor.includes(typeFilter)
   )
 
+  // 加载花字预设
+  useEffect(() => {
+    const loadFancyTextPresets = async () => {
+      setLoading(true)
+      try {
+        const registry = await loadPresets()
+        setPresetRegistry(registry)
+
+        // 加载每个预设并转换为模版
+        const templates: FancyTextTemplate[] = []
+        for (const item of registry) {
+          const preset = await getPreset(item)
+          if (preset) {
+            templates.push(convertPresetToTemplate(preset))
+          }
+        }
+
+        setFancyTextTemplates(templates)
+        setTypeCounts(prev => ({ ...prev, FANCY_TEXT: templates.length }))
+      } catch (err) {
+        console.error('Failed to load fancy text presets:', err)
+        setError('加载花字模版失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadFancyTextPresets()
+  }, [])
+
   // 初始化收藏状态
   useEffect(() => {
+    if (fancyTextTemplates.length === 0) return
     const checkFavorites = async () => {
-      const items = FANCY_TEXT_TEMPLATE_PRESETS.map(t => ({
+      const items = fancyTextTemplates.map((t: FancyTextTemplate) => ({
         targetId: t.id,
         targetType: 'TEMPLATE' as const,
       }))
@@ -174,7 +212,7 @@ export default function TemplatesPage() {
       }
     }
     checkFavorites()
-  }, [])
+  }, [fancyTextTemplates])
 
   // 切换收藏
   const toggleFavorite = async (templateId: string) => {
@@ -209,7 +247,7 @@ export default function TemplatesPage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              
+
               {/* 面包屑导航 */}
               <nav className="flex items-center gap-2 text-sm">
                 <button
@@ -312,8 +350,8 @@ export default function TemplatesPage() {
                     onClick={() => setTemplateSource(tab.id)}
                     className={`
                       relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all duration-200
-                      ${isActive 
-                        ? 'text-rose-400' 
+                      ${isActive
+                        ? 'text-rose-400'
                         : 'text-surface-400 hover:text-surface-200'
                       }
                     `}
@@ -390,6 +428,8 @@ export default function TemplatesPage() {
                             scale={0.35}
                             onClick={() => {
                               setPreviewTemplate(template)
+                              setPreviewText(template.globalParams.text)
+                              setPreviewColor(undefined) // 重置为默认颜色
                               setPreviewKey(k => k + 1)
                             }}
                           />
@@ -528,118 +568,148 @@ export default function TemplatesPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-4xl bg-surface-900 rounded-2xl overflow-hidden border border-surface-700"
+              className="relative w-full max-w-5xl bg-surface-900 rounded-2xl overflow-hidden border border-surface-700 flex flex-col md:flex-row"
+              style={{ height: 'min(600px, 85vh)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* 顶部工具栏 */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-surface-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-pink-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-surface-100">{previewTemplate.name}</h3>
-                    <p className="text-sm text-surface-400">{previewTemplate.description}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPreviewKey(k => k + 1)}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-1.5" />
-                    重播动画
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleFavorite(previewTemplate.id)}
-                  >
-                    <Heart className={`w-4 h-4 mr-1.5 ${favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? 'fill-rose-400 text-rose-400' : ''}`} />
-                    {favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? '已收藏' : '收藏'}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-1.5" />
-                    使用模版
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    isIconOnly
-                    onClick={() => setPreviewTemplate(null)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* 预览区域 */}
-              <div 
-                className="relative aspect-video flex items-center justify-center overflow-hidden"
+              {/* 左侧预览区域 */}
+              <div
+                className="flex-1 relative bg-black/50 overflow-hidden flex items-center justify-center min-h-[300px]"
                 style={{
                   background: `
-                    radial-gradient(ellipse at center, ${
-                      previewTemplate.globalParams.color.type === 'solid'
-                        ? previewTemplate.globalParams.color.value + '20'
-                        : '#FFD70020'
-                    } 0%, transparent 60%), 
+                    radial-gradient(ellipse at center, ${(previewColor?.type === 'solid' ? previewColor.value : previewTemplate.globalParams.color.type === 'solid' ? previewTemplate.globalParams.color.value : '#FFD700') + '15'
+                    } 0%, transparent 70%), 
                     linear-gradient(180deg, #1a1a2e 0%, #0d0d15 100%)
                   `,
                 }}
               >
                 {/* 网格背景 */}
-                <div 
-                  className="absolute inset-0 opacity-30"
+                <div
+                  className="absolute inset-0 opacity-15"
                   style={{
                     backgroundImage: `
                       linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
                       linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
                     `,
-                    backgroundSize: '30px 30px',
+                    backgroundSize: '40px 40px',
                   }}
                 />
-                
-                {/* 花字效果 */}
-                <div className="relative z-10">
+
+                {/* 花字渲染 */}
+                <div className="relative z-10 w-full px-8 flex justify-center">
                   <FancyTextRenderer
                     key={previewKey}
                     template={previewTemplate}
-                    scale={0.8}
+                    text={previewText || undefined}
+                    color={previewColor}
+                    scale={1}
                     autoPlay={true}
                     showDecorations={true}
                   />
                 </div>
               </div>
 
-              {/* 底部信息 */}
-              <div className="px-6 py-4 border-t border-surface-800 bg-surface-850">
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-surface-500">用途</span>
-                    <p className="text-surface-200 mt-0.5">
-                      {previewTemplate.usage ? USAGE_LABELS[previewTemplate.usage].label : '-'}
-                    </p>
+              {/* 右侧控制面板 */}
+              <div className="w-full md:w-80 bg-surface-900 border-t md:border-t-0 md:border-l border-surface-800 flex flex-col">
+                {/* 顶部标题栏 */}
+                <div className="px-5 py-4 border-b border-surface-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-pink-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-surface-100">{previewTemplate.name}</h3>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-surface-500">入场动画</span>
-                    <p className="text-surface-200 mt-0.5">
-                      {previewTemplate.globalParams.animation.entrance.replace(/-/g, ' ')}
-                    </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isIconOnly
+                    className="h-7 w-7 -mr-1"
+                    onClick={() => setPreviewTemplate(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* 控制区域 */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                  {/* 文本输入 */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-surface-400 uppercase tracking-wider">
+                      文字内容
+                    </label>
+                    <Input
+                      value={previewText}
+                      onChange={(e) => setPreviewText(e.target.value)}
+                      placeholder="输入文字..."
+                      className="bg-surface-800/50 border-surface-700 focus:border-pink-500/50"
+                    />
                   </div>
-                  <div>
-                    <span className="text-surface-500">循环动画</span>
-                    <p className="text-surface-200 mt-0.5">
-                      {previewTemplate.globalParams.animation.loop === 'none' ? '无' : previewTemplate.globalParams.animation.loop}
-                    </p>
+
+                  {/* 颜色选择 */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-surface-400 uppercase tracking-wider">
+                      颜色
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        '#FFD700', '#FF4500', '#FF69B4', '#00FFFF', '#FFFFFF',
+                        '#FF0000', '#9B59B6', '#4ECDC4', '#FFE135', '#00FF00',
+                      ].map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setPreviewColor({ type: 'solid', value: c })}
+                          className={`
+                             w-7 h-7 rounded-full border-2 transition-all
+                             ${previewColor?.value === c ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105 hover:border-white/30'}
+                           `}
+                          style={{ background: c }}
+                        />
+                      ))}
+                      {/* 自定义颜色 */}
+                      <div className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-dashed border-surface-600 flex items-center justify-center cursor-pointer hover:border-surface-400">
+                        <div className="w-full h-full bg-gradient-conic from-red-500 via-green-500 via-blue-500 to-red-500"
+                          style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} />
+                        <input
+                          type="color"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={(e) => setPreviewColor({ type: 'solid', value: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-surface-500">总时长</span>
-                    <p className="text-surface-200 mt-0.5">{previewTemplate.globalParams.totalDuration}秒</p>
-                  </div>
+
+                  {/* 收藏按钮 */}
+                  <button
+                    onClick={() => toggleFavorite(previewTemplate.id)}
+                    className="flex items-center gap-2 text-xs text-surface-400 hover:text-rose-400 transition-colors"
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? 'fill-current text-rose-400' : ''}`} />
+                    {favoriteMap[`TEMPLATE:${previewTemplate.id}`] ? '已收藏' : '收藏模版'}
+                  </button>
+                </div>
+
+                {/* 底部操作栏 */}
+                <div className="p-5 border-t border-surface-800 space-y-2.5">
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="w-full border border-surface-700 hover:bg-surface-800 flex items-center justify-center gap-2"
+                    onClick={() => setPreviewKey(k => k + 1)}
+                  >
+                    <RotateCcw className="w-4 h-4 flex-shrink-0" />
+                    <span>预览一下</span>
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 border-0 flex items-center justify-center gap-2"
+                    onClick={() => alert('保存素材功能开发中...')}
+                  >
+                    <Download className="w-4 h-4 flex-shrink-0" />
+                    <span>保存为素材</span>
+                  </Button>
                 </div>
               </div>
             </motion.div>

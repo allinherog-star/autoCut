@@ -614,3 +614,4 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
 }
 
 
+

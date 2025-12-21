@@ -1,0 +1,55 @@
+{
+    "id": "shock-wave",
+    "name": "震惊!",
+    "description": "综艺节目震惊/惊讶情绪花字，带有强烈的视觉冲击感和屏幕震动效果",
+    "level": "advanced",
+    "tags": [
+        "shock",
+        "surprise",
+        "variety",
+        "dramatic",
+        "emotion"
+    ],
+    "category": "emotions",
+    "language": "zh",
+    "textDefaults": {
+        "text": "震惊！",
+        "fontSizeRange": [
+            56,
+            84
+        ],
+        "recommendLines": 1,
+        "fontFamily": [
+            "PingFang SC",
+            "Microsoft YaHei",
+            "Noto Sans SC",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#1a0a00",
+            "width": 4
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(255, 60, 0, 0.8)",
+            "blur": 25,
+            "offsetX": 0,
+            "offsetY": 0
+        }
+    },
+    "assets": {
+        "sfx": {
+            "file": "impact.mp3",
+            "cues": [
+                "in",
+                "hit"
+            ]
+        }
+    },
+    "compat": {
+        "renderer": "fancy-text",
+        "motionType": "script",
+        "scriptApiVersion": 1
+    }
+}

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "shock-wave",
+    "category": "emotions",
+    "name": "震惊!",
+    "level": "advanced",
+    "tags": [
+      "shock",
+      "surprise",
+      "variety",
+      "dramatic",
+      "emotion"
+    ],
+    "thumbnail": "/presets/fancy-text/emotions/shock-wave/thumbnail.png",
+    "path": "/presets/fancy-text/emotions/shock-wave"
+  },
+  {
+    "id": "hilarious-burst",
+    "category": "variety",
+    "name": "笑死我了!",
+    "level": "advanced",
+    "tags": [
+      "funny",
+      "variety",
+      "explosion",
+      "comedy"
+    ],
+    "thumbnail": "/presets/fancy-text/variety/hilarious-burst/thumbnail.png",
+    "path": "/presets/fancy-text/variety/hilarious-burst"
+  }
+]
