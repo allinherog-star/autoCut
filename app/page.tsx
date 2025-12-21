@@ -173,9 +173,7 @@ export default function HomePage() {
               <p className="text-xs md:text-sm text-surface-400 font-light leading-relaxed tracking-widest">
                 <span className="opacity-80">不是不会剪，是没时间剪，</span>
                 <span className="opacity-80">不知道剪哪里，</span>
-                <span className="text-amber-500 font-normal glow-text-sm">
-                  剪了也没流量
-                </span>
+                <span className="opacity-80">剪了也没流量</span>
               </p>
             </div>
 
