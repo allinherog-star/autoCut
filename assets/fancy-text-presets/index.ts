@@ -18,6 +18,7 @@ import varietyMainTitleMeta from './variety-main-title/variety-main-title.meta.j
 import varietyTitleBounceMeta from './variety-title-bounce/variety-title-bounce.meta.json'
 import varietyTitleBurstMeta from './variety-title-burst/variety-title-burst.meta.json'
 import wowEmphasisMeta from './wow-emphasis/wow-emphasis.meta.json'
+import explosiveLaughMeta from './explosive-laugh/explosive-laugh.meta.json'
 
 // ============================================
 // 组件导入 (lazy)
@@ -34,6 +35,7 @@ export const PRESET_COMPONENTS = {
     'shock-wave': null,
     'variety-title-bounce': null,
     'variety-title-burst': null,
+    'explosive-laugh': () => import('./explosive-laugh/explosive-laugh.motion'),
 } as const
 
 // ============================================
@@ -95,6 +97,7 @@ export const PRESET_REGISTRY: PresetEntry[] = [
     { meta: varietyTitleBounceMeta as PresetMeta, hasComponent: false },
     { meta: varietyTitleBurstMeta as PresetMeta, hasComponent: false },
     { meta: wowEmphasisMeta as PresetMeta, hasComponent: true },
+    { meta: explosiveLaughMeta as PresetMeta, hasComponent: true },
 ]
 
 // 按 ID 查找预设

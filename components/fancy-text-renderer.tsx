@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useAnimationControls, Variants } from 'framer-motion'
 import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
 import { createVarietyMainTitle, VARIETY_MAIN_TITLE_PRESET } from '@/assets/fancy-text-presets/variety-main-title/variety-main-title.scene'
+import { loadPresetComponent } from '@/assets/fancy-text-presets'
 import type {
   FancyTextTemplate,
   FancyTextGlobalParams,
@@ -464,6 +465,98 @@ function CharacterRenderer({
 }
 
 // ============================================
+// React 组件动态渲染器
+// ============================================
+
+interface ReactComponentRendererProps {
+  templateId: string
+  text: string
+  scale: number
+  autoPlay: boolean
+  template: FancyTextTemplate
+  className?: string
+  onAnimationComplete?: () => void
+}
+
+function ReactComponentRenderer({
+  templateId,
+  text,
+  scale,
+  autoPlay,
+  template,
+  className = '',
+  onAnimationComplete,
+}: ReactComponentRendererProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [Component, setComponent] = useState<React.ComponentType<any> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadComponent() {
+      try {
+        setLoading(true)
+        setError(null)
+        const loaded = await loadPresetComponent(templateId)
+        if (!cancelled) {
+          setComponent(() => loaded)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error(`Failed to load component for ${templateId}:`, err)
+          setError(`加载组件失败: ${templateId}`)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadComponent()
+    return () => { cancelled = true }
+  }, [templateId])
+
+  if (loading) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !Component) {
+    return (
+      <div className={`flex items-center justify-center text-red-400 text-sm ${className}`}>
+        {error || '组件未找到'}
+      </div>
+    )
+  }
+
+  // 从 template 获取颜色配置
+  const colorPreset = template.colorPresets?.[0]
+  const gradient = colorPreset?.gradient || template.globalParams.color.value
+  const strokeColor = colorPreset?.strokeColor || template.globalParams.stroke.color
+  const glowColor = colorPreset?.glowColor || template.globalParams.glow.color
+
+  return (
+    <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+      <Component
+        text={text}
+        scale={scale}
+        gradient={gradient}
+        strokeColor={strokeColor}
+        glowColor={glowColor}
+        autoPlay={autoPlay}
+        onComplete={onAnimationComplete}
+      />
+    </div>
+  )
+}
+
+// ============================================
 // 主组件
 // ============================================
 
@@ -508,6 +601,21 @@ export function FancyTextRenderer({
         </div>
       )
     }
+  }
+
+  // React 组件渲染逻辑 (动态加载 motion.tsx)
+  if (template.renderer === 'react' && template.id) {
+    return (
+      <ReactComponentRenderer
+        templateId={template.id}
+        text={text || template.globalParams.text}
+        scale={scale}
+        autoPlay={autoPlay}
+        template={template}
+        className={className}
+        onAnimationComplete={onAnimationComplete}
+      />
+    )
   }
 
   const [isVisible, setIsVisible] = useState(autoPlay)
