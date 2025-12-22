@@ -24,6 +24,7 @@ import candyMainTitleMeta from './candy-main-title/candy-main-title.meta.json'
 import candySegmentTitleMeta from './candy-segment-title/candy-segment-title.meta.json'
 import candyGuestNameMeta from './candy-guest-name/candy-guest-name.meta.json'
 import candyFunnyBurstMeta from './candy-funny-burst/candy-funny-burst.meta.json'
+import candySweetFrameMeta from './candy-sweet-frame/candy-sweet-frame.meta.json'
 
 // ============================================
 // 组件导入 (lazy)
@@ -46,6 +47,7 @@ export const PRESET_COMPONENTS = {
     'candy-segment-title': () => import('./candy-segment-title/candy-segment-title.motion'),
     'candy-guest-name': () => import('./candy-guest-name/candy-guest-name.motion'),
     'candy-funny-burst': () => import('./candy-funny-burst/candy-funny-burst.motion'),
+    'candy-sweet-frame': () => import('./candy-sweet-frame/candy-sweet-frame.motion'),
 } as const
 
 // ============================================
@@ -113,6 +115,7 @@ export const PRESET_REGISTRY: PresetEntry[] = [
     { meta: candySegmentTitleMeta as PresetMeta, hasComponent: true },
     { meta: candyGuestNameMeta as PresetMeta, hasComponent: true },
     { meta: candyFunnyBurstMeta as PresetMeta, hasComponent: true },
+    { meta: candySweetFrameMeta as PresetMeta, hasComponent: true },
 ]
 
 // 按 ID 查找预设
