@@ -27,6 +27,7 @@ interface FancyTextRendererProps {
   color?: ColorValue // 覆盖模版颜色
   scale?: number // 缩放比例
   autoPlay?: boolean // 自动播放动画
+  skipToEnd?: boolean // 跳过动画直接显示最终帧
   loop?: boolean // 循环播放
   showDecorations?: boolean // 显示装饰
   className?: string
@@ -473,6 +474,7 @@ interface ReactComponentRendererProps {
   text: string
   scale: number
   autoPlay: boolean
+  skipToEnd?: boolean  // 跳过动画直接显示最终帧
   template: FancyTextTemplate
   className?: string
   onAnimationComplete?: () => void
@@ -483,6 +485,7 @@ function ReactComponentRenderer({
   text,
   scale,
   autoPlay,
+  skipToEnd = false,
   template,
   className = '',
   onAnimationComplete,
@@ -550,6 +553,7 @@ function ReactComponentRenderer({
         strokeColor={strokeColor}
         glowColor={glowColor}
         autoPlay={autoPlay}
+        skipToEnd={skipToEnd}
         onComplete={onAnimationComplete}
       />
     </div>
@@ -565,6 +569,7 @@ export function FancyTextRenderer({
   text,
   scale = 1,
   autoPlay = true,
+  skipToEnd = false,
   loop = false,
   showDecorations = true,
   className = '',
@@ -611,6 +616,7 @@ export function FancyTextRenderer({
         text={text || template.globalParams.text}
         scale={scale}
         autoPlay={autoPlay}
+        skipToEnd={skipToEnd}
         template={template}
         className={className}
         onAnimationComplete={onAnimationComplete}
@@ -849,18 +855,30 @@ export function FancyTextPreviewCard({
               showDecorations={true}
             />
           ) : (
-            template.renderer === 'canvas' ? (
-              // Canvas 静态预览（这里用 renderer 渲染第一帧，或者简化处理）
+            // 静态预览 - 显示动画最终帧状态
+            template.renderer === 'react' ? (
+              // React 组件预设 - 跳过动画直接显示最终态
               <FancyTextRenderer
                 key={`static-${previewKey}`}
                 template={template}
                 text={displayText.slice(0, 6)}
                 scale={effectiveScale}
-                autoPlay={false} // 不自动播放
+                autoPlay={false}
+                skipToEnd={true}  // 直接显示最终帧
+                showDecorations={true}
+              />
+            ) : template.renderer === 'canvas' ? (
+              // Canvas 静态预览
+              <FancyTextRenderer
+                key={`static-${previewKey}`}
+                template={template}
+                text={displayText.slice(0, 6)}
+                scale={effectiveScale}
+                autoPlay={false}
                 showDecorations={true}
               />
             ) : (
-              // 静态预览 (CSS)
+              // 普通 CSS 预览
               <span
                 style={{
                   ...getTextGradientStyle(template.globalParams.color),

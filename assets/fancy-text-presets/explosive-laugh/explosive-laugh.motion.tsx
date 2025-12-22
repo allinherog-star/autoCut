@@ -32,6 +32,8 @@ export interface ExplosiveLaughTextProps {
     glowColor?: string
     /** 是否自动播放 */
     autoPlay?: boolean
+    /** 跳过动画直接显示最终帧 (用于静态预览) */
+    skipToEnd?: boolean
     /** 动画完成回调 */
     onComplete?: () => void
     /** 额外的 CSS 类名 */
@@ -114,6 +116,70 @@ function ExplosionPlate({
                 filter="url(#explosionGlow)"
             />
         </motion.svg>
+    )
+}
+
+// ============================================
+// 静态爆炸底板 (无动画，用于静态预览)
+// ============================================
+
+function StaticExplosionPlate({
+    size,
+    glowColor = '#FF6600',
+}: {
+    size: number
+    glowColor?: string
+}) {
+    const path = useMemo(() => {
+        const cx = size / 2
+        const cy = size / 2
+        const points = 14
+        const outerRadius = size * 0.48
+        const innerRadius = size * 0.32
+
+        let d = ''
+        for (let i = 0; i < points * 2; i++) {
+            const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2
+            const radius = i % 2 === 0 ? outerRadius : innerRadius
+            const jitter = 1 + (Math.sin(i * 2.7) * 0.12)
+            const x = cx + Math.cos(angle) * radius * jitter
+            const y = cy + Math.sin(angle) * radius * jitter
+            d += (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)}`
+        }
+        d += 'Z'
+        return d
+    }, [size])
+
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            className="absolute"
+            style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+        >
+            <defs>
+                <linearGradient id="staticExplosionGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFFF66" />
+                    <stop offset="50%" stopColor="#FFD700" />
+                    <stop offset="100%" stopColor="#FF9900" />
+                </linearGradient>
+                <filter id="staticExplosionGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            <path
+                d={path}
+                fill="url(#staticExplosionGrad)"
+                stroke={glowColor}
+                strokeWidth={5}
+                filter="url(#staticExplosionGlow)"
+            />
+        </svg>
     )
 }
 
@@ -304,6 +370,7 @@ export function ExplosiveLaughText({
     strokeColor = '#4a0080',
     glowColor = '#FF6600',
     autoPlay = true,
+    skipToEnd = false,
     onComplete,
     className = '',
 }: ExplosiveLaughTextProps) {
@@ -311,10 +378,10 @@ export function ExplosiveLaughText({
     const controls = useAnimationControls()
 
     useEffect(() => {
-        if (autoPlay) {
+        if (autoPlay || skipToEnd) {
             setIsVisible(true)
         }
-    }, [autoPlay])
+    }, [autoPlay, skipToEnd])
 
     const handleAnimationComplete = useCallback(() => {
         onComplete?.()
@@ -323,6 +390,85 @@ export function ExplosiveLaughText({
     // 计算尺寸
     const fontSize = 100 * scale
     const plateSize = Math.max(text.length * fontSize * 0.8, fontSize * 2.5)
+
+    // 如果是 skipToEnd 模式，直接显示最终静态状态
+    if (skipToEnd) {
+        return (
+            <div
+                className={`relative inline-flex items-center justify-center ${className}`}
+                style={{
+                    minWidth: plateSize + 100,
+                    minHeight: plateSize * 0.7,
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'center center',
+                }}
+            >
+                {/* 静态爆炸底板 */}
+                <StaticExplosionPlate size={plateSize} glowColor={glowColor} />
+
+                {/* 主文字 - 静态显示最终状态 */}
+                <div className="relative z-10">
+                    {/* 外层白色描边 */}
+                    <span
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            fontSize,
+                            fontWeight: 900,
+                            fontFamily: '"PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif',
+                            color: 'transparent',
+                            WebkitTextStroke: `12px white`,
+                            letterSpacing: '0.08em',
+                            whiteSpace: 'nowrap',
+                            zIndex: 1,
+                        }}
+                    >
+                        {text}
+                    </span>
+
+                    {/* 深紫描边层 */}
+                    <span
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            fontSize,
+                            fontWeight: 900,
+                            fontFamily: '"PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif',
+                            color: 'transparent',
+                            WebkitTextStroke: `6px ${strokeColor}`,
+                            letterSpacing: '0.08em',
+                            whiteSpace: 'nowrap',
+                            zIndex: 2,
+                        }}
+                    >
+                        {text}
+                    </span>
+
+                    {/* 主文字 - 渐变填充 */}
+                    <span
+                        style={{
+                            position: 'relative',
+                            fontSize,
+                            fontWeight: 900,
+                            fontFamily: '"PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif',
+                            background: gradient,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            letterSpacing: '0.08em',
+                            whiteSpace: 'nowrap',
+                            zIndex: 3,
+                            filter: `drop-shadow(0 0 30px ${glowColor}) drop-shadow(0 0 60px ${glowColor}50)`,
+                        }}
+                    >
+                        {text}
+                    </span>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div
