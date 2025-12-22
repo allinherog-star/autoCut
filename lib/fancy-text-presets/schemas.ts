@@ -38,10 +38,11 @@ export const FancyTextMetaSchema = z.object({
     }).optional(),
 
     compat: z.object({
-        renderer: z.enum(['fancy-text', 'canvas-fancy-text']).default('fancy-text'),
+        renderer: z.enum(['fancy-text', 'canvas-fancy-text', 'react-component']).default('fancy-text'),
         minAppVersion: z.string().optional(),
         motionType: z.enum(['script', 'none']).default('script'),
         scriptApiVersion: z.number().default(1),
+        componentPath: z.string().optional(), // For react-component renderer
     }).optional(),
 });
 

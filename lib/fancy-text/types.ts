@@ -108,11 +108,11 @@ export interface AnimationConfig {
   entranceDuration: number // 秒
   entranceEasing: EasingFunction
   entranceDelay: number // 秒
-  
+
   loop: LoopAnimation
   loopDuration: number // 单次循环时长（秒）
   loopDelay: number // 循环间隔（秒）
-  
+
   exit: ExitAnimation
   exitDuration: number // 秒
   exitEasing: EasingFunction
@@ -186,36 +186,36 @@ export type FancyTextUsage =
 export interface FancyTextGlobalParams {
   // 文字内容
   text: string
-  
+
   // 字体样式
   fontFamily: string
   fontSize: number
   fontWeight: number
   letterSpacing: number
   lineHeight: number
-  
+
   // 颜色
   color: ColorValue
-  
+
   // 效果
   stroke: StrokeConfig
   shadow: ShadowConfig
   glow: GlowConfig
-  
+
   // 变换
   rotation: number
   skewX: number
   skewY: number
-  
+
   // 动画
   animation: AnimationConfig
-  
+
   // 装饰
   decorations: DecorationConfig[]
-  
+
   // 音效
   soundEffect?: string
-  
+
   // 时长
   totalDuration: number // 总展示时长（秒）
 }
@@ -227,23 +227,32 @@ export interface FancyTextTemplate {
   description: string
   thumbnail?: string
   previewUrl?: string
-  
+
   // 用途标签
   usage?: FancyTextUsage
-  
+
   // 视觉风格标签
   visualStyles: string[]
-  
+
   // 参数
   globalParams: FancyTextGlobalParams
   perCharacter: PerCharacterConfig
-  
+
   // 元数据
   source: 'system' | 'user' | 'ai'
-  renderer?: 'css' | 'canvas' // 渲染引擎
+  renderer?: 'css' | 'canvas' | 'react' // 渲染引擎
   canvasPresetId?: string // Canvas 预设 ID
+  componentPath?: string  // React 组件路径（react-component 渲染器）
+  colorPresets?: ColorPreset[] // 配色预设（react-component 渲染器）
   createdAt: string
   updatedAt: string
+}
+
+/** 配色预设 */
+export interface ColorPreset {
+  id: string
+  name: string
+  [key: string]: string // 允许任意颜色配置字段
 }
 
 /** 渲染参数（用户输入） */

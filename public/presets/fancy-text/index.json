@@ -29,6 +29,22 @@
     "path": "/presets/fancy-text/variety/hilarious-burst"
   },
   {
+    "id": "variety-frame",
+    "category": "variety",
+    "name": "综艺边框花字",
+    "level": "advanced",
+    "tags": [
+      "variety",
+      "frame",
+      "classic",
+      "sun",
+      "bounce",
+      "multi-stroke"
+    ],
+    "thumbnail": "/presets/fancy-text/variety/variety-frame/thumbnail.png",
+    "path": "/presets/fancy-text/variety/variety-frame"
+  },
+  {
     "id": "variety-main-title",
     "category": "variety",
     "name": "综艺主标题-一见你就笑",

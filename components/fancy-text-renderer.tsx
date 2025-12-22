@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useAnimationControls, Variants } from 'framer-motion'
 import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
-import { createVarietyMainTitle, VARIETY_MAIN_TITLE_PRESET } from '@/assets/fancy-text-presets/variety/variety-main-title/scene'
+import { createVarietyMainTitle, VARIETY_MAIN_TITLE_PRESET } from '@/assets/fancy-text-presets/variety-main-title/variety-main-title.scene'
 import type {
   FancyTextTemplate,
   FancyTextGlobalParams,

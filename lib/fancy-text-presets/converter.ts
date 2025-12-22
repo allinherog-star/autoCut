@@ -1,5 +1,5 @@
 import { FancyTextPreset, MotionPlan } from './schemas';
-import { FancyTextTemplate, FancyTextGlobalParams, EntranceAnimation, LoopAnimation, ExitAnimation } from '../fancy-text/types';
+import { FancyTextTemplate, FancyTextGlobalParams, EntranceAnimation, LoopAnimation, ExitAnimation, ColorPreset } from '../fancy-text/types';
 
 /**
  * Converts a Fancy Text Preset (meta + motionPlan) into a FancyTextTemplate
@@ -76,14 +76,25 @@ export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTempl
         }
     }
 
+    // Determine renderer type
+    const rendererType = meta.compat?.renderer;
+    let renderer: 'css' | 'canvas' | 'react' = 'css';
+    if (rendererType === 'canvas-fancy-text') {
+        renderer = 'canvas';
+    } else if (rendererType === 'react-component') {
+        renderer = 'react';
+    }
+
     return {
         id: meta.id,
         name: meta.name,
         description: meta.description || '',
         visualStyles: meta.tags,
         source: 'system',
-        renderer: meta.compat?.renderer === 'canvas-fancy-text' ? 'canvas' : 'css',
-        canvasPresetId: meta.compat?.renderer === 'canvas-fancy-text' ? meta.id : undefined,
+        renderer,
+        canvasPresetId: rendererType === 'canvas-fancy-text' ? meta.id : undefined,
+        componentPath: meta.compat?.componentPath,
+        colorPresets: (meta as unknown as { colorPresets?: ColorPreset[] }).colorPresets,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         globalParams,

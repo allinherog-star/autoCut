@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
-import { VARIETY_MAIN_TITLE_PRESET, createVarietyMainTitle } from '@/assets/fancy-text-presets/variety/variety-main-title/scene'
+import { VARIETY_MAIN_TITLE_PRESET, createVarietyMainTitle } from '@/assets/fancy-text-presets/variety-main-title/variety-main-title.scene'
 
 export default function CanvasVarietyTitleTest() {
   const [customText, setCustomText] = useState('一见你就笑')
@@ -28,7 +28,7 @@ export default function CanvasVarietyTitleTest() {
         {/* 控制面板 */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">🎨 自定义配置</h2>
-          
+
           <div className="space-y-4">
             {/* 文字输入 */}
             <div>
@@ -156,7 +156,7 @@ export default function CanvasVarietyTitleTest() {
         <div className="mt-8 bg-gray-800 text-gray-100 rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-3">💻 代码示例</h3>
           <pre className="text-sm overflow-x-auto">
-{`import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
+            {`import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
 import { createVarietyMainTitle } from '@/lib/canvas-fancy-text/presets/variety-main-title'
 
 // 创建场景
