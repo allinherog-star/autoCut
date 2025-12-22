@@ -1,79 +1,60 @@
-import { FancyTextPresetSchema, FancyTextPreset, MotionPlan } from './schemas';
+/**
+ * Fancy Text Presets Registry
+ * 
+ * 使用静态导入从 assets/fancy-text-presets/ 加载预设
+ * 不再使用 HTTP fetch 从 public/ 目录加载
+ */
 
-const PRESETS_ROOT = '/presets/fancy-text';
+import {
+    PRESET_REGISTRY,
+    PresetMeta,
+    PresetEntry,
+    getPresetMeta,
+    getAllPresetMetas,
+    loadPresetComponent,
+} from '@/assets/fancy-text-presets'
 
+// Re-export types and functions
+export type { PresetMeta, PresetEntry }
+export { getPresetMeta, getAllPresetMetas, loadPresetComponent, PRESET_REGISTRY }
+
+// Legacy interface for compatibility
 export interface PresetRegistryItem {
-    id: string;
-    category: string;
-    name: string;
-    level: string;
-    thumbnail?: string;
-    tags: string[];
-    path: string;
-}
-
-let registryCache: PresetRegistryItem[] | null = null;
-
-/**
- * Loads the list of available presets from index.json.
- */
-export async function loadPresets(forceRefresh = false): Promise<PresetRegistryItem[]> {
-    if (registryCache && !forceRefresh) {
-        return registryCache;
-    }
-
-    try {
-        const res = await fetch(`${PRESETS_ROOT}/index.json`);
-        if (!res.ok) {
-            console.warn('Failed to load fancy text presets index');
-            return [];
-        }
-        const data = await res.json();
-        registryCache = data;
-        return data;
-    } catch (error) {
-        console.error('Error loading fancy text presets:', error);
-        return [];
-    }
+    id: string
+    category: string
+    name: string
+    level: string
+    thumbnail?: string
+    tags: string[]
 }
 
 /**
- * Fetches full preset data (meta + motionPlan).
+ * Loads the list of available presets (synchronous, no HTTP fetch)
  */
-export async function getPreset(item: PresetRegistryItem): Promise<FancyTextPreset | null> {
-    try {
-        // Load meta.json
-        const metaRes = await fetch(`${item.path}/meta.json`);
-        if (!metaRes.ok) throw new Error(`Failed to load meta.json for ${item.id}`);
-        const meta = await metaRes.json();
-
-        // Load motion.plan.json (optional)
-        let motionPlan: MotionPlan | undefined;
-        try {
-            const planRes = await fetch(`${item.path}/motion.plan.json`);
-            if (planRes.ok) {
-                motionPlan = await planRes.json();
-            } else {
-                // Fallback: if motion.plan.json is missing, use simple mode
-                console.debug(`No motion.plan.json for ${item.id}, using simple mode.`);
-            }
-        } catch {
-            // Ignore motion plan load error
-        }
-
-        return { meta, motionPlan };
-    } catch (error) {
-        console.error(`Error loading preset ${item.id}:`, error);
-        return null;
-    }
+export async function loadPresets(): Promise<PresetRegistryItem[]> {
+    return PRESET_REGISTRY.map(entry => ({
+        id: entry.meta.id,
+        category: entry.meta.category || 'variety',
+        name: entry.meta.name,
+        level: entry.meta.level,
+        tags: entry.meta.tags,
+    }))
 }
 
 /**
- * Get preset by ID directly.
+ * Fetches full preset data by registry item
  */
-export async function getPresetById(id: string): Promise<FancyTextPreset | null> {
-    const presets = await loadPresets();
-    const item = presets.find(p => p.id === id);
-    if (!item) return null;
-    return getPreset(item);
+export async function getPreset(item: PresetRegistryItem): Promise<{ meta: PresetMeta } | null> {
+    const meta = getPresetMeta(item.id)
+    if (!meta) return null
+    return { meta }
+}
+
+/**
+ * Get preset by ID directly
+ */
+export async function getPresetById(id: string): Promise<{ meta: PresetMeta } | null> {
+    const meta = getPresetMeta(id)
+    if (!meta) return null
+    return { meta }
 }

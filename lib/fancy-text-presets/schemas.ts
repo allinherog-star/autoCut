@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
-// --- Meta Schema (Updated for Script Mode) ---
+// --- Meta Schema ---
 
 export const FancyTextMetaSchema = z.object({
     id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "ID must be kebab-case"),
@@ -30,6 +30,18 @@ export const FancyTextMetaSchema = z.object({
         }).optional(),
     }).optional(),
 
+    colorPresets: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        gradient: z.string().optional(),
+        strokeColor: z.string().optional(),
+        glowColor: z.string().optional(),
+        frameColor: z.string().optional(),
+        sunColor: z.string().optional(),
+        textGradient: z.string().optional(),
+        outerStrokeColor: z.string().optional(),
+    })).optional(),
+
     assets: z.object({
         sfx: z.object({
             file: z.string(),
@@ -40,57 +52,16 @@ export const FancyTextMetaSchema = z.object({
     compat: z.object({
         renderer: z.enum(['fancy-text', 'canvas-fancy-text', 'react-component']).default('fancy-text'),
         minAppVersion: z.string().optional(),
-        motionType: z.enum(['script', 'none']).default('script'),
-        scriptApiVersion: z.number().default(1),
-        componentPath: z.string().optional(), // For react-component renderer
+        componentPath: z.string().optional(),
     }).optional(),
-});
+})
 
-export type FancyTextMeta = z.infer<typeof FancyTextMetaSchema>;
+export type FancyTextMeta = z.infer<typeof FancyTextMetaSchema>
 
-// --- Motion Plan Schema (Compiled output from motion.ts) ---
-
-const KeyframeSchema = z.object({
-    time: z.number().min(0).max(1), // Normalized 0-1
-    value: z.union([z.number(), z.string()]),
-    easing: z.string().optional(),
-});
-
-const PropertyAnimationSchema = z.object({
-    property: z.string(), // e.g., 'fill', 'scale', 'opacity', 'blur'
-    keyframes: z.array(KeyframeSchema),
-});
-
-const SectionSchema = z.object({
-    startMs: z.number(),
-    durationMs: z.number(),
-    animations: z.array(PropertyAnimationSchema),
-});
-
-const EffectSchema = z.object({
-    type: z.enum(['glow', 'particle', 'sticker', 'outline', 'shadow']),
-    params: z.record(z.string(), z.any()),
-    section: z.enum(['in', 'loop', 'out', 'always']).optional(),
-});
-
-export const MotionPlanSchema = z.object({
-    dslVersion: z.number().default(1),
-    durationMs: z.number(),
-    sections: z.object({
-        in: SectionSchema.optional(),
-        loop: SectionSchema.optional(),
-        out: SectionSchema.optional(),
-    }),
-    effects: z.array(EffectSchema).optional(),
-});
-
-export type MotionPlan = z.infer<typeof MotionPlanSchema>;
-
-// --- Combined Preset Schema ---
+// --- Combined Preset Schema (simplified, no motionPlan) ---
 
 export const FancyTextPresetSchema = z.object({
     meta: FancyTextMetaSchema,
-    motionPlan: MotionPlanSchema.optional(),
-});
+})
 
-export type FancyTextPreset = z.infer<typeof FancyTextPresetSchema>;
+export type FancyTextPreset = z.infer<typeof FancyTextPresetSchema>

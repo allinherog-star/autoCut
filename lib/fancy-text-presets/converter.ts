@@ -1,12 +1,14 @@
-import { FancyTextPreset, MotionPlan } from './schemas';
-import { FancyTextTemplate, FancyTextGlobalParams, EntranceAnimation, LoopAnimation, ExitAnimation, ColorPreset } from '../fancy-text/types';
+import type { PresetMeta } from '@/assets/fancy-text-presets'
+import { FancyTextTemplate, FancyTextGlobalParams, EntranceAnimation, LoopAnimation, ExitAnimation, ColorPreset } from '../fancy-text/types'
 
 /**
- * Converts a Fancy Text Preset (meta + motionPlan) into a FancyTextTemplate
+ * Converts a Fancy Text Preset (meta only) into a FancyTextTemplate
  * that the existing renderer can consume.
+ * 
+ * Note: motionPlan has been removed, all animations are now handled by motion.tsx components
  */
-export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTemplate {
-    const { meta, motionPlan } = preset;
+export function convertPresetToTemplate(preset: { meta: PresetMeta }): FancyTextTemplate {
+    const { meta } = preset
 
     // Base global params from meta defaults
     const globalParams: FancyTextGlobalParams = {
@@ -47,42 +49,15 @@ export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTempl
         },
         decorations: [],
         totalDuration: 1.8,
-    };
-
-    // Apply motion plan data if available
-    if (motionPlan) {
-        globalParams.totalDuration = motionPlan.durationMs / 1000;
-
-        // Map sections to animation config
-        if (motionPlan.sections.in) {
-            globalParams.animation.entranceDuration = motionPlan.sections.in.durationMs / 1000;
-        }
-        if (motionPlan.sections.loop) {
-            globalParams.animation.loopDuration = motionPlan.sections.loop.durationMs / 1000;
-        }
-        if (motionPlan.sections.out) {
-            globalParams.animation.exitDuration = motionPlan.sections.out.durationMs / 1000;
-        }
-
-        // Map effects to glow/decorations
-        const glowEffect = motionPlan.effects?.find(e => e.type === 'glow');
-        if (glowEffect) {
-            globalParams.glow = {
-                enabled: true,
-                color: (glowEffect.params.color as string) || '#ff6600',
-                blur: (glowEffect.params.blur as number) || 20,
-                spread: 0,
-            };
-        }
     }
 
     // Determine renderer type
-    const rendererType = meta.compat?.renderer;
-    let renderer: 'css' | 'canvas' | 'react' = 'css';
+    const rendererType = meta.compat?.renderer
+    let renderer: 'css' | 'canvas' | 'react' = 'css'
     if (rendererType === 'canvas-fancy-text') {
-        renderer = 'canvas';
+        renderer = 'canvas'
     } else if (rendererType === 'react-component') {
-        renderer = 'react';
+        renderer = 'react'
     }
 
     return {
@@ -94,7 +69,7 @@ export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTempl
         renderer,
         canvasPresetId: rendererType === 'canvas-fancy-text' ? meta.id : undefined,
         componentPath: meta.compat?.componentPath,
-        colorPresets: (meta as unknown as { colorPresets?: ColorPreset[] }).colorPresets,
+        colorPresets: meta.colorPresets as ColorPreset[] | undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         globalParams,
@@ -102,30 +77,5 @@ export function convertPresetToTemplate(preset: FancyTextPreset): FancyTextTempl
             enabled: false,
             characters: [],
         },
-    };
-}
-
-/**
- * Parse motion plan for more detailed animation control.
- * This can be used by advanced renderers.
- */
-export function parseMotionPlan(plan: MotionPlan) {
-    return {
-        durationMs: plan.durationMs,
-        sections: plan.sections,
-        effects: plan.effects || [],
-
-        getAnimationsForTime(timeMs: number) {
-            const results: { section: string; animations: typeof plan.sections.in }[] = [];
-
-            for (const [name, section] of Object.entries(plan.sections)) {
-                if (!section) continue;
-                if (timeMs >= section.startMs && timeMs < section.startMs + section.durationMs) {
-                    results.push({ section: name, animations: section });
-                }
-            }
-
-            return results;
-        },
-    };
+    }
 }

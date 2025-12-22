@@ -1,0 +1,69 @@
+{
+    "id": "comic-burst",
+    "name": "漫画爆炸大字",
+    "description": "综艺节目爆笑瞬间大字特效，漫画拟声词风格，带爆炸底板、速度线和弹性动画",
+    "level": "advanced",
+    "tags": [
+        "comic",
+        "variety",
+        "explosion",
+        "comedy",
+        "emphasis",
+        "big-text"
+    ],
+    "category": "variety",
+    "language": "zh",
+    "textDefaults": {
+        "text": "笑死我了",
+        "fontSizeRange": [
+            80,
+            120
+        ],
+        "recommendLines": 1,
+        "fontFamily": [
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#4a0080",
+            "width": 6
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(255, 100, 0, 0.8)",
+            "blur": 30,
+            "offsetX": 0,
+            "offsetY": 6
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "orange-fire",
+            "name": "橙色火焰",
+            "gradient": "linear-gradient(180deg, #FFE066 0%, #FFAA00 40%, #FF6600 100%)",
+            "strokeColor": "#4a0080",
+            "glowColor": "#FF6600"
+        },
+        {
+            "id": "pink-pop",
+            "name": "粉色炸裂",
+            "gradient": "linear-gradient(180deg, #FFCCFF 0%, #FF66CC 40%, #FF0099 100%)",
+            "strokeColor": "#660066",
+            "glowColor": "#FF0099"
+        },
+        {
+            "id": "golden-boom",
+            "name": "金色BOOM",
+            "gradient": "linear-gradient(180deg, #FFFFCC 0%, #FFD700 40%, #FF9900 100%)",
+            "strokeColor": "#663300",
+            "glowColor": "#FFD700"
+        }
+    ],
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "ComicBurstText",
+        "scriptApiVersion": 1
+    }
+}

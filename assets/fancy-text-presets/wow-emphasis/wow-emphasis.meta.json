@@ -1,0 +1,56 @@
+{
+    "id": "wow-emphasis",
+    "name": "惊叹强调",
+    "description": "综艺节目惊叹/强调大字特效，震撼视觉冲击，适用于名场面和高能预警",
+    "level": "advanced",
+    "tags": [
+        "wow",
+        "variety",
+        "emphasis",
+        "shock",
+        "highlight"
+    ],
+    "category": "variety",
+    "language": "zh",
+    "textDefaults": {
+        "text": "绝了",
+        "fontSizeRange": [
+            72,
+            108
+        ],
+        "recommendLines": 1,
+        "fontFamily": [
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ]
+    },
+    "colorPresets": [
+        {
+            "id": "electric-blue",
+            "name": "电光蓝",
+            "gradient": "linear-gradient(180deg, #FFFFFF 0%, #00CCFF 30%, #0066FF 70%, #0033CC 100%)",
+            "strokeColor": "#000066",
+            "glowColor": "#00CCFF"
+        },
+        {
+            "id": "hot-red",
+            "name": "热力红",
+            "gradient": "linear-gradient(180deg, #FFFFFF 0%, #FF6666 30%, #FF0000 70%, #990000 100%)",
+            "strokeColor": "#330000",
+            "glowColor": "#FF3300"
+        },
+        {
+            "id": "neon-green",
+            "name": "霓虹绿",
+            "gradient": "linear-gradient(180deg, #FFFFFF 0%, #66FF66 30%, #00FF00 70%, #009900 100%)",
+            "strokeColor": "#003300",
+            "glowColor": "#00FF00"
+        }
+    ],
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "WowEmphasisText",
+        "scriptApiVersion": 1
+    }
+}
