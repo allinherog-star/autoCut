@@ -1,0 +1,82 @@
+{
+    "id": "neon-jagged-text",
+    "name": "霓虹锯齿",
+    "description": "亮天蓝+深海蓝双重描边，配霓虹绿锯齿底板，极具综艺感的贴纸风格",
+    "level": "advanced",
+    "tags": [
+        "neon",
+        "sticker",
+        "variety",
+        "jagged",
+        "blue",
+        "green"
+    ],
+    "category": "variety",
+    "language": "zh",
+    "textDefaults": {
+        "text": "互撩\n眼神拉丝",
+        "fontSizeRange": [
+            64,
+            96
+        ],
+        "recommendLines": 2,
+        "fontFamily": [
+            "PingFang SC",
+            "Microsoft YaHei",
+            "Noto Sans SC",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#00E5FF",
+            "width": 8
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(0, 0, 0, 0.3)",
+            "blur": 15,
+            "offsetX": 4,
+            "offsetY": 6
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "blue-green",
+            "name": "蓝绿潮酷",
+            "strokeColor": "#00E5FF",
+            "frameColor": "#003366",
+            "glowColor": "#CCFF00"
+        },
+        {
+            "id": "purple-yellow",
+            "name": "紫黄波普",
+            "strokeColor": "#D500F9",
+            "frameColor": "#4A148C",
+            "glowColor": "#FFEA00"
+        },
+        {
+            "id": "pink-cyan",
+            "name": "粉青赛博",
+            "strokeColor": "#FF4081",
+            "frameColor": "#880E4F",
+            "glowColor": "#00E5FF"
+        },
+        {
+            "id": "orange-blue",
+            "name": "橙蓝撞色",
+            "strokeColor": "#FF6D00",
+            "frameColor": "#BF360C",
+            "glowColor": "#2979FF"
+        }
+    ],
+    "rendering": {
+        "aspectRatio": 3.0,
+        "heightRatio": 0.5,
+        "duration": 0.6,
+        "frameRate": 30
+    },
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "NeonJaggedText"
+    }
+}
