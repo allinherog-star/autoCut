@@ -91,6 +91,12 @@
             ]
         }
     },
+    "rendering": {
+        "canvasWidth": 1920,
+        "canvasHeight": 350,
+        "duration": 1.5,
+        "frameRate": 30
+    },
     "compat": {
         "renderer": "react-component",
         "componentPath": "VarietyFrameText",

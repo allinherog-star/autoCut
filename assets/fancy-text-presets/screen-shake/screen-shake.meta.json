@@ -41,6 +41,12 @@
             "glowColor": "#FF0000"
         }
     ],
+    "rendering": {
+        "canvasWidth": 1920,
+        "canvasHeight": 500,
+        "duration": 2.5,
+        "frameRate": 30
+    },
     "compat": {
         "renderer": "react-component",
         "componentPath": "ScreenShakeText",

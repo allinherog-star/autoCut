@@ -26,6 +26,12 @@
             "sans-serif"
         ]
     },
+    "rendering": {
+        "canvasWidth": 1920,
+        "canvasHeight": 600,
+        "duration": 3.0,
+        "frameRate": 30
+    },
     "compat": {
         "renderer": "canvas-fancy-text",
         "motionType": "none",

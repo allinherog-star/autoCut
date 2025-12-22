@@ -61,6 +61,12 @@
             "glowColor": "#FFD700"
         }
     ],
+    "rendering": {
+        "canvasWidth": 1920,
+        "canvasHeight": 500,
+        "duration": 2.2,
+        "frameRate": 30
+    },
     "compat": {
         "renderer": "react-component",
         "componentPath": "ComicBurstText",

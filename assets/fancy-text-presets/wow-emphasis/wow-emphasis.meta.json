@@ -48,6 +48,12 @@
             "glowColor": "#00FF00"
         }
     ],
+    "rendering": {
+        "canvasWidth": 1920,
+        "canvasHeight": 400,
+        "duration": 2.0,
+        "frameRate": 30
+    },
     "compat": {
         "renderer": "react-component",
         "componentPath": "WowEmphasisText",

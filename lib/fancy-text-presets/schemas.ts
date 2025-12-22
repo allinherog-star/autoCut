@@ -49,6 +49,14 @@ export const FancyTextMetaSchema = z.object({
         }).optional(),
     }).optional(),
 
+    // 渲染配置 - 用于视频合成时的固定尺寸
+    rendering: z.object({
+        canvasWidth: z.number().default(1920),   // 画布宽度
+        canvasHeight: z.number().default(400),   // 画布高度
+        duration: z.number().default(2.0),       // 动画总时长 (秒)
+        frameRate: z.number().default(30),       // 导出帧率
+    }).optional(),
+
     compat: z.object({
         renderer: z.enum(['fancy-text', 'canvas-fancy-text', 'react-component']).default('fancy-text'),
         minAppVersion: z.string().optional(),
