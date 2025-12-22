@@ -8,13 +8,14 @@ Presets are organized by preset ID directly under this directory. Category infor
 
 ```
 assets/fancy-text-presets/
-├── {preset-id}/            # 模版ID目录 (kebab-case)
+├── {preset-id}/                        # 模版ID目录 (kebab-case)
 │   ├── {preset-id}.meta.json           # 必须 - 元数据配置
-│   ├── {preset-id}.motion.tsx          # 必须 - 动效脚本 (TSX格式)
+│   ├── {preset-id}.motion.tsx          # 动效脚本 - React组件 (与scene.ts二选一)
+│   ├── {preset-id}.scene.ts            # 动效脚本 - Canvas渲染器 (与motion.tsx二选一)
 │   ├── {preset-id}.thumbnail.png       # 推荐 - 预览缩略图
-│   └── assets/             # 可选 - 本地资源目录
-│       ├── sfx/            # 音效文件
-│       └── images/         # 图片资源
+│   └── assets/                         # 可选 - 本地资源目录
+│       ├── sfx/                        # 音效文件
+│       └── images/                     # 图片资源
 └── README.md
 ```
 
