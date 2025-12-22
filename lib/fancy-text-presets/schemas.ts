@@ -49,12 +49,12 @@ export const FancyTextMetaSchema = z.object({
         }).optional(),
     }).optional(),
 
-    // 渲染配置 - 用于视频合成时的固定尺寸
+    // 渲染配置 - 用于视频合成时的自适应尺寸
     rendering: z.object({
-        canvasWidth: z.number().default(1920),   // 画布宽度
-        canvasHeight: z.number().default(400),   // 画布高度
-        duration: z.number().default(2.0),       // 动画总时长 (秒)
-        frameRate: z.number().default(30),       // 导出帧率
+        aspectRatio: z.number().default(4.8),       // 宽高比 (默认 1920/400 = 4.8)
+        heightRatio: z.number().default(0.35),      // 相对视频高度比例 (0.0-1.0)
+        duration: z.number().default(2.0),          // 动画总时长 (秒)
+        frameRate: z.number().default(30),          // 导出帧率
     }).optional(),
 
     compat: z.object({

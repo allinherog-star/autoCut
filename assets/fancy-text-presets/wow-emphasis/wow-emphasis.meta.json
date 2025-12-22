@@ -49,8 +49,8 @@
         }
     ],
     "rendering": {
-        "canvasWidth": 1920,
-        "canvasHeight": 400,
+        "aspectRatio": 4.8,
+        "heightRatio": 0.35,
         "duration": 2.0,
         "frameRate": 30
     },

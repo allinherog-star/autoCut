@@ -66,12 +66,12 @@ export interface PresetMeta {
         textGradient?: string
         outerStrokeColor?: string
     }>
-    // 渲染配置 - 用于视频合成时的固定尺寸
+    // 渲染配置 - 用于视频合成时的自适应尺寸
     rendering?: {
-        canvasWidth?: number    // 画布宽度 (默认 1920)
-        canvasHeight?: number   // 画布高度 (默认 400)
-        duration?: number       // 动画总时长 (秒, 默认 2.0)
-        frameRate?: number      // 导出帧率 (默认 30)
+        aspectRatio?: number     // 宽高比 (默认 4.8)
+        heightRatio?: number     // 相对视频高度比例 (0.0-1.0, 默认 0.35)
+        duration?: number        // 动画总时长 (秒, 默认 2.0)
+        frameRate?: number       // 导出帧率 (默认 30)
     }
     compat?: {
         renderer?: 'fancy-text' | 'canvas-fancy-text' | 'react-component'
