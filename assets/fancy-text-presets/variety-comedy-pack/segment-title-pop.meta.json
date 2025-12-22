@@ -1,0 +1,90 @@
+{
+    "id": "segment-title-pop",
+    "name": "分段标题弹出",
+    "description": "《一见你就笑》风格分段/环节标题特效，圆角底板 + 弹性缩放 + 星星装饰，适用于【本期主题】【游戏环节】等分段标题",
+    "level": "advanced",
+    "tags": [
+        "variety",
+        "comedy",
+        "segment",
+        "pop",
+        "cartoon",
+        "colorful",
+        "chinese"
+    ],
+    "category": "variety-comedy",
+    "language": "zh",
+    "textDefaults": {
+        "text": "本期主题",
+        "fontSizeRange": [56, 90],
+        "recommendLines": 1,
+        "fontFamily": [
+            "Zcool KuaiLe",
+            "Zcool QingKe HuangYou",
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#FFFFFF",
+            "width": 5
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(45, 27, 78, 0.35)",
+            "blur": 6,
+            "offsetX": 2,
+            "offsetY": 2
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "purple-pop",
+            "name": "流行紫",
+            "gradient": "linear-gradient(135deg, #FF6B9D 0%, #7C3AED 50%, #00D4FF 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#2D1B4E",
+            "plateColor": "#7C3AED",
+            "glowColor": "#7C3AED"
+        },
+        {
+            "id": "pink-party",
+            "name": "派对粉",
+            "gradient": "linear-gradient(180deg, #FFE135 0%, #FF6B9D 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#4A1942",
+            "plateColor": "#FF6B9D",
+            "glowColor": "#FF6B9D"
+        },
+        {
+            "id": "ocean-blue",
+            "name": "海洋蓝",
+            "gradient": "linear-gradient(180deg, #FFFFFF 0%, #00D4FF 50%, #0066FF 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#003366",
+            "plateColor": "#00D4FF",
+            "glowColor": "#00D4FF"
+        },
+        {
+            "id": "sunset-orange",
+            "name": "日落橙",
+            "gradient": "linear-gradient(180deg, #FFE135 0%, #FF8C00 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#663300",
+            "plateColor": "#FF8C00",
+            "glowColor": "#FF8C00"
+        }
+    ],
+    "rendering": {
+        "aspectRatio": 4.0,
+        "heightRatio": 0.35,
+        "duration": 1.2,
+        "frameRate": 30
+    },
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "SegmentTitlePop"
+    }
+}
+

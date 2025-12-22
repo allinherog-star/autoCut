@@ -1,0 +1,92 @@
+{
+    "id": "guest-name-slide",
+    "name": "嘉宾姓名条滑入",
+    "description": "《一见你就笑》风格嘉宾介绍条特效，横向滑入 + 头像占位 + 身份标签，适用于嘉宾出场介绍、主持人姓名条",
+    "level": "advanced",
+    "tags": [
+        "variety",
+        "comedy",
+        "name",
+        "guest",
+        "slide",
+        "lower-third",
+        "chinese"
+    ],
+    "category": "variety-comedy",
+    "language": "zh",
+    "textDefaults": {
+        "text": "王大锤",
+        "fontSizeRange": [40, 60],
+        "recommendLines": 1,
+        "fontFamily": [
+            "Zcool KuaiLe",
+            "Zcool QingKe HuangYou",
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": false
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(45, 27, 78, 0.3)",
+            "blur": 4,
+            "offsetX": 2,
+            "offsetY": 2
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "sunny-joy",
+            "name": "阳光欢乐",
+            "gradient": "linear-gradient(180deg, #FF6B9D 0%, #FFE135 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#2D1B4E",
+            "plateColor": "#FFE135",
+            "titleBgColor": "#7C3AED",
+            "accentColor": "#FF6B9D"
+        },
+        {
+            "id": "cool-purple",
+            "name": "酷炫紫",
+            "gradient": "linear-gradient(180deg, #00D4FF 0%, #7C3AED 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#1A0A2E",
+            "plateColor": "#7C3AED",
+            "titleBgColor": "#FF6B9D",
+            "accentColor": "#00D4FF"
+        },
+        {
+            "id": "fresh-mint",
+            "name": "清新薄荷",
+            "gradient": "linear-gradient(180deg, #FFE135 0%, #7CFC00 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#1A4D00",
+            "plateColor": "#7CFC00",
+            "titleBgColor": "#00D4FF",
+            "accentColor": "#FFE135"
+        },
+        {
+            "id": "coral-dream",
+            "name": "珊瑚梦境",
+            "gradient": "linear-gradient(180deg, #FFE135 0%, #FF8C00 50%, #FF6B9D 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#4A1942",
+            "plateColor": "#FF6B9D",
+            "titleBgColor": "#FF8C00",
+            "accentColor": "#FFE135"
+        }
+    ],
+    "rendering": {
+        "aspectRatio": 5.0,
+        "heightRatio": 0.2,
+        "duration": 1.0,
+        "frameRate": 30
+    },
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "GuestNameSlide"
+    }
+}
+

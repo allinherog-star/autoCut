@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useAnimationControls, Variants } from 'framer-motion'
 import { CanvasFancyTextPlayer } from '@/components/canvas-fancy-text-player'
-import { createVarietyMainTitle, VARIETY_MAIN_TITLE_PRESET } from '@/assets/fancy-text-presets/variety-main-title/variety-main-title.scene'
+
 import { loadPresetComponent } from '@/assets/fancy-text-presets'
 import type {
   FancyTextTemplate,
@@ -30,6 +30,7 @@ interface FancyTextRendererProps {
   skipToEnd?: boolean // 跳过动画直接显示最终帧
   loop?: boolean // 循环播放
   showDecorations?: boolean // 显示装饰
+  clipOverflow?: boolean // 是否裁剪溢出内容（预览卡片使用）
   className?: string
   onAnimationComplete?: () => void
 }
@@ -475,6 +476,7 @@ interface ReactComponentRendererProps {
   scale: number
   autoPlay: boolean
   skipToEnd?: boolean  // 跳过动画直接显示最终帧
+  clipOverflow?: boolean  // 是否裁剪溢出内容（预览卡片使用）
   template: FancyTextTemplate
   className?: string
   onAnimationComplete?: () => void
@@ -486,6 +488,7 @@ function ReactComponentRenderer({
   scale,
   autoPlay,
   skipToEnd = false,
+  clipOverflow = false,
   template,
   className = '',
   onAnimationComplete,
@@ -545,7 +548,7 @@ function ReactComponentRenderer({
   const glowColor = colorPreset?.glowColor || template.globalParams.glow.color
 
   return (
-    <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+    <div className={className} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: clipOverflow ? 'hidden' : 'visible' }}>
       <Component
         text={text}
         scale={scale}
@@ -572,6 +575,7 @@ export function FancyTextRenderer({
   skipToEnd = false,
   loop = false,
   showDecorations = true,
+  clipOverflow = false,
   className = '',
   onAnimationComplete,
 }: FancyTextRendererProps) {
@@ -579,16 +583,6 @@ export function FancyTextRenderer({
   if (template.renderer === 'canvas' && template.canvasPresetId) {
     let scene = null
     const displayText = text || template.globalParams.text
-
-    if (template.canvasPresetId === 'variety-main-title') {
-      // 如果文字不同，重新创建场景
-      const defaultText = VARIETY_MAIN_TITLE_PRESET.layers.find(l => l.id === 'main-title-text')?.config.text
-      if (displayText !== defaultText) {
-        scene = createVarietyMainTitle(displayText)
-      } else {
-        scene = VARIETY_MAIN_TITLE_PRESET
-      }
-    }
 
     if (scene) {
       return (
@@ -617,6 +611,7 @@ export function FancyTextRenderer({
         scale={scale}
         autoPlay={autoPlay}
         skipToEnd={skipToEnd}
+        clipOverflow={clipOverflow}
         template={template}
         className={className}
         onAnimationComplete={onAnimationComplete}
@@ -804,7 +799,7 @@ export function FancyTextPreviewCard({
   const displayText = text || template.globalParams.text
 
   // 智能计算默认缩放比例
-  const effectiveScale = scale ?? (template.renderer === 'canvas' ? 0.15 : 0.4)
+  const effectiveScale = scale ?? (template.renderer === 'canvas' ? 0.15 : template.renderer === 'react' ? 0.25 : 0.4)
 
   return (
     <motion.div
@@ -844,7 +839,7 @@ export function FancyTextPreviewCard({
         />
 
         {/* 花字预览 */}
-        <div className="relative z-10 w-full h-full flex items-center justify-center">
+        <div className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden">
           {isHovered ? (
             <FancyTextRenderer
               key={previewKey}
@@ -853,6 +848,7 @@ export function FancyTextPreviewCard({
               scale={effectiveScale}
               autoPlay={true}
               showDecorations={true}
+              clipOverflow={true}
             />
           ) : (
             // 静态预览 - 显示动画最终帧状态
@@ -866,6 +862,7 @@ export function FancyTextPreviewCard({
                 autoPlay={false}
                 skipToEnd={true}  // 直接显示最终帧
                 showDecorations={true}
+                clipOverflow={true}
               />
             ) : template.renderer === 'canvas' ? (
               // Canvas 静态预览

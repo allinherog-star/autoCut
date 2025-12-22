@@ -9,47 +9,25 @@
 // 元数据导入
 // ============================================
 
-import comicBurstMeta from './comic-burst/comic-burst.meta.json'
-import hilariousBurstMeta from './hilarious-burst/hilarious-burst.meta.json'
-import screenShakeMeta from './screen-shake/screen-shake.meta.json'
-import shockWaveMeta from './shock-wave/shock-wave.meta.json'
-import varietyFrameMeta from './variety-frame/variety-frame.meta.json'
-import varietyMainTitleMeta from './variety-main-title/variety-main-title.meta.json'
-import varietyTitleBounceMeta from './variety-title-bounce/variety-title-bounce.meta.json'
-import varietyTitleBurstMeta from './variety-title-burst/variety-title-burst.meta.json'
-import wowEmphasisMeta from './wow-emphasis/wow-emphasis.meta.json'
-import explosiveLaughMeta from './explosive-laugh/explosive-laugh.meta.json'
-// 一见你就笑 - 软糖系列花字预设
-import candyMainTitleMeta from './candy-main-title/candy-main-title.meta.json'
-import candySegmentTitleMeta from './candy-segment-title/candy-segment-title.meta.json'
-import candyGuestNameMeta from './candy-guest-name/candy-guest-name.meta.json'
-import candyFunnyBurstMeta from './candy-funny-burst/candy-funny-burst.meta.json'
-import candySweetFrameMeta from './candy-sweet-frame/candy-sweet-frame.meta.json'
-import neonJaggedTextMeta from './neon-jagged-text/neon-jagged-text.meta.json'
+import neonPulseSwirlMeta from './neon-pulse-swirl/neon-pulse-swirl.meta.json'
+
+// Variety Comedy Pack - 《一见你就笑》风格综艺花字套件
+import showTitleBurstMeta from './variety-comedy-pack/show-title-burst.meta.json'
+import segmentTitlePopMeta from './variety-comedy-pack/segment-title-pop.meta.json'
+import guestNameSlideMeta from './variety-comedy-pack/guest-name-slide.meta.json'
+import laughExplosionMeta from './variety-comedy-pack/laugh-explosion.meta.json'
 
 // ============================================
 // 组件导入 (lazy)
 // ============================================
 
 export const PRESET_COMPONENTS = {
-    'comic-burst': () => import('./comic-burst/comic-burst.motion'),
-    'wow-emphasis': () => import('./wow-emphasis/wow-emphasis.motion'),
-    'screen-shake': () => import('./screen-shake/screen-shake.motion'),
-    'variety-frame': () => import('./variety-frame/variety-frame.motion'),
-    // Canvas presets don't have React components
-    'variety-main-title': null,
-    'hilarious-burst': null,
-    'shock-wave': null,
-    'variety-title-bounce': null,
-    'variety-title-burst': null,
-    'explosive-laugh': () => import('./explosive-laugh/explosive-laugh.motion'),
-    // 一见你就笑 - 软糖系列花字预设
-    'candy-main-title': () => import('./candy-main-title/candy-main-title.motion'),
-    'candy-segment-title': () => import('./candy-segment-title/candy-segment-title.motion'),
-    'candy-guest-name': () => import('./candy-guest-name/candy-guest-name.motion'),
-    'candy-funny-burst': () => import('./candy-funny-burst/candy-funny-burst.motion'),
-    'candy-sweet-frame': () => import('./candy-sweet-frame/candy-sweet-frame.motion'),
-    'neon-jagged-text': () => import('./neon-jagged-text/neon-jagged-text.motion'),
+    'neon-pulse-swirl': () => import('./neon-pulse-swirl/neon-pulse-swirl.motion'),
+    // Variety Comedy Pack
+    'show-title-burst': () => import('./variety-comedy-pack/show-title-burst.motion'),
+    'segment-title-pop': () => import('./variety-comedy-pack/segment-title-pop.motion'),
+    'guest-name-slide': () => import('./variety-comedy-pack/guest-name-slide.motion'),
+    'laugh-explosion': () => import('./variety-comedy-pack/laugh-explosion.motion'),
 } as const
 
 // ============================================
@@ -102,23 +80,12 @@ export interface PresetEntry {
 
 // 所有预设的静态注册表
 export const PRESET_REGISTRY: PresetEntry[] = [
-    { meta: comicBurstMeta as PresetMeta, hasComponent: true },
-    { meta: hilariousBurstMeta as PresetMeta, hasComponent: false },
-    { meta: screenShakeMeta as PresetMeta, hasComponent: true },
-    { meta: shockWaveMeta as PresetMeta, hasComponent: false },
-    { meta: varietyFrameMeta as PresetMeta, hasComponent: true },
-    { meta: varietyMainTitleMeta as PresetMeta, hasComponent: false },
-    { meta: varietyTitleBounceMeta as PresetMeta, hasComponent: false },
-    { meta: varietyTitleBurstMeta as PresetMeta, hasComponent: false },
-    { meta: wowEmphasisMeta as PresetMeta, hasComponent: true },
-    { meta: explosiveLaughMeta as PresetMeta, hasComponent: true },
-    // 一见你就笑 - 软糖系列花字预设
-    { meta: candyMainTitleMeta as PresetMeta, hasComponent: true },
-    { meta: candySegmentTitleMeta as PresetMeta, hasComponent: true },
-    { meta: candyGuestNameMeta as PresetMeta, hasComponent: true },
-    { meta: candyFunnyBurstMeta as PresetMeta, hasComponent: true },
-    { meta: candySweetFrameMeta as PresetMeta, hasComponent: true },
-    { meta: neonJaggedTextMeta as PresetMeta, hasComponent: true },
+    { meta: neonPulseSwirlMeta as PresetMeta, hasComponent: true },
+    // Variety Comedy Pack - 《一见你就笑》风格综艺花字套件
+    { meta: showTitleBurstMeta as PresetMeta, hasComponent: true },
+    { meta: segmentTitlePopMeta as PresetMeta, hasComponent: true },
+    { meta: guestNameSlideMeta as PresetMeta, hasComponent: true },
+    { meta: laughExplosionMeta as PresetMeta, hasComponent: true },
 ]
 
 // 按 ID 查找预设

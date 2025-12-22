@@ -3,10 +3,10 @@
  * 系统内置的花字模版
  */
 
-import type { 
-  FancyTextTemplate, 
-  FancyTextUsage, 
-  FontStyleConfig, 
+import type {
+  FancyTextTemplate,
+  FancyTextUsage,
+  FontStyleConfig,
   VisualStyleConfig,
   TextureConfig,
   ColorValue,
@@ -31,8 +31,8 @@ export const FONT_STYLE_PRESETS: FontStyleConfig[] = [
     fontFamily: '"Noto Sans SC", "PingFang SC", sans-serif',
     fontWeight: 900,
     letterSpacing: 4,
-    defaultColor: { 
-      type: 'linear-gradient', 
+    defaultColor: {
+      type: 'linear-gradient',
       value: 'linear-gradient(135deg, #FF6B6B, #FFE66D)',
       colors: ['#FF6B6B', '#FFE66D'],
       angle: 135,
@@ -265,8 +265,8 @@ export const TEXTURE_PRESETS: TextureConfig[] = [
     preset: 'metallic',
     label: '金属',
     icon: '🔩',
-    defaultColor: { 
-      type: 'linear-gradient', 
+    defaultColor: {
+      type: 'linear-gradient',
       value: 'linear-gradient(180deg, #D4AF37, #F5D061, #D4AF37)',
       colors: ['#D4AF37', '#F5D061', '#D4AF37'],
       angle: 180,
@@ -292,8 +292,8 @@ export const TEXTURE_PRESETS: TextureConfig[] = [
     preset: 'gradient',
     label: '渐变',
     icon: '🌈',
-    defaultColor: { 
-      type: 'linear-gradient', 
+    defaultColor: {
+      type: 'linear-gradient',
       value: 'linear-gradient(135deg, #667eea, #764ba2)',
       colors: ['#667eea', '#764ba2'],
       angle: 135,
@@ -327,49 +327,7 @@ export const TEXTURE_PRESETS: TextureConfig[] = [
 // ============================================
 
 export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
-  // ========== 标题类 ==========
-  {
-    id: 'title-variety-canvas-yijiannijuxiao',
-    name: '综艺主标题(Canvas)',
-    description: '一见你就笑 - 高性能Canvas渲染，包含放射线、爆炸底板、粒子特效',
-    usage: 'title',
-    visualStyles: ['variety-show', 'funny', 'cute'],
-    renderer: 'canvas',
-    canvasPresetId: 'variety-main-title',
-    globalParams: {
-      text: '一见你就笑',
-      fontFamily: '"Noto Sans SC", sans-serif',
-      fontSize: 100,
-      fontWeight: 900,
-      letterSpacing: 0,
-      lineHeight: 1,
-      color: { type: 'solid', value: '#FFD700' },
-      stroke: { enabled: true, color: '#000000', width: 0 },
-      shadow: { enabled: false, color: '', blur: 0, offsetX: 0, offsetY: 0 },
-      glow: { enabled: false, color: '', blur: 0, spread: 0 },
-      rotation: 0,
-      skewX: 0,
-      skewY: 0,
-      animation: {
-        entrance: 'none',
-        entranceDuration: 0,
-        entranceEasing: 'linear',
-        entranceDelay: 0,
-        loop: 'none',
-        loopDuration: 0,
-        loopDelay: 0,
-        exit: 'none',
-        exitDuration: 0,
-        exitEasing: 'linear',
-      },
-      decorations: [],
-      totalDuration: 2.5,
-    },
-    perCharacter: { enabled: false, characters: [] },
-    source: 'system',
-    createdAt: '2025-12-21',
-    updatedAt: '2025-12-21',
-  },
+
 
   {
     id: 'title-variety-pop',
@@ -414,7 +372,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   {
     id: 'title-neon-glow',
     name: '霓虹发光标题',
@@ -457,7 +415,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 章节标题类 ==========
   {
     id: 'chapter-step-number',
@@ -472,8 +430,8 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
       fontWeight: 700,
       letterSpacing: 4,
       lineHeight: 1.3,
-      color: { 
-        type: 'linear-gradient', 
+      color: {
+        type: 'linear-gradient',
         value: 'linear-gradient(135deg, #667eea, #764ba2)',
         colors: ['#667eea', '#764ba2'],
         angle: 135,
@@ -504,7 +462,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 强调特写类 ==========
   {
     id: 'emphasis-explosion',
@@ -549,7 +507,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   {
     id: 'emphasis-shake',
     name: '抖动强调',
@@ -593,7 +551,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 操作指引类 ==========
   {
     id: 'guide-arrow',
@@ -635,7 +593,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 人物介绍类 ==========
   {
     id: 'person-intro-elegant',
@@ -679,7 +637,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 重点强调类 ==========
   {
     id: 'cta-like-subscribe',
@@ -733,7 +691,7 @@ export const FANCY_TEXT_TEMPLATE_PRESETS: FancyTextTemplate[] = [
     createdAt: '2024-12-01',
     updatedAt: '2024-12-01',
   },
-  
+
   // ========== 详细描述类 ==========
   {
     id: 'dialogue-bubble',

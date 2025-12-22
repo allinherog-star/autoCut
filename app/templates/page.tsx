@@ -435,7 +435,7 @@ export default function TemplatesPage() {
                         >
                           <FancyTextPreviewCard
                             template={template}
-                            scale={0.35}
+                            scale={template.renderer === 'react' ? 0.25 : 0.35}
                             onClick={() => {
                               setPreviewTemplate(template)
                               setPreviewText(template.globalParams.text)
@@ -613,7 +613,7 @@ export default function TemplatesPage() {
                     template={previewTemplate}
                     text={previewText || undefined}
                     color={previewColor}
-                    scale={previewTemplate.renderer === 'canvas' ? 0.45 : 1}
+                    scale={previewTemplate.renderer === 'canvas' ? 0.45 : previewTemplate.renderer === 'react' ? 0.5 : 1}
                     autoPlay={isModalReady}
                     showDecorations={true}
                   />

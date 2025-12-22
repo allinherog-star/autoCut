@@ -1,0 +1,90 @@
+{
+    "id": "show-title-burst",
+    "name": "节目主标题爆炸",
+    "description": "《一见你就笑》风格节目主标题特效，漫画爆炸底板 + 逐字弹入动画 + 彩色粒子 + 笑脸装饰，适用于节目名称和片头标题",
+    "level": "advanced",
+    "tags": [
+        "variety",
+        "comedy",
+        "title",
+        "burst",
+        "cartoon",
+        "colorful",
+        "chinese"
+    ],
+    "category": "variety-comedy",
+    "language": "zh",
+    "textDefaults": {
+        "text": "一见你就笑",
+        "fontSizeRange": [80, 120],
+        "recommendLines": 1,
+        "fontFamily": [
+            "Zcool KuaiLe",
+            "Zcool QingKe HuangYou",
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#FFFFFF",
+            "width": 6
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(45, 27, 78, 0.4)",
+            "blur": 8,
+            "offsetX": 3,
+            "offsetY": 3
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "sunshine-laugh",
+            "name": "阳光欢笑",
+            "gradient": "linear-gradient(180deg, #FFE135 0%, #FF8C00 50%, #FF6B9D 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#2D1B4E",
+            "plateColor": "#FFE135",
+            "glowColor": "#FFE135"
+        },
+        {
+            "id": "candy-pop",
+            "name": "糖果派对",
+            "gradient": "linear-gradient(135deg, #FF6B9D 0%, #7C3AED 50%, #00D4FF 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#2D1B4E",
+            "plateColor": "#FF6B9D",
+            "glowColor": "#FF6B9D"
+        },
+        {
+            "id": "electric-joy",
+            "name": "电光欢乐",
+            "gradient": "linear-gradient(180deg, #00D4FF 0%, #7C3AED 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#1A0A2E",
+            "plateColor": "#00D4FF",
+            "glowColor": "#00D4FF"
+        },
+        {
+            "id": "lime-fresh",
+            "name": "青柠清新",
+            "gradient": "linear-gradient(180deg, #7CFC00 0%, #FFE135 100%)",
+            "strokeColor": "#FFFFFF",
+            "outerStrokeColor": "#1A4D00",
+            "plateColor": "#7CFC00",
+            "glowColor": "#7CFC00"
+        }
+    ],
+    "rendering": {
+        "aspectRatio": 3.2,
+        "heightRatio": 0.5,
+        "duration": 1.8,
+        "frameRate": 30
+    },
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "ShowTitleBurst"
+    }
+}
+

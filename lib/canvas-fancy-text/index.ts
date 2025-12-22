@@ -7,7 +7,7 @@ export * from './types'
 export * from './renderer'
 
 // 预设模板
-export { VARIETY_MAIN_TITLE_PRESET, createVarietyMainTitle } from '@/assets/fancy-text-presets/variety-main-title/variety-main-title.scene'
+
 
 
 

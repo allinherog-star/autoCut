@@ -1,0 +1,107 @@
+{
+    "id": "neon-pulse-swirl",
+    "name": "霓虹脉冲旋风",
+    "description": "震撼登场综艺花字效果，适用于【超绝重磅】【震撼来袭】【终极大招】等高能瞬间，霓虹涡旋 + 脉冲光环 + 闪电飞散 + 文字旋入",
+    "level": "advanced",
+    "tags": [
+        "variety",
+        "neon",
+        "pulse",
+        "swirl",
+        "dynamic",
+        "epic",
+        "emphasis",
+        "lightning"
+    ],
+    "category": "variety",
+    "language": "zh",
+    "textDefaults": {
+        "text": "超绝重磅",
+        "fontSizeRange": [
+            72,
+            120
+        ],
+        "recommendLines": 1,
+        "fontFamily": [
+            "Zcool KuaiLe",
+            "Zcool QingKe HuangYou",
+            "PingFang SC",
+            "Microsoft YaHei",
+            "sans-serif"
+        ],
+        "stroke": {
+            "enabled": true,
+            "color": "#00FFFF",
+            "width": 8
+        },
+        "shadow": {
+            "enabled": true,
+            "color": "rgba(0, 255, 255, 0.6)",
+            "blur": 30,
+            "offsetX": 0,
+            "offsetY": 5
+        }
+    },
+    "colorPresets": [
+        {
+            "id": "cyber-neon",
+            "name": "赛博霓虹",
+            "gradient": "linear-gradient(135deg, #00FFFF 0%, #FF00FF 50%, #FFFF00 100%)",
+            "strokeColor": "#FF00FF",
+            "outerStrokeColor": "#001144",
+            "glowColor": "#00FFFF",
+            "swirlColor": "#00FFFF",
+            "lightningColor": "#FFFF00"
+        },
+        {
+            "id": "fire-storm",
+            "name": "火焰风暴",
+            "gradient": "linear-gradient(180deg, #FFFF00 0%, #FF8800 40%, #FF0044 100%)",
+            "strokeColor": "#880000",
+            "outerStrokeColor": "#220000",
+            "glowColor": "#FF4400",
+            "swirlColor": "#FF8800",
+            "lightningColor": "#FFFF00"
+        },
+        {
+            "id": "aurora-pulse",
+            "name": "极光脉冲",
+            "gradient": "linear-gradient(135deg, #00FF88 0%, #00DDFF 50%, #8800FF 100%)",
+            "strokeColor": "#004466",
+            "outerStrokeColor": "#001122",
+            "glowColor": "#00FF88",
+            "swirlColor": "#00DDFF",
+            "lightningColor": "#00FF88"
+        },
+        {
+            "id": "electric-blue",
+            "name": "电光蓝焰",
+            "gradient": "linear-gradient(180deg, #FFFFFF 0%, #00CCFF 40%, #0066FF 100%)",
+            "strokeColor": "#003399",
+            "outerStrokeColor": "#001166",
+            "glowColor": "#00CCFF",
+            "swirlColor": "#0066FF",
+            "lightningColor": "#FFFFFF"
+        },
+        {
+            "id": "royal-purple",
+            "name": "皇家紫焰",
+            "gradient": "linear-gradient(180deg, #FFD4FF 0%, #CC66FF 40%, #6600CC 100%)",
+            "strokeColor": "#330066",
+            "outerStrokeColor": "#110022",
+            "glowColor": "#CC66FF",
+            "swirlColor": "#AA00FF",
+            "lightningColor": "#FFD4FF"
+        }
+    ],
+    "rendering": {
+        "aspectRatio": 2.8,
+        "heightRatio": 0.55,
+        "duration": 1.4,
+        "frameRate": 30
+    },
+    "compat": {
+        "renderer": "react-component",
+        "componentPath": "NeonPulseSwirl"
+    }
+}
