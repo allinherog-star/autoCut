@@ -19,6 +19,11 @@ import varietyTitleBounceMeta from './variety-title-bounce/variety-title-bounce.
 import varietyTitleBurstMeta from './variety-title-burst/variety-title-burst.meta.json'
 import wowEmphasisMeta from './wow-emphasis/wow-emphasis.meta.json'
 import explosiveLaughMeta from './explosive-laugh/explosive-laugh.meta.json'
+// 一见你就笑 - 软糖系列花字预设
+import candyMainTitleMeta from './candy-main-title/candy-main-title.meta.json'
+import candySegmentTitleMeta from './candy-segment-title/candy-segment-title.meta.json'
+import candyGuestNameMeta from './candy-guest-name/candy-guest-name.meta.json'
+import candyFunnyBurstMeta from './candy-funny-burst/candy-funny-burst.meta.json'
 
 // ============================================
 // 组件导入 (lazy)
@@ -36,6 +41,11 @@ export const PRESET_COMPONENTS = {
     'variety-title-bounce': null,
     'variety-title-burst': null,
     'explosive-laugh': () => import('./explosive-laugh/explosive-laugh.motion'),
+    // 一见你就笑 - 软糖系列花字预设
+    'candy-main-title': () => import('./candy-main-title/candy-main-title.motion'),
+    'candy-segment-title': () => import('./candy-segment-title/candy-segment-title.motion'),
+    'candy-guest-name': () => import('./candy-guest-name/candy-guest-name.motion'),
+    'candy-funny-burst': () => import('./candy-funny-burst/candy-funny-burst.motion'),
 } as const
 
 // ============================================
@@ -98,6 +108,11 @@ export const PRESET_REGISTRY: PresetEntry[] = [
     { meta: varietyTitleBurstMeta as PresetMeta, hasComponent: false },
     { meta: wowEmphasisMeta as PresetMeta, hasComponent: true },
     { meta: explosiveLaughMeta as PresetMeta, hasComponent: true },
+    // 一见你就笑 - 软糖系列花字预设
+    { meta: candyMainTitleMeta as PresetMeta, hasComponent: true },
+    { meta: candySegmentTitleMeta as PresetMeta, hasComponent: true },
+    { meta: candyGuestNameMeta as PresetMeta, hasComponent: true },
+    { meta: candyFunnyBurstMeta as PresetMeta, hasComponent: true },
 ]
 
 // 按 ID 查找预设
