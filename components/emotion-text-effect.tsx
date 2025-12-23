@@ -3161,13 +3161,13 @@ const Character = memo(function Character({ char, index, preset, scale, totalCha
 const Decoration = memo(function Decoration({ preset, textLength }: DecorationProps) {
   const { decoration } = preset
   
-  if (!decoration) return null
-
-  const emojis = decoration.items.length > 0 
+  const emojis = decoration?.items.length > 0 
     ? decoration.items 
     : DECORATION_EMOJIS[preset.emotion].slice(0, 6)
 
   const decorationElements = useMemo(() => {
+    if (!decoration) return []
+    
     return emojis.map((emoji, i) => {
       let x = 0, y = 0
       const spread = textLength * 14 + 80
@@ -3201,7 +3201,9 @@ const Decoration = memo(function Decoration({ preset, textLength }: DecorationPr
         rotation: randomInRange(-25, 25),
       }
     })
-  }, [emojis, decoration.position, textLength])
+  }, [emojis, decoration?.position, textLength])
+  
+  if (!decoration) return null
 
   return (
     <>

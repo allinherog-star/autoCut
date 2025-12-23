@@ -667,6 +667,63 @@ export function FancyTextRenderer({
   className = '',
   onAnimationComplete,
 }: FancyTextRendererProps) {
+  // All hooks must be called before any return statements
+  const [isVisible, setIsVisible] = useState(autoPlay)
+  const [textBounds, setTextBounds] = useState({ width: 0, height: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+  
+  const displayText = text || template.globalParams.text
+  const { globalParams, perCharacter } = template
+  
+  // 入场动画
+  const entranceVariants = useMemo(
+    () => getEntranceVariants(
+      globalParams.animation.entrance,
+      globalParams.animation.entranceDuration,
+      globalParams.animation.entranceEasing,
+      globalParams.animation.entranceDelay
+    ),
+    [globalParams.animation]
+  )
+
+  // 循环动画
+  const loopVariants = useMemo(
+    () => getLoopVariants(globalParams.animation.loop, globalParams.animation.loopDuration),
+    [globalParams.animation.loop, globalParams.animation.loopDuration]
+  )
+
+  // 重播功能
+  const replay = useCallback(() => {
+    setIsVisible(false)
+    requestAnimationFrame(() => {
+      setIsVisible(true)
+    })
+  }, [])
+
+  // 监听 autoPlay 变化
+  useEffect(() => {
+    if (autoPlay) {
+      setIsVisible(true)
+    }
+  }, [autoPlay])
+
+  // 测量文字尺寸
+  useEffect(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      setTextBounds({ width: rect.width, height: rect.height })
+    }
+  }, [displayText, scale])
+
+  // 暴露重播方法
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).__fancyTextReplay) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__fancyTextReplay[template.id] = replay
+    }
+  }, [replay, template.id])
+
   // Canvas Fancy Text 渲染逻辑 (新版)
   if (template.compat?.renderer === 'canvas-fancy-text' && template.id) {
     return (
@@ -706,29 +763,6 @@ export function FancyTextRenderer({
     )
   }
 
-  const [isVisible, setIsVisible] = useState(autoPlay)
-
-  // 监听 autoPlay 变化
-  useEffect(() => {
-    if (autoPlay) {
-      setIsVisible(true)
-    }
-  }, [autoPlay])
-
-  const [textBounds, setTextBounds] = useState({ width: 0, height: 0 })
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const displayText = text || template.globalParams.text
-  const { globalParams, perCharacter } = template
-
-  // 测量文字尺寸
-  useEffect(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      setTextBounds({ width: rect.width, height: rect.height })
-    }
-  }, [displayText, scale])
-
   // 整体样式
   const containerStyle: React.CSSProperties = {
     transform: `rotate(${globalParams.rotation}deg) skewX(${globalParams.skewX}deg) skewY(${globalParams.skewY}deg)`,
@@ -748,38 +782,6 @@ export function FancyTextRenderer({
     WebkitTextStroke: getStrokeStyle(globalParams),
     whiteSpace: 'nowrap',
   }
-
-  // 入场动画
-  const entranceVariants = useMemo(
-    () => getEntranceVariants(
-      globalParams.animation.entrance,
-      globalParams.animation.entranceDuration,
-      globalParams.animation.entranceEasing,
-      globalParams.animation.entranceDelay
-    ),
-    [globalParams.animation]
-  )
-
-  // 循环动画
-  const loopVariants = useMemo(
-    () => getLoopVariants(globalParams.animation.loop, globalParams.animation.loopDuration),
-    [globalParams.animation.loop, globalParams.animation.loopDuration]
-  )
-
-  // 重播功能
-  const replay = useCallback(() => {
-    setIsVisible(false)
-    requestAnimationFrame(() => {
-      setIsVisible(true)
-    })
-  }, [])
-
-  // 暴露重播方法
-  useEffect(() => {
-    if ((window as any).__fancyTextReplay) {
-      (window as any).__fancyTextReplay[template.id] = replay
-    }
-  }, [replay, template.id])
 
   return (
     <div

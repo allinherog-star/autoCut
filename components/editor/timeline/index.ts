@@ -9,3 +9,4 @@ export { TimelineTrack } from './timeline-track';
 export { TimelineClip } from './timeline-clip';
 export { TimelinePlayhead } from './timeline-playhead';
 export { TimelineControls } from './timeline-controls';
+export { TimelineViewer } from './timeline-viewer';

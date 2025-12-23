@@ -1,36 +1,221 @@
 'use client'
 
 /**
- * 剪辑微调页面 - 集成新时间轴编辑器
- * Edit Page with Integrated Timeline Editor
+ * 剪辑微调页面 - VEIR 只读时间轴查看
+ * Edit Page with Read-Only Timeline Viewer
+ * 
+ * 注意：此页面不使用 layout 的底部操作栏，而是将时间轴直接置于底部
  */
 
-import { useEffect, useCallback, useState } from 'react'
-import { Sparkles, FolderOpen, Video, Music, Image as ImageIcon } from 'lucide-react'
-import { Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
-import NextImage from 'next/image'
+import { useEffect, useCallback, useRef } from 'react'
+import { Video } from 'lucide-react'
 import { useEditor } from '../layout'
 
-// 新组件导入
-import { AssetUploader } from '@/components/editor/asset-uploader'
-import { AssetList } from '@/components/editor/asset-list'
-import { TimelineEditor } from '@/components/editor/timeline'
+// 时间轴组件导入
+import { TimelineViewer } from '@/components/editor/timeline'
 import { useTimelineStore } from '@/lib/timeline/store'
-import type { Asset, VideoAsset, AudioAsset, ImageAsset } from '@/lib/assets'
-import { createClipFromAsset } from '@/lib/timeline/veir-converter'
-import type { TrackType } from '@/lib/veir/types'
+import type { TimelineData } from '@/lib/timeline/types'
+
+// ============================================
+// 测试数据 - 模拟真实的视频编辑场景
+// ============================================
+const TEST_TIMELINE_DATA: TimelineData = {
+  duration: 60,
+  tracks: [
+    // 视频轨道 1 - 主视频
+    {
+      id: 'track_video_1',
+      type: 'video',
+      layer: 0,
+      clips: [
+        {
+          id: 'clip_video_1',
+          asset: '开场片头.mp4',
+          time: { start: 0, end: 5 },
+        },
+        {
+          id: 'clip_video_2',
+          asset: '主视频内容.mp4',
+          time: { start: 5, end: 35 },
+        },
+        {
+          id: 'clip_video_3',
+          asset: '精彩片段.mp4',
+          time: { start: 35, end: 50 },
+        },
+        {
+          id: 'clip_video_4',
+          asset: '结尾画面.mp4',
+          time: { start: 50, end: 58 },
+        },
+      ],
+    },
+    // 视频轨道 2 - 画中画/叠加素材
+    {
+      id: 'track_video_2',
+      type: 'video',
+      layer: 1,
+      clips: [
+        {
+          id: 'clip_video_pip_1',
+          asset: '反应镜头.mp4',
+          time: { start: 12, end: 18 },
+        },
+        {
+          id: 'clip_video_pip_2',
+          asset: 'B-Roll素材.mp4',
+          time: { start: 28, end: 34 },
+        },
+      ],
+    },
+    // 文字轨道 - 字幕和标题
+    {
+      id: 'track_text_1',
+      type: 'text',
+      layer: 2,
+      clips: [
+        {
+          id: 'clip_text_1',
+          asset: '片头标题',
+          time: { start: 1, end: 4 },
+        },
+        {
+          id: 'clip_text_2',
+          asset: '第一部分字幕',
+          time: { start: 8, end: 15 },
+        },
+        {
+          id: 'clip_text_3',
+          asset: '重点提示文字',
+          time: { start: 20, end: 25 },
+        },
+        {
+          id: 'clip_text_4',
+          asset: '精彩时刻',
+          time: { start: 36, end: 42 },
+        },
+        {
+          id: 'clip_text_5',
+          asset: '订阅关注',
+          time: { start: 52, end: 57 },
+        },
+      ],
+    },
+    // 贴纸/图片轨道
+    {
+      id: 'track_pip_1',
+      type: 'pip',
+      layer: 3,
+      clips: [
+        {
+          id: 'clip_sticker_1',
+          asset: '表情包.gif',
+          time: { start: 10, end: 14 },
+        },
+        {
+          id: 'clip_sticker_2',
+          asset: 'Logo水印.png',
+          time: { start: 0, end: 58 },
+        },
+        {
+          id: 'clip_sticker_3',
+          asset: '动态贴纸.webm',
+          time: { start: 38, end: 45 },
+        },
+      ],
+    },
+    // 音频轨道 1 - 背景音乐
+    {
+      id: 'track_audio_1',
+      type: 'audio',
+      layer: 4,
+      clips: [
+        {
+          id: 'clip_audio_bgm',
+          asset: '背景音乐.mp3',
+          time: { start: 0, end: 58 },
+        },
+      ],
+    },
+    // 音频轨道 2 - 音效
+    {
+      id: 'track_audio_2',
+      type: 'audio',
+      layer: 5,
+      clips: [
+        {
+          id: 'clip_audio_sfx_1',
+          asset: '转场音效.wav',
+          time: { start: 4.5, end: 5.5 },
+        },
+        {
+          id: 'clip_audio_sfx_2',
+          asset: '强调音效.wav',
+          time: { start: 19, end: 20 },
+        },
+        {
+          id: 'clip_audio_sfx_3',
+          asset: '笑声音效.wav',
+          time: { start: 36, end: 38 },
+        },
+        {
+          id: 'clip_audio_sfx_4',
+          asset: '订阅提示音.wav',
+          time: { start: 52, end: 53 },
+        },
+      ],
+    },
+  ],
+}
 
 // ============================================
 // 剪辑微调页面
 // ============================================
 
 export default function EditPage() {
-  const { goToNextStep, markStepCompleted, currentStep, setBottomBar } = useEditor()
-  const [assetFilter, setAssetFilter] = useState<'all' | 'video' | 'audio' | 'image'>('all')
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar } = useEditor()
 
   // 时间轴 store
-  const { data, playback, addTrack, addClip } = useTimelineStore()
+  const { data, playback, loadData, _tick } = useTimelineStore()
+  
+  // 播放动画引用
+  const animationRef = useRef<number>()
+  const lastTimeRef = useRef<number>(0)
+
+  // 加载测试数据
+  useEffect(() => {
+    loadData(TEST_TIMELINE_DATA)
+  }, [loadData])
+
+  // 播放动画循环
+  useEffect(() => {
+    if (!playback.isPlaying) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      return
+    }
+
+    const animate = (time: number) => {
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = time
+      }
+      const deltaTime = (time - lastTimeRef.current) / 1000
+      lastTimeRef.current = time
+
+      _tick(deltaTime)
+      animationRef.current = requestAnimationFrame(animate)
+    }
+
+    lastTimeRef.current = 0
+    animationRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [playback.isPlaying, _tick])
 
   // 统计信息
   const trackCount = data.tracks.length
@@ -49,225 +234,64 @@ export default function EditPage() {
     goToNextStep()
   }, [markStepCompleted, currentStep, goToNextStep])
 
-  // 更新底部操作栏
+  // 隐藏 layout 的底部操作栏，因为我们自己控制布局
   useEffect(() => {
-    setBottomBar({
-      show: true,
-      icon: <Sparkles className="w-5 h-5 text-amber-400" />,
-      title: '剪辑就绪',
-      description: `总时长 ${formatTime(playback.duration)} · ${trackCount} 轨道 · ${clipCount} 片段`,
-      primaryButton: {
-        text: '完成编辑，导出视频',
-        onClick: handleFinishEdit,
-      },
-    })
-  }, [playback.duration, trackCount, clipCount, setBottomBar, handleFinishEdit])
-
-  // 处理素材上传完成
-  const handleAssetsUploaded = useCallback((assets: Asset[]) => {
-    // 可选：自动添加到时间轴
-    console.log('Uploaded assets:', assets)
-  }, [])
-
-  // 处理素材双击（添加到时间轴）
-  const handleAssetDoubleClick = useCallback((asset: Asset) => {
-    // 确定目标轨道类型
-    let trackType: TrackType
-    switch (asset.type) {
-      case 'video':
-        trackType = 'video'
-        break
-      case 'audio':
-        trackType = 'audio'
-        break
-      case 'image':
-        trackType = 'pip'
-        break
-      default:
-        return
-    }
-
-    // 查找匹配类型的轨道，如果没有则创建
-    let targetTrack = data.tracks.find(t => t.type === trackType)
-    if (!targetTrack) {
-      targetTrack = addTrack(trackType)
-    }
-
-    // 计算素材时长
-    let duration = 5 // 默认 5 秒（图片）
-    if (asset.type === 'video') {
-      duration = (asset as VideoAsset).metadata?.duration || 10
-    } else if (asset.type === 'audio') {
-      duration = (asset as AudioAsset).metadata?.duration || 10
-    }
-
-    // 计算放置位置（追加到轨道末尾）
-    const lastClip = targetTrack.clips[targetTrack.clips.length - 1]
-    const startTime = lastClip ? lastClip.time.end : 0
-
-    // 创建并添加 clip
-    const clip = createClipFromAsset(asset.id, startTime, duration)
-    addClip(targetTrack.id, clip)
-  }, [data.tracks, addTrack, addClip])
+    hideBottomBar()
+    return () => hideBottomBar()
+  }, [hideBottomBar])
 
   return (
-    <div className="flex-1 flex min-h-0 overflow-hidden bg-surface-950">
-      {/* 左侧素材库面板 */}
-      <aside className="w-72 border-r border-surface-800 bg-surface-900/50 flex flex-col">
-        {/* 面板标题 */}
-        <div className="h-12 px-4 flex items-center justify-between border-b border-surface-800">
-          <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-amber-400" />
-            <span className="font-medium text-surface-100">素材库</span>
-          </div>
-          <Badge variant="outline" size="sm">本地</Badge>
-        </div>
-
-        {/* 上传区域 */}
-        <div className="p-3 border-b border-surface-800">
-          <AssetUploader
-            onUpload={handleAssetsUploaded}
-            multiple={true}
-            className="min-h-[80px]"
-          />
-        </div>
-
-        {/* 过滤标签 */}
-        <Tabs value={assetFilter} onValueChange={(v) => setAssetFilter(v as 'all' | 'video' | 'audio' | 'image')} className="flex-1 flex flex-col">
-          <TabsList className="px-3 pt-2 justify-start gap-1 bg-transparent">
-            <TabsTrigger value="all" className="text-xs px-2 py-1">
-              全部
-            </TabsTrigger>
-            <TabsTrigger value="video" className="text-xs px-2 py-1">
-              <Video className="w-3 h-3 mr-1" />
-              视频
-            </TabsTrigger>
-            <TabsTrigger value="audio" className="text-xs px-2 py-1">
-              <Music className="w-3 h-3 mr-1" />
-              音频
-            </TabsTrigger>
-            <TabsTrigger value="image" className="text-xs px-2 py-1">
-              <ImageIcon className="w-3 h-3 mr-1" />
-              图片
-            </TabsTrigger>
-          </TabsList>
-
-          {/* 素材列表 */}
-          <TabsContent value={assetFilter} className="flex-1 overflow-y-auto mt-0">
-            <AssetList
-              filter={assetFilter === 'all' ? undefined : assetFilter}
-              selectedId={selectedAsset?.id}
-              onSelect={setSelectedAsset}
-              onDoubleClick={handleAssetDoubleClick}
-              className="min-h-full"
-            />
-          </TabsContent>
-        </Tabs>
-
-        {/* 选中素材信息 */}
-        {selectedAsset && (
-          <div className="p-3 border-t border-surface-800 bg-surface-800/50">
-            <p className="text-sm font-medium text-surface-100 truncate">
-              {selectedAsset.name}
-            </p>
-            <p className="text-xs text-surface-400 mt-1">
-              双击添加到时间轴
-            </p>
-          </div>
-        )}
-      </aside>
-
-      {/* 主内容区 - 预览 + 时间轴 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 预览区域 */}
-        <div className="h-64 bg-black flex items-center justify-center border-b border-surface-800">
-          <div className="relative w-[480px] h-[270px] bg-surface-900 rounded-lg overflow-hidden">
-            {/* 模拟视频预览 */}
-            <div className="absolute inset-0 bg-gradient-to-br from-surface-800 to-surface-900 flex items-center justify-center">
-              <div className="text-center">
-                <Video className="w-16 h-16 text-surface-600 mx-auto mb-2" />
-                <p className="text-surface-500 text-sm">视频预览</p>
-                <p className="text-surface-600 text-xs mt-1">
-                  {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
-                </p>
-              </div>
+    <div className="absolute inset-0 flex flex-col bg-[#0f0f12]">
+      {/* 预览区域 - 填满上方空间 */}
+      <div className="flex-1 bg-black flex items-center justify-center min-h-0">
+        <div className="relative w-[640px] h-[360px] bg-[#1a1a1e] rounded-lg overflow-hidden shadow-2xl">
+          {/* 模拟视频预览 */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1e1e22] to-[#141418] flex items-center justify-center">
+            <div className="text-center">
+              <Video className="w-20 h-20 text-[#333] mx-auto mb-3" />
+              <p className="text-[#666] text-sm">视频预览</p>
+              <p className="text-[#444] text-xs mt-2 font-mono">
+                {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
+              </p>
             </div>
           </div>
+          
+          {/* 播放进度条 */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#222]">
+            <div 
+              className="h-full bg-indigo-500 transition-all duration-100"
+              style={{ width: `${(playback.currentTime / playback.duration) * 100}%` }}
+            />
+          </div>
         </div>
-
-        {/* 时间轴编辑器 */}
-        <TimelineEditor className="flex-1" />
       </div>
 
-      {/* 右侧属性面板（可选） */}
-      {selectedAsset && (
-        <aside className="w-64 border-l border-surface-800 bg-surface-900/50 flex flex-col">
-          <div className="h-12 px-4 flex items-center border-b border-surface-800">
-            <span className="font-medium text-surface-100">属性</span>
-          </div>
-          <div className="flex-1 p-4 overflow-y-auto">
-            <div className="space-y-4">
-              {/* 缩略图 */}
-              {selectedAsset.thumbnailUrl && (
-                <div className="aspect-video bg-surface-800 rounded-lg overflow-hidden relative">
-                  <NextImage
-                    src={selectedAsset.thumbnailUrl}
-                    alt={selectedAsset.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
+      {/* 只读时间轴查看器 - 固定在底部 */}
+      <TimelineViewer className="h-[280px] flex-shrink-0" />
 
-              {/* 基础信息 */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-400">名称</span>
-                  <span className="text-surface-100 truncate ml-2 max-w-[120px]">
-                    {selectedAsset.name}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-400">类型</span>
-                  <Badge variant="secondary" size="sm">
-                    {selectedAsset.type}
-                  </Badge>
-                </div>
-                {(selectedAsset.type === 'video' || selectedAsset.type === 'audio') && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-surface-400">时长</span>
-                    <span className="text-surface-100">
-                      {formatTime(
-                        selectedAsset.type === 'video'
-                          ? (selectedAsset as VideoAsset).metadata?.duration || 0
-                          : (selectedAsset as AudioAsset).metadata?.duration || 0
-                      )}
-                    </span>
-                  </div>
-                )}
-                {(selectedAsset.type === 'video' || selectedAsset.type === 'image') && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-surface-400">分辨率</span>
-                    <span className="text-surface-100">
-                      {selectedAsset.type === 'video'
-                        ? `${(selectedAsset as VideoAsset).metadata?.width}×${(selectedAsset as VideoAsset).metadata?.height}`
-                        : `${(selectedAsset as ImageAsset).metadata?.width}×${(selectedAsset as ImageAsset).metadata?.height}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* 添加到时间轴按钮 */}
-              <Button
-                className="w-full"
-                onClick={() => handleAssetDoubleClick(selectedAsset)}
-              >
-                添加到时间轴
-              </Button>
-            </div>
+      {/* 底部操作栏 */}
+      <div className="h-16 px-6 flex items-center justify-between bg-[#1a1a1e] border-t border-[#2a2a2e] flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
+            <span className="text-amber-400">✨</span>
           </div>
-        </aside>
-      )}
+          <div>
+            <p className="font-medium text-[#eee]">剪辑就绪</p>
+            <p className="text-sm text-[#888]">
+              总时长 {formatTime(playback.duration)} · {trackCount} 轨道 · {clipCount} 片段
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleFinishEdit}
+          className="px-6 py-2.5 bg-amber-400 hover:bg-amber-500 text-[#111] font-medium rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-amber-400/20"
+        >
+          完成编辑，导出视频
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }
