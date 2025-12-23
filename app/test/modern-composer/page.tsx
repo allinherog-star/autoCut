@@ -357,19 +357,26 @@ export default function ModernComposerPreviewPage() {
         return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
       };
 
-      // 线性插值关键帧序列
-      const interpolateKeyframes = (keyframes: number[], t: number): number => {
-        if (t <= 0) return keyframes[0];
-        if (t >= 1) return keyframes[keyframes.length - 1];
+      // 关键帧插值函数 - 模拟 Anime.js 的关键帧行为
+      // Anime.js 对关键帧的处理方式：
+      // 1. 用线性时间来确定当前在哪两个关键帧之间
+      // 2. 对每个关键帧段内的过渡应用缓动函数
+      const interpolateKeyframes = (keyframes: number[], linearProgress: number): number => {
+        if (linearProgress <= 0) return keyframes[0];
+        if (linearProgress >= 1) return keyframes[keyframes.length - 1];
         
         const segments = keyframes.length - 1;
-        const segmentIndex = Math.floor(t * segments);
-        const segmentProgress = (t * segments) - segmentIndex;
+        // 使用线性进度来确定当前在哪个关键帧段
+        const segmentIndex = Math.floor(linearProgress * segments);
+        // 计算当前段内的进度
+        const segmentProgress = (linearProgress * segments) - segmentIndex;
+        // 对段内进度应用缓动 - 与 Anime.js 一致
+        const easedSegmentProgress = easeOutExpo(segmentProgress);
         
         const start = keyframes[segmentIndex];
         const end = keyframes[Math.min(segmentIndex + 1, keyframes.length - 1)];
         
-        return start + (end - start) * segmentProgress;
+        return start + (end - start) * easedSegmentProgress;
       };
 
       const result = await composeFromCanvas({
@@ -508,12 +515,13 @@ export default function ModernComposerPreviewPage() {
           let subtitleState = { ...subtitleInitial };
 
           if (isKeyframeAnim) {
-            // 关键帧动画 - 直接在关键帧之间插值
+            // 关键帧动画 - 使用线性进度插值（与 Anime.js 行为一致）
+            // Anime.js 使用线性时间来分布关键帧，然后对每个段应用缓动
             for (const [prop, keyframes] of Object.entries(titleKeyframes)) {
-              (titleState as any)[prop] = interpolateKeyframes(keyframes, titleEased);
+              (titleState as any)[prop] = interpolateKeyframes(keyframes, titleAnimProgress);
             }
             for (const [prop, keyframes] of Object.entries(subtitleKeyframes)) {
-              (subtitleState as any)[prop] = interpolateKeyframes(keyframes, subtitleEased);
+              (subtitleState as any)[prop] = interpolateKeyframes(keyframes, subtitleAnimProgress);
             }
           } else {
             // 普通过渡动画 - 从初始状态插值到目标状态
