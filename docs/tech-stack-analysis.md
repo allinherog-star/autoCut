@@ -12,7 +12,7 @@
 | Canvas 渲染 | 原生 Canvas 2D API | **Fabric.js** | ⚠️ 需重构 |
 | 动画引擎 | 自定义 calculateAnimationState | **Anime.js** | ⚠️ 需重构 |
 | 视频编码 | MediaRecorder API | **WebCodecs** | ⚠️ 需重构 |
-| Muxer | 无（MediaRecorder 内置） | **mp4-muxer / MP4Box.js** | ⚠️ 需重构 |
+| Muxer | 无（MediaRecorder 内置） | **MediaBunny** | ⚠️ 需重构 |
 | 素材库 | lucide-react | **iconfont.cn / icons8.com** | ⚠️ 需扩展 |
 
 ---
@@ -200,60 +200,49 @@ recorder.stop();
 - ❌ 浏览器兼容性差异大
 - ❌ 无硬件加速控制
 
-#### 最佳方案: WebCodecs + mp4-muxer
+#### 最佳方案: WebCodecs + MediaBunny
 
 ```typescript
-import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { Writer, VideoEncoder, AudioEncoder } from 'mediabunny';
 
-// 创建 MP4 Muxer
-const muxer = new Muxer({
-  target: new ArrayBufferTarget(),
-  video: {
-    codec: 'avc', // H.264
-    width: 1920,
-    height: 1080
-  },
-  audio: {
-    codec: 'aac',
-    sampleRate: 48000,
-    numberOfChannels: 2
-  }
+// 创建 MediaBunny Writer
+const writer = new Writer({
+  container: 'mp4',
+  width: 1920,
+  height: 1080,
+  frameRate: 30,
 });
 
-// WebCodecs 编码器
-const videoEncoder = new VideoEncoder({
-  output: (chunk, meta) => {
-    muxer.addVideoChunk(chunk, meta);
-  },
-  error: (e) => console.error(e)
-});
-
-await videoEncoder.configure({
-  codec: 'avc1.640028', // H.264 High Profile
+// 添加视频轨道
+const videoTrack = writer.addVideoTrack({
+  codec: 'h264', // 或 'hevc', 'av1'
   width: 1920,
   height: 1080,
   bitrate: 8_000_000,
-  framerate: 30,
   hardwareAcceleration: 'prefer-hardware',
-  latencyMode: 'quality'
 });
 
-// 帧级精确编码
+// 添加音频轨道
+const audioTrack = writer.addAudioTrack({
+  codec: 'aac',
+  sampleRate: 48000,
+  channels: 2,
+  bitrate: 192_000,
+});
+
+// 帧级精确编码（支持 Canvas/ImageBitmap/VideoFrame）
 for (let frame = 0; frame < totalFrames; frame++) {
-  const videoFrame = new VideoFrame(canvas, {
-    timestamp: frame * (1_000_000 / fps), // 微秒时间戳
-    duration: 1_000_000 / fps
-  });
+  const timestamp = frame * (1_000_000 / fps); // 微秒
   
-  videoEncoder.encode(videoFrame, { keyFrame: frame % 30 === 0 });
-  videoFrame.close();
+  // 直接从 Canvas 编码帧
+  await videoTrack.encodeFrame(canvas, {
+    timestamp,
+    keyFrame: frame % 30 === 0,
+  });
 }
 
-await videoEncoder.flush();
-muxer.finalize();
-
-const { buffer } = muxer.target;
-const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
+// 生成 MP4 文件
+const mp4Blob = await writer.finalize();
 ```
 
 **优势:**
@@ -325,8 +314,8 @@ class AssetLibraryService {
 │            Video Compositor (WebCodecs)              │
 │   (VideoEncoder, VideoDecoder, AudioEncoder)         │
 ├─────────────────────────────────────────────────────┤
-│              Muxer (mp4-muxer)                       │
-│   (MP4/WebM Container, Audio/Video Sync)             │
+│              Muxer (MediaBunny)                      │
+│   (MP4/WebM Container, Audio/Video Sync, I/O)        │
 ├─────────────────────────────────────────────────────┤
 │              Asset Library Service                   │
 │   (iconfont.cn, icons8.com, Local Assets)            │
@@ -354,11 +343,13 @@ export class WebCodecsEncoder {
   async flush(): Promise<Blob>;
 }
 
-// MP4Muxer - 容器封装
-export class MP4Muxer {
-  addVideoChunk(chunk: EncodedVideoChunk): void;
-  addAudioChunk(chunk: EncodedAudioChunk): void;
-  finalize(): ArrayBuffer;
+// MediaBunnyWriter - 容器封装 (基于 MediaBunny)
+export class MediaBunnyWriter {
+  addVideoTrack(config: VideoTrackConfig): VideoTrack;
+  addAudioTrack(config: AudioTrackConfig): AudioTrack;
+  encodeVideoFrame(source: CanvasSource, options: FrameOptions): Promise<void>;
+  encodeAudioSamples(samples: Float32Array, timestamp: number): Promise<void>;
+  finalize(): Promise<Blob>;
 }
 ```
 
@@ -366,30 +357,35 @@ export class MP4Muxer {
 
 ## 4. 迁移计划
 
-### Phase 1: 基础设施 (Week 1)
-- [ ] 安装 fabric, animejs, mp4-muxer 依赖
-- [ ] 创建新的类型定义
-- [ ] 设置 Feature Flag 切换
+### Phase 1: 基础设施 ✅ 已完成
+- [x] 安装 fabric, animejs, mediabunny 依赖
+- [x] 创建新的类型定义
+- [x] 设置模块化架构
 
-### Phase 2: Canvas 引擎 (Week 2)
-- [ ] 创建 FabricComposer 类
-- [ ] 迁移 Image/Text/Video 渲染
-- [ ] 集成 SVG 素材支持
+### Phase 2: Canvas 引擎 ✅ 已完成
+- [x] 创建 FabricEngine 类 (`lib/modern-composer/fabric/`)
+- [x] 实现 Image/Text/Video/SVG 渲染
+- [x] 集成对象模型和滤镜支持
 
-### Phase 3: 动画引擎 (Week 2)
-- [ ] 创建 AnimeMotionEngine 类
-- [ ] 实现 VEIR Motion 到 Anime.js 转换
-- [ ] 迁移所有动画效果
+### Phase 3: 动画引擎 ✅ 已完成
+- [x] 创建 AnimeEngine 类 (`lib/modern-composer/anime/`)
+- [x] 实现关键帧动画和时间轴
+- [x] 预设动画模板 (20+ 动画效果)
 
-### Phase 4: 视频合成 (Week 3)
-- [ ] 创建 WebCodecsVideoComposer 类
-- [ ] 实现 MP4 输出
-- [ ] 音视频同步
+### Phase 4: 视频合成 ✅ 已完成
+- [x] 创建 MediaBunnyComposer 类 (`lib/modern-composer/webcodecs/`)
+- [x] 实现 MP4/WebM 输出
+- [x] 硬件加速编码支持
 
-### Phase 5: 素材库 (Week 3)
-- [ ] 创建 AssetLibraryService
-- [ ] 集成 iconfont.cn API
-- [ ] 集成 icons8.com API
+### Phase 5: 素材库 ✅ 已完成
+- [x] 创建 AssetLibraryService (`lib/modern-composer/assets/`)
+- [x] iconfont.cn API 接口预留
+- [x] icons8.com API 接口预留
+
+### Phase 6: 统一入口 ✅ 已完成
+- [x] 创建 ModernComposer 主类 (`lib/modern-composer/index.ts`)
+- [x] VEIR DSL 集成
+- [x] 完整合成管线
 
 ---
 
@@ -411,11 +407,12 @@ export class MP4Muxer {
 
 1. **Canvas 渲染**: 需要从原生 API 迁移到 Fabric.js 以获得更好的对象管理
 2. **动画系统**: 需要从自定义实现迁移到 Anime.js 以获得专业级动画能力
-3. **视频合成**: 必须从 MediaRecorder 迁移到 WebCodecs + mp4-muxer 以支持 MP4 输出
+3. **视频合成**: 必须从 MediaRecorder 迁移到 WebCodecs + MediaBunny 以支持 MP4 输出
 
 建议立即启动重构工作，优先级：
 1. **P0**: WebCodecs + Muxer (核心功能 - MP4 输出)
 2. **P1**: Anime.js (动画质量提升)
 3. **P2**: Fabric.js (开发效率提升)
 4. **P3**: 素材库 (内容丰富度)
+
 
