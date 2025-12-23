@@ -1,6 +1,6 @@
 /**
  * VEIR 合成器模块
- * 基于 VEIR DSL 的视频合成导出系统
+ * 基于 ModernComposer 新架构的视频合成导出系统
  */
 
 // 类型导出
@@ -8,9 +8,11 @@ export * from './types';
 
 // 转换器导出
 export {
-  convertVEIRToComposer,
+  convertVEIRToModern,
   validateVEIRForComposition,
   getVEIRStats,
+  type ConvertedAsset,
+  type ConvertedProject,
 } from './converter';
 
 // 合成器导出
@@ -19,6 +21,7 @@ export {
   composeVEIR,
   downloadComposition,
   createPreviewElement,
+  releaseComposition,
 } from './composer';
 
 // 运动关键帧导出

@@ -1,16 +1,10 @@
 /**
  * VEIR 合成器类型定义
- * 用于将 VEIR DSL 转换为可执行的视频合成配置
+ * 基于 ModernComposer 新架构
  */
 
 import type { VEIRProject, Clip, Track, Asset as VEIRAsset } from '../types';
-import type { 
-  ComposerProject, 
-  Asset, 
-  AnimationEffect, 
-  FilterEffect, 
-  TransitionEffect 
-} from '@/lib/video-composer/types';
+import type { AnimationState, PresetAnimationType } from '@/lib/modern-composer';
 
 // ============================================
 // 合成器配置
@@ -30,6 +24,8 @@ export interface ExportConfig {
   includeAudio?: boolean;
   /** 输出文件名 */
   filename?: string;
+  /** 视频质量 */
+  quality?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -54,28 +50,73 @@ export const defaultAssetResolver: AssetResolver = {
 };
 
 // ============================================
-// 表达式映射
+// 动画效果映射
 // ============================================
+
+/**
+ * 动画效果类型
+ */
+export type AnimationEffectType = 
+  | 'fade'
+  | 'fade-in'
+  | 'fade-out'
+  | 'slide-up'
+  | 'slide-down'
+  | 'slide-left'
+  | 'slide-right'
+  | 'zoom'
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'bounce'
+  | 'bounce-in'
+  | 'bounce-out'
+  | 'shake'
+  | 'pulse'
+  | 'glow'
+  | 'rotate-in'
+  | 'rotate-out';
 
 /**
  * 行为到动画效果的映射
  */
-export const behaviorToAnimationMap: Record<string, AnimationEffect['type']> = {
-  'fade-in': 'fade',
-  'fade-out': 'fade',
-  'bounce': 'bounce',
+export const behaviorToAnimationMap: Record<string, PresetAnimationType> = {
+  'fade-in': 'fade-in',
+  'fade-out': 'fade-out',
+  'bounce': 'bounce-in',
   'slide-up': 'slide-up',
   'slide-down': 'slide-down',
   'shake': 'shake',
   'pulse': 'pulse',
-  'zoom': 'zoom',
-  'glow': 'glow',
+  'zoom': 'zoom-in',
+  'zoom-in': 'zoom-in',
+  'zoom-out': 'zoom-out',
 };
+
+/**
+ * 滤镜效果类型
+ */
+export type FilterEffectType = 
+  | 'brightness'
+  | 'contrast'
+  | 'saturate'
+  | 'grayscale'
+  | 'sepia'
+  | 'hue-rotate'
+  | 'blur'
+  | 'invert';
+
+/**
+ * 滤镜效果
+ */
+export interface FilterEffect {
+  type: FilterEffectType;
+  value: number;
+}
 
 /**
  * 滤镜名称到滤镜效果的映射
  */
-export const filterNameMap: Record<string, FilterEffect['type']> = {
+export const filterNameMap: Record<string, FilterEffectType> = {
   'vintage': 'sepia',
   'warm': 'saturate',
   'cool': 'hue-rotate',
@@ -269,8 +310,5 @@ export type CompositionProgressCallback = (
   progress: number,
   message: string
 ) => void;
-
-
-
 
 

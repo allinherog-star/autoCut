@@ -701,7 +701,8 @@ export default function VEIRComposerTestPage() {
                   <li>支持多种动画效果（弹跳、滑入、缩放、渐变等）</li>
                   <li>支持文字样式预设（综艺、信息、科技、强调等）</li>
                   <li>支持视频滤镜（暖色调、复古、提亮等）</li>
-                  <li>基于 Canvas + MediaRecorder 实现浏览器端渲染</li>
+                  <li><strong className="text-green-400">新架构：</strong>基于 Fabric.js + Anime.js + MediaBunny(WebCodecs)</li>
+                  <li><strong className="text-blue-400">输出格式：</strong>支持 MP4/WebM，硬件加速编码</li>
                 </ul>
                 <p className="text-gray-500 text-xs mt-4">
                   ⚠️ 注意：首次合成可能需要较长时间加载资源，请耐心等待。

@@ -1,42 +1,83 @@
 /**
- * VEIR 到 ComposerProject 转换器
- * 将 VEIR DSL 转换为可执行的视频合成项目
+ * VEIR 转换器
+ * 将 VEIR DSL 转换为 ModernComposer 可用的配置
  */
 
 import type { VEIRProject, Clip, Track, Asset as VEIRAssetDef } from '../types';
-import type {
-  ComposerProject,
-  Asset,
-  VideoAsset,
-  AudioAsset,
-  ImageAsset,
-  TextAsset,
-  TextStyle,
-  AnimationEffect,
-  FilterEffect,
-  TransitionConfig,
-} from '@/lib/video-composer/types';
+import type { PresetAnimationType } from '@/lib/modern-composer';
 import {
   VEIRParseContext,
   AssetResolver,
   defaultAssetResolver,
   behaviorToAnimationMap,
   builtinTextStyles,
-  builtinPipLayouts,
   TextStylePreset,
+  FilterEffect,
+  filterNameMap,
 } from './types';
+
+// ============================================
+// 类型定义
+// ============================================
+
+/**
+ * 转换后的资产配置
+ */
+export interface ConvertedAsset {
+  id: string;
+  type: 'video' | 'audio' | 'image' | 'text';
+  src?: string;
+  content?: string;
+  timelineStart: number;
+  duration: number;
+  clipStart?: number;
+  clipEnd?: number;
+  volume?: number;
+  muted?: boolean;
+  speed?: number;
+  filters?: FilterEffect[];
+  track?: number;
+  position?: { x: number | string; y: number | string };
+  size?: { width: number | string; height: number | string };
+  opacity?: number;
+  animation?: {
+    enter: PresetAnimationType;
+    exit?: PresetAnimationType;
+    enterDuration?: number;
+    exitDuration?: number;
+  };
+  style?: TextStylePreset;
+}
+
+/**
+ * 转换后的项目配置
+ */
+export interface ConvertedProject {
+  id: string;
+  name: string;
+  output: {
+    width: number;
+    height: number;
+    fps: number;
+    duration: number;
+    format: 'webm' | 'mp4';
+    quality: 'high' | 'medium' | 'low';
+  };
+  assets: ConvertedAsset[];
+  backgroundColor?: string;
+}
 
 // ============================================
 // 转换器核心
 // ============================================
 
 /**
- * 将 VEIR 项目转换为 ComposerProject
+ * 将 VEIR 项目转换为 ModernComposer 可用的配置
  */
-export async function convertVEIRToComposer(
+export async function convertVEIRToModern(
   veir: VEIRProject,
   resolver: AssetResolver = defaultAssetResolver
-): Promise<{ project: ComposerProject; context: VEIRParseContext }> {
+): Promise<{ project: ConvertedProject; context: VEIRParseContext }> {
   const context: VEIRParseContext = {
     project: veir,
     resolver,
@@ -46,24 +87,23 @@ export async function convertVEIRToComposer(
   };
 
   // 创建基础项目结构
-  const composerProject: ComposerProject = {
+  const convertedProject: ConvertedProject = {
     id: `veir-${Date.now()}`,
     name: 'VEIR Composition',
     output: {
       width: veir.meta.resolution[0],
       height: veir.meta.resolution[1],
       fps: veir.meta.fps,
-      videoBitrate: 4000000,
-      audioBitrate: 128000,
-      format: 'webm',
+      duration: veir.meta.duration,
+      format: 'mp4',
+      quality: 'high',
     },
     assets: [],
-    transitions: [],
     backgroundColor: '#000000',
   };
 
   // 解析并转换所有轨道和片段
-  const allAssets: Asset[] = [];
+  const allAssets: ConvertedAsset[] = [];
   
   for (const track of veir.timeline.tracks) {
     for (const clip of track.clips) {
@@ -76,30 +116,9 @@ export async function convertVEIRToComposer(
 
   // 按轨道层级排序
   allAssets.sort((a, b) => (a.track ?? 0) - (b.track ?? 0));
-  composerProject.assets = allAssets;
+  convertedProject.assets = allAssets;
 
-  // 处理背景音乐（如果有）
-  const bgmTrack = veir.timeline.tracks.find(t => t.type === 'audio');
-  if (bgmTrack && bgmTrack.clips.length > 0) {
-    const bgmClip = bgmTrack.clips[0];
-    const bgmAssetDef = veir.assets.assets[bgmClip.asset];
-    if (bgmAssetDef?.type === 'audio' && bgmAssetDef.src) {
-      const resolvedSrc = await resolver.resolveAudio(bgmAssetDef.src);
-      composerProject.backgroundMusic = {
-        id: 'bgm',
-        type: 'audio',
-        src: resolvedSrc,
-        timelineStart: bgmClip.time.start,
-        duration: bgmClip.time.end - bgmClip.time.start,
-        clipStart: 0,
-        volume: 0.5,
-        fadeIn: 1,
-        fadeOut: 1,
-      };
-    }
-  }
-
-  return { project: composerProject, context };
+  return { project: convertedProject, context };
 }
 
 /**
@@ -109,7 +128,7 @@ async function convertClipToAsset(
   clip: Clip,
   track: Track,
   context: VEIRParseContext
-): Promise<Asset | null> {
+): Promise<ConvertedAsset | null> {
   const { project, resolver } = context;
   const assetDef = project.assets.assets[clip.asset];
 
@@ -135,7 +154,7 @@ async function convertClipToAsset(
       return convertTextAsset(clip, track, assetDef, duration, adjustment, context);
     
     default:
-      context.warnings.push(`Unknown asset type: ${(assetDef as any).type}`);
+      context.warnings.push(`Unknown asset type: ${(assetDef as { type: string }).type}`);
       return null;
   }
 }
@@ -148,9 +167,9 @@ async function convertVideoAsset(
   track: Track,
   assetDef: VEIRAssetDef,
   duration: number,
-  adjustment: any,
+  adjustment: ReturnType<typeof getAdjustment>,
   context: VEIRParseContext
-): Promise<VideoAsset | null> {
+): Promise<ConvertedAsset | null> {
   if (!assetDef.src) {
     context.errors.push(`Video asset missing src: ${clip.asset}`);
     return null;
@@ -202,7 +221,7 @@ async function convertAudioAsset(
   assetDef: VEIRAssetDef,
   duration: number,
   context: VEIRParseContext
-): Promise<AudioAsset | null> {
+): Promise<ConvertedAsset | null> {
   if (!assetDef.src) {
     context.warnings.push(`Audio asset missing src: ${clip.asset}`);
     return null;
@@ -219,8 +238,6 @@ async function convertAudioAsset(
     duration,
     clipStart: 0,
     volume: 0.7,
-    fadeIn: 0.5,
-    fadeOut: 0.5,
     track: track.layer,
   };
 }
@@ -233,9 +250,9 @@ async function convertImageAsset(
   track: Track,
   assetDef: VEIRAssetDef,
   duration: number,
-  adjustment: any,
+  adjustment: ReturnType<typeof getAdjustment>,
   context: VEIRParseContext
-): Promise<ImageAsset | null> {
+): Promise<ConvertedAsset | null> {
   if (!assetDef.src) {
     context.errors.push(`Image asset missing src: ${clip.asset}`);
     return null;
@@ -274,9 +291,9 @@ function convertTextAsset(
   track: Track,
   assetDef: VEIRAssetDef,
   duration: number,
-  adjustment: any,
+  adjustment: ReturnType<typeof getAdjustment>,
   context: VEIRParseContext
-): TextAsset | null {
+): ConvertedAsset | null {
   const content = assetDef.content || '';
   if (!content) {
     context.warnings.push(`Text asset has no content: ${clip.asset}`);
@@ -313,26 +330,32 @@ function convertTextAsset(
 // ============================================
 
 /**
- * 从行为定义获取动画效果
- * behavior.enter 映射到 AnimationEffect.type
+ * 获取调整配置的类型安全辅助函数
  */
-function getAnimationFromBehavior(behavior?: { enter?: string; exit?: string }): AnimationEffect {
-  // 获取入场动画类型
+function getAdjustment(project: VEIRProject, clipId: string) {
+  return project.adjustments?.clipOverrides?.[clipId];
+}
+
+/**
+ * 从行为定义获取动画效果
+ */
+function getAnimationFromBehavior(behavior?: { enter?: string; exit?: string }): {
+  enter: PresetAnimationType;
+  exit?: PresetAnimationType;
+  enterDuration?: number;
+  exitDuration?: number;
+} {
   const behaviorEnter = behavior?.enter;
-  const enterType = behaviorEnter ? behaviorToAnimationMap[behaviorEnter] : 'fade';
+  const behaviorExit = behavior?.exit;
   
-  // 调试日志：确认动画类型映射
-  console.log('[VEIR Converter] Animation mapping:', {
-    behaviorEnter,
-    mappedType: enterType,
-    behaviorExit: behavior?.exit,
-  });
+  const enterType = behaviorEnter ? (behaviorToAnimationMap[behaviorEnter] || 'fade-in') : 'fade-in';
+  const exitType = behaviorExit ? (behaviorToAnimationMap[behaviorExit] || 'fade-out') : 'fade-out';
   
   return {
-    type: enterType || 'fade',
+    enter: enterType,
+    exit: exitType,
     enterDuration: 0.3,
     exitDuration: 0.25,
-    easing: 'ease-out',
   };
 }
 
@@ -343,7 +366,7 @@ function getTextStyleFromPreset(
   presetId: string | undefined,
   intensity: number,
   context: VEIRParseContext
-): TextStyle {
+): TextStylePreset {
   // 优先使用内置预设
   if (presetId && builtinTextStyles[presetId]) {
     const preset = builtinTextStyles[presetId];
@@ -402,25 +425,14 @@ function getPositionFromAnchor(anchor?: string): { x: number | string; y: number
  * 映射滤镜名称
  */
 function mapFilterName(name: string): FilterEffect['type'] {
-  const map: Record<string, FilterEffect['type']> = {
-    'vintage': 'sepia',
-    'warm': 'saturate',
-    'cool': 'hue-rotate',
-    'bright': 'brightness',
-    'contrast': 'contrast',
-    'blur': 'blur',
-    'grayscale': 'grayscale',
-  };
-  return map[name] || 'saturate';
+  return filterNameMap[name] || 'saturate';
 }
 
 /**
- * 从 VEIR adjustments.video.timeWarp 推导合成器可用的 speed（当前仅支持常量 speed）
- * - constant：直接使用首段 speed
- * - ramp：当前合成引擎不支持分段曲线变速，采用“分段时长加权平均”近似，并输出 warning
+ * 从 VEIR adjustments.video.timeWarp 推导速度
  */
 function deriveVideoSpeedFromTimeWarp(
-  timeWarp: any,
+  timeWarp: { mode?: string; segments?: Array<{ speed?: number; when?: { start?: number; end?: number } }> } | undefined,
   clipDuration: number,
   context: VEIRParseContext
 ): number | undefined {
@@ -467,13 +479,13 @@ function deriveVideoSpeedFromTimeWarp(
   }
 
   context.warnings.push(
-    'timeWarp(mode=ramp) 当前在合成器中仅做常量 speed 近似（分段时长加权平均）；如需真实曲线变速，需要扩展 video-composer 支持分段映射。'
+    'timeWarp(mode=ramp) 当前在合成器中仅做常量 speed 近似（分段时长加权平均）。'
   );
   return clamp(weightedSum / totalWeight);
 }
 
 // ============================================
-// 导出工具函数
+// 验证函数
 // ============================================
 
 /**

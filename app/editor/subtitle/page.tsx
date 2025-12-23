@@ -33,8 +33,8 @@ import { Button, Card, Badge, Progress, Slider } from '@/components/ui'
 import {
   quickCompose,
   type AnimationEffect,
-  type ProgressCallback,
-} from '@/lib/video-composer'
+  type LegacyProgressCallback as ProgressCallback,
+} from '@/lib/modern-composer'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { useEditor, type TargetDevice } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
@@ -1121,9 +1121,10 @@ export default function SubtitlePage() {
       const segment = segments[0]
       
       // 转换字幕格式 - 传递完整样式
-      const subtitles = segment.subtitles.map((sub) => {
+      const subtitles = segment.subtitles.map((sub, index) => {
         const style = sub.style
         return {
+          id: sub.id || `subtitle-${index}`,
           text: sub.text,
           startTime: sub.startTime,
           endTime: sub.endTime,
@@ -1132,31 +1133,30 @@ export default function SubtitlePage() {
             fontSize: style.fontSize,
             fontFamily: style.fontFamily,
             fontWeight: style.fontWeight,
-            letterSpacing: style.letterSpacing,
             // 颜色
             color: style.color,
             backgroundColor: style.backgroundColor !== 'transparent' ? style.backgroundColor : undefined,
-            backgroundPadding: style.backgroundPadding?.x,
-            backgroundRadius: style.backgroundBorderRadius,
             // 位置
             position: style.position,
             alignment: style.alignment,
-            marginBottom: style.marginBottom,
             // 描边
-            hasOutline: style.hasOutline,
-            outlineColor: style.outlineColor,
-            outlineWidth: style.outlineWidth,
+            stroke: style.hasOutline ? {
+              color: style.outlineColor || '#000000',
+              width: style.outlineWidth || 2,
+            } : undefined,
             // 阴影
-            hasShadow: style.hasShadow,
-            shadowColor: style.shadowColor,
-            shadowBlur: style.shadowBlur,
-            shadowOffsetX: style.shadowOffsetX,
-            shadowOffsetY: style.shadowOffsetY,
-          },
-          animation: {
-            type: (style.animationId || 'fade') as AnimationEffect['type'],
-            enterDuration: 0.3,
-            exitDuration: 0.2,
+            shadow: style.hasShadow ? {
+              color: style.shadowColor || 'rgba(0,0,0,0.5)',
+              blur: style.shadowBlur || 4,
+              offsetX: style.shadowOffsetX || 2,
+              offsetY: style.shadowOffsetY || 2,
+            } : undefined,
+            // 动画
+            animation: {
+              enter: (style.animationId || 'fade') as string,
+              enterDuration: 0.3,
+              exitDuration: 0.2,
+            },
           },
         }
       })

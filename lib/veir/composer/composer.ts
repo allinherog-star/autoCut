@@ -1,12 +1,17 @@
 /**
  * VEIR 视频合成器
- * 核心合成引擎，基于 Canvas + MediaRecorder
+ * 基于 ModernComposer 新架构 (Fabric.js + Anime.js + MediaBunny)
  */
 
 import type { VEIRProject } from '../types';
-import type { ComposerProject, ProgressCallback } from '@/lib/video-composer/types';
-import { VideoComposer } from '@/lib/video-composer/composer';
-import { convertVEIRToComposer, validateVEIRForComposition, getVEIRStats } from './converter';
+import { 
+  ModernComposer, 
+  composeVEIRModern,
+  type ProgressCallback as ModernProgressCallback,
+  type CompositionResult as ModernCompositionResult,
+  type OutputFormat,
+} from '@/lib/modern-composer';
+import { convertVEIRToModern, validateVEIRForComposition, getVEIRStats } from './converter';
 import type {
   ExportConfig,
   AssetResolver,
@@ -21,11 +26,12 @@ import type {
 /**
  * VEIR 视频合成器
  * 将 VEIR DSL 项目渲染为视频文件
+ * 使用新架构：Fabric.js + Anime.js + WebCodecs + MediaBunny
  */
 export class VEIRComposer {
   private veir: VEIRProject;
   private resolver: AssetResolver;
-  private composerProject: ComposerProject | null = null;
+  private modernComposer: ModernComposer | null = null;
 
   constructor(veir: VEIRProject, resolver?: AssetResolver) {
     this.veir = veir;
@@ -51,7 +57,7 @@ export class VEIRComposer {
   }
 
   /**
-   * 准备合成（解析资源、转换配置）
+   * 准备合成（验证项目）
    */
   async prepare(
     onProgress?: CompositionProgressCallback
@@ -64,12 +70,11 @@ export class VEIRComposer {
       return { success: false, errors: validation.errors, warnings: validation.warnings };
     }
 
-    onProgress?.('parsing', 30, '转换项目配置...');
+    onProgress?.('parsing', 50, '转换项目配置...');
 
     try {
-      // 转换为 ComposerProject
-      const { project, context } = await convertVEIRToComposer(this.veir, this.resolver);
-      this.composerProject = project;
+      // 转换为 ModernComposer 配置（仅验证）
+      const { context } = await convertVEIRToModern(this.veir, this.resolver);
 
       onProgress?.('parsing', 100, '准备完成');
 
@@ -89,51 +94,53 @@ export class VEIRComposer {
 
   /**
    * 执行合成导出
+   * 使用 ModernComposer 新架构
    */
   async compose(
     config: Partial<ExportConfig> = {},
     onProgress?: CompositionProgressCallback
   ): Promise<CompositionResult> {
-    // 确保已准备
-    if (!this.composerProject) {
-      const prepResult = await this.prepare(onProgress);
-      if (!prepResult.success) {
-        throw new Error(`Preparation failed: ${prepResult.errors.join(', ')}`);
+    // 准备阶段
+    const prepResult = await this.prepare((stage, progress, msg) => {
+      onProgress?.(stage, progress * 0.1, msg); // 准备阶段占 10%
+    });
+
+    if (!prepResult.success) {
+      throw new Error(`Preparation failed: ${prepResult.errors.join(', ')}`);
+    }
+
+    // 映射进度回调
+    const modernProgress: ModernProgressCallback = (progress, stage, message) => {
+      // 将 ModernComposer 进度映射到 CompositionProgressCallback
+      let composerStage: 'parsing' | 'loading' | 'rendering' | 'encoding' | 'complete';
+      
+      if (stage === 'loading') {
+        composerStage = 'loading';
+      } else if (stage === 'rendering') {
+        composerStage = 'rendering';
+      } else if (stage === 'encoding') {
+        composerStage = 'encoding';
+      } else if (stage === 'complete') {
+        composerStage = 'complete';
+      } else {
+        composerStage = 'rendering';
       }
-    }
-
-    const project = this.composerProject!;
-
-    // 应用导出配置
-    if (config.format) {
-      project.output.format = config.format;
-    }
-    if (config.videoBitrate) {
-      project.output.videoBitrate = config.videoBitrate;
-    }
-    if (config.audioBitrate) {
-      project.output.audioBitrate = config.audioBitrate;
-    }
-
-    // 创建合成器
-    const composer = new VideoComposer(project);
+      
+      // 调整进度：准备阶段 10%，其余 90%
+      const adjustedProgress = 10 + progress * 0.9;
+      onProgress?.(composerStage, adjustedProgress, message);
+    };
 
     try {
-      // 执行渲染
-      const result = await composer.render((progress, message) => {
-        if (progress < 15) {
-          onProgress?.('loading', progress, message);
-        } else if (progress < 90) {
-          onProgress?.('rendering', progress, message);
-        } else if (progress < 100) {
-          onProgress?.('encoding', progress, message);
-        } else {
-          onProgress?.('complete', 100, '完成');
-        }
+      // 使用 ModernComposer 进行合成
+      const result = await composeVEIRModern(this.veir, {
+        format: (config.format as OutputFormat) || 'mp4',
+        quality: config.quality || 'high',
+        resolver: this.resolver,
+        onProgress: modernProgress,
       });
 
-      // 创建下载 URL
-      const downloadUrl = URL.createObjectURL(result.blob);
+      // 如果需要自定义文件名，在这里处理
       const filename = config.filename || `veir-export-${Date.now()}.${result.format}`;
 
       return {
@@ -141,10 +148,11 @@ export class VEIRComposer {
         duration: result.duration,
         format: result.format,
         size: result.size,
-        downloadUrl,
+        downloadUrl: result.downloadUrl,
       };
-    } finally {
-      composer.destroy();
+    } catch (error) {
+      console.error('[VEIRComposer] Composition failed:', error);
+      throw error;
     }
   }
 
@@ -152,7 +160,8 @@ export class VEIRComposer {
    * 销毁资源
    */
   destroy(): void {
-    this.composerProject = null;
+    this.modernComposer?.destroy();
+    this.modernComposer = null;
   }
 }
 
@@ -203,7 +212,10 @@ export function createPreviewElement(result: CompositionResult): HTMLVideoElemen
   return video;
 }
 
-
-
-
+/**
+ * 释放合成结果的资源
+ */
+export function releaseComposition(result: CompositionResult): void {
+  URL.revokeObjectURL(result.downloadUrl);
+}
 

@@ -63,10 +63,10 @@ export {
   revokeDownloadUrl,
   Output,
   Mp4OutputFormat,
-  WebmOutputFormat,
+  WebMOutputFormat,
   BufferTarget,
   CanvasSource,
-  AudioSamplesSource,
+  AudioSampleSource,
   QUALITY_HIGH,
   QUALITY_MEDIUM,
   QUALITY_LOW,
@@ -205,8 +205,9 @@ export class ModernComposer {
       // 更新场景
       await this.renderFrameFromVEIR(project, time);
 
-      // 编码帧
-      await this.videoComposer!.encodeFrame({
+      // 编码帧 (传入时间戳，帧时长，关键帧选项)
+      const frameDuration = 1 / this.config.frameRate;
+      await this.videoComposer!.encodeFrame(time, frameDuration, {
         keyFrame: frame % 30 === 0,
       });
 
@@ -298,14 +299,18 @@ export class ModernComposer {
       const position = this.calculateClipPosition(clip, track, project);
 
       // 应用渲染状态
+      // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
+      const getNum = (v: number | number[] | undefined, def: number) => 
+        typeof v === 'number' ? v : (Array.isArray(v) ? v[0] : def);
+      
       const renderState: RenderState = {
-        x: position.x + (animState.translateX || 0),
-        y: position.y + (animState.translateY || 0),
-        scaleX: animState.scaleX || animState.scale || 1,
-        scaleY: animState.scaleY || animState.scale || 1,
-        angle: animState.rotate || 0,
-        opacity: animState.opacity ?? 1,
-        blur: animState.blur || 0,
+        x: position.x + getNum(animState.translateX, 0),
+        y: position.y + getNum(animState.translateY, 0),
+        scaleX: getNum(animState.scaleX, 1) || getNum(animState.scale, 1),
+        scaleY: getNum(animState.scaleY, 1) || getNum(animState.scale, 1),
+        angle: getNum(animState.rotate, 0),
+        opacity: getNum(animState.opacity, 1),
+        blur: getNum(animState.blur, 0),
       };
 
       this.fabricEngine.applyRenderState(clip.asset, renderState);
@@ -672,6 +677,334 @@ export async function composeVEIRModern(
   } finally {
     composer.destroy();
   }
+}
+
+// ============================================
+// 快速合成函数 (简化 API)
+// ============================================
+
+/**
+ * 字幕输入类型
+ */
+export interface SubtitleInput {
+  id: string;
+  text: string;
+  startTime: number;
+  endTime: number;
+  style?: {
+    fontSize?: number;
+    color?: string;
+    backgroundColor?: string;
+    position?: 'top' | 'center' | 'bottom';
+    alignment?: 'left' | 'center' | 'right';
+    fontFamily?: string;
+    fontWeight?: number;
+    stroke?: { color: string; width: number };
+    shadow?: { color: string; blur: number; offsetX: number; offsetY: number };
+    animation?: {
+      enter?: string;
+      exit?: string;
+      enterDuration?: number;
+      exitDuration?: number;
+    };
+  };
+}
+
+/**
+ * 快速合成选项
+ */
+export interface QuickComposeOptions {
+  startTime?: number;
+  endTime?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
+  keepAudio?: boolean;
+  format?: OutputFormat;
+  quality?: 'high' | 'medium' | 'low';
+}
+
+/**
+ * 老架构兼容的进度回调类型
+ */
+export type LegacyProgressCallback = (progress: number, message: string) => void;
+
+/**
+ * 动画效果类型 (兼容老架构)
+ */
+export interface AnimationEffect {
+  type: 'fade' | 'slide-up' | 'slide-down' | 'zoom' | 'bounce' | 'shake' | 'pulse' | 'glow';
+  enterDuration?: number;
+  exitDuration?: number;
+  easing?: string;
+}
+
+/**
+ * 快速合成视频与字幕
+ * 这是一个简化的 API，用于快速将视频和字幕合成为新视频
+ * 
+ * @param videoUrl - 视频 URL
+ * @param subtitles - 字幕列表
+ * @param options - 合成选项
+ * @param onProgress - 进度回调
+ * @returns 输出视频的 Blob URL
+ */
+export async function quickCompose(
+  videoUrl: string,
+  subtitles: SubtitleInput[],
+  options: QuickComposeOptions = {},
+  onProgress?: LegacyProgressCallback
+): Promise<string> {
+  const {
+    startTime = 0,
+    endTime,
+    width = 1920,
+    height = 1080,
+    fps = 30,
+    format = 'mp4',
+    quality = 'high',
+  } = options;
+
+  onProgress?.(0, '初始化合成器...');
+
+  // 创建 Fabric 画布引擎
+  const fabricEngine = new FabricEngine({
+    width,
+    height,
+    backgroundColor: '#000000',
+  });
+
+  try {
+    onProgress?.(5, '加载视频...');
+
+    // 加载视频
+    await fabricEngine.addVideo({
+      id: 'main-video',
+      type: 'video',
+      src: videoUrl,
+      x: width / 2,
+      y: height / 2,
+      width,
+      height,
+    });
+
+    // 计算时长
+    const videoElement = document.createElement('video');
+    videoElement.src = videoUrl;
+    videoElement.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      videoElement.onloadedmetadata = () => resolve();
+      videoElement.onerror = () => reject(new Error('Failed to load video'));
+    });
+
+    const videoDuration = endTime ?? videoElement.duration;
+    const duration = videoDuration - startTime;
+    const totalFrames = Math.ceil(duration * fps);
+
+    onProgress?.(10, '准备编码器...');
+
+    // 创建视频合成器
+    const videoComposer = new MediaBunnyComposer(
+      {
+        width,
+        height,
+        frameRate: fps,
+        quality,
+      },
+      undefined,
+      format
+    );
+
+    await videoComposer.start(fabricEngine.getCanvasElement());
+
+    onProgress?.(15, '开始渲染...');
+
+    // 逐帧渲染
+    for (let frame = 0; frame < totalFrames; frame++) {
+      const time = startTime + frame / fps;
+
+      // 更新视频帧
+      await fabricEngine.seekVideo('main-video', time);
+      fabricEngine.applyRenderState('main-video', { opacity: 1 });
+
+      // 渲染字幕
+      renderSubtitlesOnCanvas(
+        fabricEngine,
+        subtitles,
+        time,
+        { width, height }
+      );
+
+      // 渲染并编码帧
+      fabricEngine.render();
+      
+      const frameDuration = 1 / fps;
+      await videoComposer.encodeFrame(frame / fps, frameDuration, {
+        keyFrame: frame % 30 === 0,
+      });
+
+      // 更新进度
+      if (frame % 10 === 0) {
+        const progress = 15 + (frame / totalFrames) * 80;
+        onProgress?.(progress, `渲染中 ${Math.round((frame / totalFrames) * 100)}%`);
+      }
+    }
+
+    onProgress?.(95, '完成编码...');
+
+    // 完成合成
+    const result = await videoComposer.finalize();
+    videoComposer.destroy();
+
+    onProgress?.(100, '完成');
+
+    return result.downloadUrl;
+  } finally {
+    fabricEngine.destroy();
+  }
+}
+
+/**
+ * 在 Canvas 上渲染字幕
+ */
+function renderSubtitlesOnCanvas(
+  fabricEngine: FabricEngine,
+  subtitles: SubtitleInput[],
+  currentTime: number,
+  dimensions: { width: number; height: number }
+): void {
+  const { width, height } = dimensions;
+
+  // 找到当前时间的字幕
+  const activeSubtitles = subtitles.filter(
+    (sub) => currentTime >= sub.startTime && currentTime <= sub.endTime
+  );
+
+  // 移除不活跃的字幕
+  for (const sub of subtitles) {
+    if (!activeSubtitles.includes(sub)) {
+      fabricEngine.removeElement(`subtitle-${sub.id}`);
+    }
+  }
+
+  // 渲染活跃的字幕
+  for (const subtitle of activeSubtitles) {
+    const elementId = `subtitle-${subtitle.id}`;
+    const existing = fabricEngine.getElement(elementId);
+
+    // 计算位置
+    const style = subtitle.style || {};
+    let y = height * 0.85; // 默认底部
+    if (style.position === 'top') y = height * 0.1;
+    if (style.position === 'center') y = height * 0.5;
+
+    // 计算动画状态
+    const duration = subtitle.endTime - subtitle.startTime;
+    const localTime = currentTime - subtitle.startTime;
+    const progress = localTime / duration;
+    const animState = calculateSubtitleAnimation(progress, style.animation);
+
+    if (!existing) {
+      // 创建新字幕
+      fabricEngine.addText({
+        id: elementId,
+        type: 'text',
+        content: subtitle.text,
+        x: width / 2,
+        y,
+        fontSize: style.fontSize || 36,
+        fontFamily: style.fontFamily || 'Noto Sans SC',
+        fontWeight: style.fontWeight || 500,
+        fill: style.color || '#FFFFFF',
+        stroke: style.stroke?.color,
+        strokeWidth: style.stroke?.width || 0,
+        textAlign: style.alignment || 'center',
+        opacity: animState.opacity,
+      });
+    } else {
+      // 更新字幕状态
+      fabricEngine.applyRenderState(elementId, {
+        opacity: animState.opacity,
+        y: y + (animState.translateY || 0),
+        scaleX: animState.scale,
+        scaleY: animState.scale,
+      });
+    }
+  }
+}
+
+/**
+ * 计算字幕动画状态
+ */
+function calculateSubtitleAnimation(
+  progress: number,
+  animation?: { enter?: string; exit?: string; enterDuration?: number; exitDuration?: number }
+): { opacity: number; translateY: number; scale: number } {
+  const enterDuration = animation?.enterDuration ?? 0.15;
+  const exitDuration = animation?.exitDuration ?? 0.15;
+
+  let opacity = 1;
+  let translateY = 0;
+  let scale = 1;
+
+  const enterType = animation?.enter || 'fade';
+  const exitType = animation?.exit || 'fade';
+
+  // 入场动画
+  if (progress < enterDuration) {
+    const t = progress / enterDuration;
+    const easedT = 1 - Math.pow(1 - t, 3); // easeOut
+
+    switch (enterType) {
+      case 'slide-up':
+        translateY = (1 - easedT) * 50;
+        opacity = easedT;
+        break;
+      case 'slide-down':
+        translateY = -(1 - easedT) * 50;
+        opacity = easedT;
+        break;
+      case 'zoom':
+        scale = 0.5 + easedT * 0.5;
+        opacity = easedT;
+        break;
+      case 'bounce':
+        scale = easedT;
+        translateY = (1 - easedT) * 50;
+        opacity = 1;
+        break;
+      case 'fade':
+      default:
+        opacity = easedT;
+        break;
+    }
+  }
+  // 出场动画
+  else if (progress > 1 - exitDuration) {
+    const t = (progress - (1 - exitDuration)) / exitDuration;
+    const easedT = t * t * t; // easeIn
+
+    switch (exitType) {
+      case 'slide-up':
+        translateY = -easedT * 30;
+        opacity = 1 - easedT;
+        break;
+      case 'slide-down':
+        translateY = easedT * 30;
+        opacity = 1 - easedT;
+        break;
+      case 'zoom':
+        scale = 1 - easedT * 0.2;
+        opacity = 1 - easedT;
+        break;
+      case 'fade':
+      default:
+        opacity = 1 - easedT;
+        break;
+    }
+  }
+
+  return { opacity, translateY, scale };
 }
 
 

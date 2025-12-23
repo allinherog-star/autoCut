@@ -408,20 +408,24 @@ export default function VEIRPreviewPage() {
         setIsExporting(true);
         setIsPlaying(false);
         try {
-            const { VEIRComposer } = await import('@/lib/canvas-video-composer');
+            // 使用新架构 ModernComposer
+            const { VEIRComposer, downloadComposition } = await import('@/lib/veir/composer');
             const composer = new VEIRComposer(project);
 
-            const blob = await composer.exportVideo((progress, msg) => {
-                setExportProgress(progress);
-                console.log(msg);
-            });
+            const result = await composer.compose(
+                { format: 'mp4', quality: 'high' },
+                (stage, progress, msg) => {
+                    setExportProgress(progress);
+                    console.log(`[${stage}] ${msg}`);
+                }
+            );
 
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'veir_export.webm';
-            a.click();
-            URL.revokeObjectURL(url);
+            // 下载视频
+            downloadComposition(result, 'veir_export.mp4');
+            
+            // 清理资源
+            URL.revokeObjectURL(result.downloadUrl);
+            composer.destroy();
         } catch (error) {
             console.error('Export failed:', error);
             alert('导出失败，请检查控制台');

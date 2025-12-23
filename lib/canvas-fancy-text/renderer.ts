@@ -922,9 +922,28 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
   }
 
   async exportVideo(format: 'webm' | 'mp4'): Promise<Blob> {
-    // 使用 MediaRecorder 或 WebCodecs 导出视频
-    // 这里需要完整实现
-    throw new Error('Not implemented yet')
+    // 使用 ModernComposer (WebCodecs + MediaBunny) 导出视频
+    const { composeFromCanvas } = await import('@/lib/modern-composer')
+    
+    if (!this.scene) {
+      throw new Error('No scene loaded')
+    }
+
+    const totalDuration = this.scene.duration ?? 3
+    const fps = 30
+
+    const result = await composeFromCanvas({
+      canvas: this.canvas,
+      duration: totalDuration,
+      frameRate: fps,
+      renderFrame: async (time) => {
+        this.render(time)
+      },
+      format: format as 'mp4' | 'webm',
+      quality: 'high',
+    })
+
+    return result.blob
   }
 
   // ============================================
