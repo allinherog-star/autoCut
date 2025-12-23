@@ -8,8 +8,8 @@
 assets/fancy-text-presets/
 ├── {preset-id}/                        # 模版ID目录 (kebab-case)
 │   ├── {preset-id}.meta.json           # 必须 - 元数据配置
-│   ├── {preset-id}.motion.tsx          # 动效脚本 - React组件 (与scene.ts二选一)
-│   ├── {preset-id}.scene.ts            # 动效脚本 - Canvas渲染器 (与motion.tsx二选一)
+│   ├── {preset-id}.scene.ts            # 推荐 - Canvas 2D 场景配置 (主渲染器)
+│   ├── {preset-id}.motion.tsx          # 可选 - React 组件 (降级/预览方案)
 │   └── {preset-id}.thumbnail.png       # 推荐 - 预览缩略图
 └── index.ts                            # 预设注册表 (自动导出所有预设)
 ```
@@ -18,7 +18,7 @@ assets/fancy-text-presets/
 
 1. 创建目录 `assets/fancy-text-presets/{preset-id}/`
 2. 创建 `{preset-id}.meta.json` 元数据
-3. 创建 `{preset-id}.motion.tsx` 动效组件
+3. 创建 `{preset-id}.scene.ts` Canvas 场景配置 **(推荐)**
 4. 在 `index.ts` 中添加导入和注册
 
 ## meta.json 格式
@@ -43,45 +43,50 @@ assets/fancy-text-presets/
         }
     ],
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "ComicBurstText"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "comic-burst.scene"
     }
 }
 ```
 
-## motion.tsx 格式
+## scene.ts 格式 (Canvas 2D - 推荐)
 
-```tsx
-'use client'
+```typescript
+import type { CanvasFancyTextScene, RenderLayer } from '@/lib/canvas-fancy-text/types'
 
-import React from 'react'
-import { motion } from 'framer-motion'
-
-export interface MyPresetTextProps {
+export interface CreateSceneOptions {
     text: string
-    scale?: number
-    autoPlay?: boolean
-    onComplete?: () => void
+    colorPresetId?: string
+    width?: number
+    height?: number
 }
 
-export function MyPresetText({ text, scale = 1, autoPlay = true, onComplete }: MyPresetTextProps) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onAnimationComplete={onComplete}
-        >
-            {text}
-        </motion.div>
-    )
+export function createMyPresetScene(options: CreateSceneOptions): CanvasFancyTextScene {
+    const { text, width = 800, height = 400 } = options
+
+    const layers: RenderLayer[] = [
+        { id: 'plate', type: 'shape', zIndex: 1, visible: true, opacity: 1, config: { ... } },
+        { id: 'text', type: 'text', zIndex: 10, visible: true, opacity: 1, config: { ... } },
+    ]
+
+    return {
+        id: 'my-preset',
+        name: '我的预设',
+        description: '预设描述',
+        renderConfig: { width, height, fps: 30, devicePixelRatio: 2, antialias: true, transparent: true },
+        layers,
+        duration: 1.5,
+        loop: false,
+    }
 }
 
-export default MyPresetText
+export default createMyPresetScene
 ```
 
 ## 渲染器类型
 
-| 类型 | 文件 | 说明 |
-|------|------|------|
-| `react-component` | `motion.tsx` | React + Framer Motion 组件 |
-| `canvas-fancy-text` | `scene.ts` | Canvas 2D 渲染器场景配置 |
+| 类型 | 文件 | 说明 | 状态 |
+|------|------|------|------|
+| `canvas-fancy-text` | `scene.ts` | Canvas 2D 渲染器场景配置 | **推荐** |
+| `react-component` | `motion.tsx` | React + Framer Motion 组件 | 降级/预览 |
+

@@ -541,6 +541,8 @@ function ReactComponentRenderer({
     )
   }
 
+
+
   // 从 template 获取颜色配置
   const colorPreset = template.colorPresets?.[0]
   const gradient = colorPreset?.gradient || template.globalParams.color.value
@@ -564,6 +566,92 @@ function ReactComponentRenderer({
 }
 
 // ============================================
+// Canvas 场景动态渲染器
+// ============================================
+
+interface CanvasSceneRendererProps {
+  templateId: string
+  text: string
+  scale: number
+  autoPlay: boolean
+  loop?: boolean
+  className?: string
+  width?: number
+  height?: number
+  onAnimationComplete?: () => void
+}
+
+function CanvasSceneRenderer({
+  templateId,
+  text,
+  scale,
+  autoPlay,
+  loop = false,
+  className = '',
+  width,
+  height,
+  onAnimationComplete,
+}: CanvasSceneRendererProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [scene, setScene] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadScene() {
+      try {
+        setLoading(true)
+        // 动态导入 loadPresetScene，避免循环依赖或服务端问题
+        const { loadPresetScene } = await import('@/assets/fancy-text-presets')
+
+        const loadedScene = await loadPresetScene(templateId, {
+          text,
+          width: width ? width * scale : undefined,
+          height: height ? height * scale : undefined,
+        })
+
+        if (!cancelled && loadedScene) {
+          setScene(loadedScene)
+        }
+      } catch (err) {
+        console.error(`Failed to load scene for ${templateId}:`, err)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadScene()
+    return () => { cancelled = true }
+  }, [templateId, text, width, height, scale])
+
+  if (loading || !scene) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className={className} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CanvasFancyTextPlayer
+          scene={scene}
+          autoPlay={autoPlay}
+          loop={loop}
+          showControls={false}
+          className="w-full h-full"
+          onComplete={onAnimationComplete}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // 主组件
 // ============================================
 
@@ -579,31 +667,30 @@ export function FancyTextRenderer({
   className = '',
   onAnimationComplete,
 }: FancyTextRendererProps) {
-  // Canvas 渲染逻辑
-  if (template.renderer === 'canvas' && template.canvasPresetId) {
-    let scene = null
-    const displayText = text || template.globalParams.text
+  // Canvas Fancy Text 渲染逻辑 (新版)
+  if (template.compat?.renderer === 'canvas-fancy-text' && template.id) {
+    return (
+      <CanvasSceneRenderer
+        templateId={template.id}
+        text={text || template.globalParams.text}
+        scale={scale}
+        autoPlay={autoPlay}
+        loop={loop}
+        className={className}
+        onAnimationComplete={onAnimationComplete}
+      />
+    )
+  }
 
-    if (scene) {
-      return (
-        <div className={className} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CanvasFancyTextPlayer
-              scene={scene}
-              autoPlay={autoPlay}
-              loop={loop}
-              showControls={false}
-              className="w-full h-full"
-              onComplete={onAnimationComplete}
-            />
-          </div>
-        </div>
-      )
-    }
+  // Canvas 渲染逻辑 (旧版)
+  if (template.renderer === 'canvas' && template.canvasPresetId) {
+    // Legacy support or fallback
+    return null
   }
 
   // React 组件渲染逻辑 (动态加载 motion.tsx)
-  if (template.renderer === 'react' && template.id) {
+  // 兼容旧版 renderer 字段或者 new compat renderer
+  if ((template.renderer === 'react' || template.compat?.renderer === 'react-component') && template.id) {
     return (
       <ReactComponentRenderer
         templateId={template.id}

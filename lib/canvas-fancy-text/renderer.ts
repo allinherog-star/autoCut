@@ -308,6 +308,19 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
       case 'emoji-decoration':
         this.renderEmojiDecoration(layer.config)
         break
+      // 新增图层类型
+      case 'swirl-plate':
+        this.renderSwirlPlate(layer.config, currentTime)
+        break
+      case 'pulse-rings':
+        this.renderPulseRings(layer.config, currentTime)
+        break
+      case 'lightning-bolts':
+        this.renderLightningBolts(layer.config, currentTime)
+        break
+      case 'starburst-particles':
+        this.renderStarburstParticles(layer.config, currentTime)
+        break
     }
   }
 
@@ -650,6 +663,249 @@ export class CanvasFancyTextRenderer implements ICanvasFancyTextRenderer {
       ctx.fillText(emoji, x, y)
       ctx.restore()
     })
+  }
+
+  // ============================================
+  // 涡旋底板渲染
+  // ============================================
+
+  private renderSwirlPlate(config: any, currentTime: number): void {
+    const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
+
+    const size = config.size || 300
+    const arms = config.arms || 6
+    const color = config.color || '#00FFFF'
+    const glowIntensity = config.glowIntensity || 0.8
+
+    ctx.save()
+    ctx.translate(centerX, centerY)
+
+    // 入场动画：旋转 + 缩放
+    const animDuration = 0.6
+    let scale = 1
+    let rotation = 0
+    if (currentTime < animDuration) {
+      const t = currentTime / animDuration
+      const easedT = 1 - Math.pow(1 - t, 3) // easeOutCubic
+      scale = easedT * 1.2 - 0.2 * Math.max(0, t - 0.6) / 0.4 // 超调后回弹
+      rotation = (1 - easedT) * -180
+    }
+    ctx.rotate((rotation * Math.PI) / 180)
+    ctx.scale(Math.max(0, scale), Math.max(0, scale))
+
+    // 中心发光圆
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.35)
+    gradient.addColorStop(0, color)
+    gradient.addColorStop(0.6, `${color}66`)
+    gradient.addColorStop(1, 'transparent')
+    ctx.fillStyle = gradient
+    ctx.globalAlpha = glowIntensity
+    ctx.beginPath()
+    ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 涡旋臂
+    ctx.globalAlpha = 1
+    for (let arm = 0; arm < arms; arm++) {
+      const baseAngle = (arm / arms) * Math.PI * 2
+      for (let j = 0; j < 20; j++) {
+        const t = j / 20
+        const radius = 30 + t * (size * 0.38)
+        const armAngle = baseAngle + t * Math.PI * 1.2
+        const x = Math.cos(armAngle) * radius
+        const y = Math.sin(armAngle) * radius
+        const opacity = 0.8 - t * 0.6
+        const dotSize = 6 - t * 4
+
+        ctx.fillStyle = color
+        ctx.globalAlpha = opacity
+        ctx.beginPath()
+        ctx.arc(x, y, dotSize, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    ctx.restore()
+  }
+
+  // ============================================
+  // 脉冲光环渲染
+  // ============================================
+
+  private renderPulseRings(config: any, currentTime: number): void {
+    const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
+
+    const count = config.count || 3
+    const color = config.color || '#00FFFF'
+    const baseRadius = config.baseRadius || 50
+    const maxRadius = config.maxRadius || 250
+    const strokeWidth = config.strokeWidth || 3
+    const delay = config.delay || 0.15
+
+    for (let i = 0; i < count; i++) {
+      const ringDelay = delay + i * 0.15
+      const ringDuration = 0.8
+      const localTime = currentTime - ringDelay
+
+      if (localTime < 0 || localTime > ringDuration) continue
+
+      const t = localTime / ringDuration
+      const easedT = t * (2 - t) // easeOutQuad
+      const radius = baseRadius + easedT * (maxRadius - baseRadius)
+      const opacity = t < 0.2 ? t * 5 : 1 - (t - 0.2) / 0.8
+
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineWidth = strokeWidth
+      ctx.globalAlpha = opacity * 0.8
+      ctx.shadowColor = color
+      ctx.shadowBlur = 20
+
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  // ============================================
+  // 闪电飞散渲染
+  // ============================================
+
+  private renderLightningBolts(config: any, currentTime: number): void {
+    const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
+
+    const count = config.count || 8
+    const color = config.color || '#FFFF00'
+    const minLength = config.minLength || 40
+    const maxLength = config.maxLength || 100
+    const segments = config.segments || 5
+    const spreadDistance = config.spreadDistance || 200
+
+    for (let i = 0; i < count; i++) {
+      const seed = i * 7 + 42
+      const angle = (i / count) * Math.PI * 2 + (seed % 10) * 0.03
+      const length = minLength + (seed % (maxLength - minLength))
+      const boltDelay = 0.15 + (seed % 100) / 600
+      const boltDuration = 0.5
+
+      const localTime = currentTime - boltDelay
+      if (localTime < 0 || localTime > boltDuration) continue
+
+      const t = localTime / boltDuration
+      const distance = spreadDistance * t
+      const opacity = t < 0.2 ? t * 5 : t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3
+
+      // 生成闪电路径
+      const startX = centerX + Math.cos(angle) * 30
+      const startY = centerY + Math.sin(angle) * 30
+      const endX = startX + Math.cos(angle) * distance
+      const endY = startY + Math.sin(angle) * distance
+
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineWidth = 3
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.globalAlpha = opacity
+      ctx.shadowColor = color
+      ctx.shadowBlur = 10
+
+      ctx.beginPath()
+      ctx.moveTo(startX, startY)
+
+      // 分段绘制锯齿状闪电
+      for (let j = 1; j <= segments; j++) {
+        const segT = j / segments
+        const baseX = startX + (endX - startX) * segT
+        const baseY = startY + (endY - startY) * segT
+
+        // 随机偏移（使用确定性种子）
+        const offsetMag = length * 0.15
+        const offsetX = Math.sin(seed * j * 1.7) * offsetMag
+        const offsetY = Math.cos(seed * j * 2.3) * offsetMag
+
+        ctx.lineTo(baseX + offsetX, baseY + offsetY)
+      }
+
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  // ============================================
+  // 星芒粒子渲染
+  // ============================================
+
+  private renderStarburstParticles(config: any, currentTime: number): void {
+    const { ctx } = this
+    const { width, height } = this.config
+    const centerX = width / 2
+    const centerY = height / 2
+
+    const count = config.count || 30
+    const colors = config.colors || ['#00FFFF', '#FF00FF', '#FFFF00', '#FFFFFF']
+    const minSize = config.minSize || 3
+    const maxSize = config.maxSize || 10
+    const spreadDistance = config.spreadDistance || 250
+    const starRatio = config.starRatio || 0.5
+
+    for (let i = 0; i < count; i++) {
+      const seed = i * 13 + 77
+      const angle = (seed % 360) * (Math.PI / 180)
+      const color = colors[i % colors.length]
+      const size = minSize + (seed % (maxSize - minSize + 1))
+      const isStar = (seed % 100) / 100 < starRatio
+      const particleDelay = 0.1 + (seed % 100) / 400
+      const particleDuration = 0.7
+
+      const localTime = currentTime - particleDelay
+      if (localTime < 0 || localTime > particleDuration) continue
+
+      const t = localTime / particleDuration
+      const easedT = 1 - Math.pow(1 - t, 2) // easeOutQuad
+      const distance = spreadDistance * easedT
+      const x = centerX + Math.cos(angle) * distance
+      const y = centerY + Math.sin(angle) * distance
+
+      // 缩放和透明度
+      const scale = t < 0.3 ? t / 0.3 * 1.5 : t < 0.5 ? 1.5 - (t - 0.3) / 0.2 * 0.5 : 1 - (t - 0.5) / 0.5 * 0.5
+      const opacity = t < 0.1 ? t * 10 : t < 0.8 ? 1 : 1 - (t - 0.8) / 0.2
+      const rotation = (seed + currentTime * 90) * (Math.PI / 180)
+
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(rotation)
+      ctx.scale(scale, scale)
+      ctx.globalAlpha = opacity
+      ctx.fillStyle = color
+      ctx.shadowColor = color
+      ctx.shadowBlur = size
+
+      if (isStar) {
+        // 绘制星形
+        ctx.font = `${size * 1.5}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('✦', 0, 0)
+      } else {
+        // 绘制圆形粒子
+        ctx.beginPath()
+        ctx.arc(0, 0, size / 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      ctx.restore()
+    }
   }
 
   // ============================================

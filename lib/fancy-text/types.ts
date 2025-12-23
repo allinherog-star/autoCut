@@ -246,6 +246,11 @@ export interface FancyTextTemplate {
   colorPresets?: ColorPreset[] // 配色预设（react-component 渲染器）
   createdAt: string
   updatedAt: string
+  compat?: {
+    renderer?: 'fancy-text' | 'canvas-fancy-text' | 'react-component'
+    scenePath?: string
+    componentPath?: string
+  }
 }
 
 /** 配色预设 */

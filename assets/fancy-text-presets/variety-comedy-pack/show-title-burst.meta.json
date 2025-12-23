@@ -16,7 +16,10 @@
     "language": "zh",
     "textDefaults": {
         "text": "一见你就笑",
-        "fontSizeRange": [80, 120],
+        "fontSizeRange": [
+            80,
+            120
+        ],
         "recommendLines": 1,
         "fontFamily": [
             "Zcool KuaiLe",
@@ -83,8 +86,7 @@
         "frameRate": 30
     },
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "ShowTitleBurst"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "show-title-burst.scene"
     }
 }
-

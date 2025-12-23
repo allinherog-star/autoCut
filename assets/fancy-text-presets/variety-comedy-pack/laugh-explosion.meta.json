@@ -17,7 +17,10 @@
     "language": "zh",
     "textDefaults": {
         "text": "笑死我了",
-        "fontSizeRange": [80, 140],
+        "fontSizeRange": [
+            80,
+            140
+        ],
         "recommendLines": 1,
         "fontFamily": [
             "Zcool KuaiLe",
@@ -84,8 +87,7 @@
         "frameRate": 30
     },
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "LaughExplosion"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "laugh-explosion.scene"
     }
 }
-

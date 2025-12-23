@@ -16,7 +16,10 @@
     "language": "zh",
     "textDefaults": {
         "text": "王大锤",
-        "fontSizeRange": [40, 60],
+        "fontSizeRange": [
+            40,
+            60
+        ],
         "recommendLines": 1,
         "fontFamily": [
             "Zcool KuaiLe",
@@ -85,8 +88,7 @@
         "frameRate": 30
     },
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "GuestNameSlide"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "guest-name-slide.scene"
     }
 }
-

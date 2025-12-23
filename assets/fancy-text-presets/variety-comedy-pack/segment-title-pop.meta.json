@@ -16,7 +16,10 @@
     "language": "zh",
     "textDefaults": {
         "text": "本期主题",
-        "fontSizeRange": [56, 90],
+        "fontSizeRange": [
+            56,
+            90
+        ],
         "recommendLines": 1,
         "fontFamily": [
             "Zcool KuaiLe",
@@ -83,8 +86,7 @@
         "frameRate": 30
     },
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "SegmentTitlePop"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "segment-title-pop.scene"
     }
 }
-

@@ -101,7 +101,7 @@
         "frameRate": 30
     },
     "compat": {
-        "renderer": "react-component",
-        "componentPath": "NeonPulseSwirl"
+        "renderer": "canvas-fancy-text",
+        "scenePath": "neon-pulse-swirl.scene"
     }
 }
