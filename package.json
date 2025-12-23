@@ -36,6 +36,7 @@
     "dotenv": "^17.2.3",
     "fabric": "^7.0.0",
     "framer-motion": "^11.11.17",
+    "immer": "^11.1.0",
     "lucide-react": "^0.460.0",
     "mediabunny": "^1.27.1",
     "next": "^15.0.3",
