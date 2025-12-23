@@ -343,182 +343,218 @@ export default function ModernComposerPreviewPage() {
       const { composeFromCanvas } = await import('@/lib/modern-composer/webcodecs');
 
       const canvas = fabricEngine.getCanvasElement();
-      const duration = 3; // 3秒视频
+      const videoDuration = 3; // 3秒视频
       const frameRate = 30;
-      const enterDuration = 0.8; // 入场动画持续时间（秒）
+      
+      // 与预览完全一致的动画参数
+      const animDuration = 1.0; // 动画持续时间 1 秒（与预览的 1000ms 一致）
+      const subtitleDelay = 0.2; // 副标题延迟 200ms（与预览一致）
 
       console.log('[composeVideo] 使用动画类型:', animeType);
 
+      // outExpo 缓动函数 - 与 Anime.js 的 outExpo 一致
+      const easeOutExpo = (t: number): number => {
+        return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      };
+
+      // 线性插值关键帧序列
+      const interpolateKeyframes = (keyframes: number[], t: number): number => {
+        if (t <= 0) return keyframes[0];
+        if (t >= 1) return keyframes[keyframes.length - 1];
+        
+        const segments = keyframes.length - 1;
+        const segmentIndex = Math.floor(t * segments);
+        const segmentProgress = (t * segments) - segmentIndex;
+        
+        const start = keyframes[segmentIndex];
+        const end = keyframes[Math.min(segmentIndex + 1, keyframes.length - 1)];
+        
+        return start + (end - start) * segmentProgress;
+      };
+
       const result = await composeFromCanvas({
         canvas,
-        duration,
+        duration: videoDuration,
         frameRate,
         format: videoFormat,
         quality: videoQuality,
         renderFrame: async (time, frameIndex) => {
-          // 动态渲染每一帧 - 使用用户选择的动画类型
-          const progress = time / duration;
-          const enterProgress = Math.min(1, time / enterDuration);
-          const easedEnter = 1 - Math.pow(1 - enterProgress, 3); // easeOut
-
-          // 根据动画类型计算标题状态
-          let titleState = { x: 400, y: 180, opacity: 1, scaleX: 1, scaleY: 1, angle: 0 };
-          let subtitleState = { x: 400, y: 240, opacity: 1, scaleX: 1, scaleY: 1, angle: 0 };
-
-          // 副标题延迟
-          const subtitleDelay = 0.2;
+          // 计算标题动画进度
+          const titleAnimProgress = Math.min(1, time / animDuration);
+          const titleEased = easeOutExpo(titleAnimProgress);
+          
+          // 计算副标题动画进度（延迟 200ms）
           const subtitleTime = Math.max(0, time - subtitleDelay);
-          const subtitleEnterProgress = Math.min(1, subtitleTime / enterDuration);
-          const subtitleEasedEnter = 1 - Math.pow(1 - subtitleEnterProgress, 3);
+          const subtitleAnimProgress = Math.min(1, subtitleTime / animDuration);
+          const subtitleEased = easeOutExpo(subtitleAnimProgress);
 
+          // 初始化状态 - 与预览的初始状态完全一致
+          // 预览中默认初始状态: { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 }
+          let titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+          let subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+          
+          // 目标状态
+          let titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+          let subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+          
+          // 是否是关键帧动画（不需要入场过渡）
+          let isKeyframeAnim = false;
+          let titleKeyframes: { [key: string]: number[] } = {};
+          let subtitleKeyframes: { [key: string]: number[] } = {};
+
+          // 根据动画类型设置初始状态和目标状态 - 与预览完全一致
           switch (animeType) {
             case 'fade-in':
-              titleState.opacity = easedEnter;
-              subtitleState.opacity = subtitleEasedEnter;
+              // 预览: titleTarget = { opacity: 1, scale: 1 }
+              titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'zoom-in':
-              titleState.opacity = easedEnter;
-              titleState.scaleX = titleState.scaleY = 0.5 + 0.5 * easedEnter;
-              subtitleState.opacity = subtitleEasedEnter;
-              subtitleState.scaleX = subtitleState.scaleY = 0.5 + 0.5 * subtitleEasedEnter;
+              // 预览: titleTarget = { opacity: 1, scale: 1 }
+              titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'slide-up':
-              titleState.opacity = easedEnter;
-              titleState.y = 180 + 50 * (1 - easedEnter);
-              subtitleState.opacity = subtitleEasedEnter;
-              subtitleState.y = 240 + 50 * (1 - subtitleEasedEnter);
+              // 预览: titleState.y = 50, titleTarget = { opacity: 1, scale: 1, y: 0 }
+              titleInitial = { opacity: 0, y: 50, scale: 0.5, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 50, scale: 0.5, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'bounce-in':
-              titleState.opacity = easedEnter;
-              titleState.y = 180 + 80 * (1 - easedEnter);
-              titleState.scaleX = titleState.scaleY = 0.3 + 0.7 * easedEnter;
-              subtitleState.opacity = subtitleEasedEnter;
-              subtitleState.y = 240 + 80 * (1 - subtitleEasedEnter);
-              subtitleState.scaleX = subtitleState.scaleY = 0.3 + 0.7 * subtitleEasedEnter;
+              // 预览: titleState.y = 80, titleState.scale = 0.3
+              titleInitial = { opacity: 0, y: 80, scale: 0.3, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 80, scale: 0.3, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'rotate-in':
-              titleState.opacity = easedEnter;
-              titleState.angle = -180 * (1 - easedEnter);
-              titleState.scaleX = titleState.scaleY = 0.5 + 0.5 * easedEnter;
-              subtitleState.opacity = subtitleEasedEnter;
-              subtitleState.angle = -180 * (1 - subtitleEasedEnter);
-              subtitleState.scaleX = subtitleState.scaleY = 0.5 + 0.5 * subtitleEasedEnter;
+              // 预览: titleState.rotate = -180
+              titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: -180, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: -180, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              break;
+
+            case 'blur-in':
+              // 预览: titleTarget = { opacity: 1, scale: 1 }
+              titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'elastic-in':
-              const elasticT = easedEnter;
-              titleState.opacity = elasticT;
-              titleState.scaleX = titleState.scaleY = elasticT * (1 + Math.sin(elasticT * Math.PI * 3) * 0.1 * (1 - elasticT));
-              const subtitleElasticT = subtitleEasedEnter;
-              subtitleState.opacity = subtitleElasticT;
-              subtitleState.scaleX = subtitleState.scaleY = subtitleElasticT * (1 + Math.sin(subtitleElasticT * Math.PI * 3) * 0.1 * (1 - subtitleElasticT));
+              // 预览: titleState.scale = 0
+              titleInitial = { opacity: 0, y: 0, scale: 0, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
               break;
 
             case 'pop':
-              // pop: 先入场，然后弹出效果
-              if (enterProgress < 1) {
-                titleState.opacity = easedEnter;
-                titleState.scaleX = titleState.scaleY = easedEnter;
-              } else {
-                const popTime = time - enterDuration;
-                const popCycle = Math.sin(popTime * 5) * 0.2;
-                titleState.scaleX = titleState.scaleY = 1 + popCycle;
-              }
-              if (subtitleEnterProgress < 1) {
-                subtitleState.opacity = subtitleEasedEnter;
-                subtitleState.scaleX = subtitleState.scaleY = subtitleEasedEnter;
-              } else {
-                const subPopTime = subtitleTime - enterDuration;
-                const subPopCycle = Math.sin(subPopTime * 5) * 0.2;
-                subtitleState.scaleX = subtitleState.scaleY = 1 + subPopCycle;
-              }
+              // 预览: 初始已可见，关键帧 scale: [1, 1.2, 1]
+              isKeyframeAnim = true;
+              titleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              titleKeyframes = { scale: [1, 1.2, 1] };
+              subtitleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              subtitleKeyframes = { scale: [1, 1.2, 1] };
               break;
 
             case 'shake':
-              // shake: 入场后持续抖动
-              if (enterProgress < 1) {
-                titleState.opacity = easedEnter;
-              } else {
-                // 持续抖动效果
-                const shakeTime = time * 30;
-                titleState.x = 400 + Math.sin(shakeTime) * 10;
-              }
-              if (subtitleEnterProgress < 1) {
-                subtitleState.opacity = subtitleEasedEnter;
-              } else {
-                const subShakeTime = subtitleTime * 30;
-                subtitleState.x = 400 + Math.sin(subShakeTime) * 10;
-              }
+              // 预览: 初始已可见，关键帧 x: [0, -10, 10, -10, 10, 0]
+              isKeyframeAnim = true;
+              titleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              titleKeyframes = { x: [0, -10, 10, -10, 10, 0] };
+              subtitleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              subtitleKeyframes = { x: [0, -10, 10, -10, 10, 0] };
               break;
 
             case 'swing':
-              // swing: 入场后摇摆
-              if (enterProgress < 1) {
-                titleState.opacity = easedEnter;
-              } else {
-                const swingTime = (time - enterDuration) * 8;
-                titleState.angle = Math.sin(swingTime) * 15 * Math.exp(-(time - enterDuration) * 0.5);
-              }
-              if (subtitleEnterProgress < 1) {
-                subtitleState.opacity = subtitleEasedEnter;
-              } else {
-                const subSwingTime = (subtitleTime - enterDuration) * 8;
-                subtitleState.angle = Math.sin(subSwingTime) * 15 * Math.exp(-(subtitleTime - enterDuration) * 0.5);
-              }
+              // 预览: 初始已可见，关键帧 rotate: [0, 15, -10, 5, -5, 0]
+              isKeyframeAnim = true;
+              titleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              titleKeyframes = { rotate: [0, 15, -10, 5, -5, 0] };
+              subtitleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              subtitleKeyframes = { rotate: [0, 15, -10, 5, -5, 0] };
               break;
 
             case 'pulse':
-              // pulse: 入场后脉冲
-              if (enterProgress < 1) {
-                titleState.opacity = easedEnter;
-              } else {
-                const pulseTime = (time - enterDuration) * 6;
-                const pulseScale = 1 + Math.sin(pulseTime) * 0.1;
-                titleState.scaleX = titleState.scaleY = pulseScale;
-                titleState.opacity = 0.8 + Math.sin(pulseTime) * 0.2;
-              }
-              if (subtitleEnterProgress < 1) {
-                subtitleState.opacity = subtitleEasedEnter;
-              } else {
-                const subPulseTime = (subtitleTime - enterDuration) * 6;
-                const subPulseScale = 1 + Math.sin(subPulseTime) * 0.1;
-                subtitleState.scaleX = subtitleState.scaleY = subPulseScale;
-                subtitleState.opacity = 0.8 + Math.sin(subPulseTime) * 0.2;
-              }
+              // 预览: 初始已可见，关键帧 scale: [1, 1.1, 1], opacity: [1, 0.8, 1]
+              isKeyframeAnim = true;
+              titleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              titleKeyframes = { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] };
+              subtitleInitial = { opacity: 1, y: 0, scale: 1, rotate: 0, x: 0 };
+              subtitleKeyframes = { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] };
               break;
 
             default:
-              // 默认淡入
-              titleState.opacity = easedEnter;
-              subtitleState.opacity = subtitleEasedEnter;
+              titleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              titleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
+              subtitleInitial = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+              subtitleTarget = { opacity: 1, scale: 1, y: 0, rotate: 0, x: 0 };
           }
 
-          // 应用状态到 Fabric 引擎
+          // 计算当前帧的状态
+          let titleState = { ...titleInitial };
+          let subtitleState = { ...subtitleInitial };
+
+          if (isKeyframeAnim) {
+            // 关键帧动画 - 直接在关键帧之间插值
+            for (const [prop, keyframes] of Object.entries(titleKeyframes)) {
+              (titleState as any)[prop] = interpolateKeyframes(keyframes, titleEased);
+            }
+            for (const [prop, keyframes] of Object.entries(subtitleKeyframes)) {
+              (subtitleState as any)[prop] = interpolateKeyframes(keyframes, subtitleEased);
+            }
+          } else {
+            // 普通过渡动画 - 从初始状态插值到目标状态
+            titleState = {
+              opacity: titleInitial.opacity + (titleTarget.opacity - titleInitial.opacity) * titleEased,
+              y: titleInitial.y + (titleTarget.y - titleInitial.y) * titleEased,
+              scale: titleInitial.scale + (titleTarget.scale - titleInitial.scale) * titleEased,
+              rotate: titleInitial.rotate + (titleTarget.rotate - titleInitial.rotate) * titleEased,
+              x: titleInitial.x + (titleTarget.x - titleInitial.x) * titleEased,
+            };
+            subtitleState = {
+              opacity: subtitleInitial.opacity + (subtitleTarget.opacity - subtitleInitial.opacity) * subtitleEased,
+              y: subtitleInitial.y + (subtitleTarget.y - subtitleInitial.y) * subtitleEased,
+              scale: subtitleInitial.scale + (subtitleTarget.scale - subtitleInitial.scale) * subtitleEased,
+              rotate: subtitleInitial.rotate + (subtitleTarget.rotate - subtitleInitial.rotate) * subtitleEased,
+              x: subtitleInitial.x + (subtitleTarget.x - subtitleInitial.x) * subtitleEased,
+            };
+          }
+
+          // 应用状态到 Fabric 引擎 - 与预览的 updateFabric 函数完全一致
           fabricEngine.applyRenderState('title-text', {
-            x: titleState.x,
-            y: titleState.y,
+            x: 400 + (titleState.x || 0),
+            y: 180 + (titleState.y || 0),
             opacity: titleState.opacity,
-            scaleX: titleState.scaleX,
-            scaleY: titleState.scaleY,
-            angle: titleState.angle,
+            scaleX: titleState.scale,
+            scaleY: titleState.scale,
+            angle: titleState.rotate || 0,
           });
 
           fabricEngine.applyRenderState('subtitle-text', {
-            x: subtitleState.x,
-            y: subtitleState.y,
+            x: 400 + (subtitleState.x || 0),
+            y: 240 + (subtitleState.y || 0),
             opacity: subtitleState.opacity,
-            scaleX: subtitleState.scaleX,
-            scaleY: subtitleState.scaleY,
-            angle: subtitleState.angle,
+            scaleX: subtitleState.scale,
+            scaleY: subtitleState.scale,
+            angle: subtitleState.rotate || 0,
           });
 
-          // 背景微旋转
+          // 背景保持不动（预览中也没有背景动画）
           fabricEngine.applyRenderState('bg-rect', {
-            angle: progress * 5,
+            angle: 0,
           });
 
           fabricEngine.render();
