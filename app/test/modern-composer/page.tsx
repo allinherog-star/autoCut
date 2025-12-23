@@ -12,8 +12,9 @@ import { Play, Download, Eye, Zap } from 'lucide-react';
  * 展示 Fabric.js + Anime.js + MediaBunny 集成
  */
 export default function ModernComposerPreviewPage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'fabric' | 'anime' | 'compose'>('fabric');
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -32,8 +33,15 @@ export default function ModernComposerPreviewPage() {
 
   // 初始化 Fabric 画布
   useEffect(() => {
-    if (activeTab === 'fabric' && canvasRef.current && !fabricEngine) {
-      initFabricDemo();
+    if (activeTab === 'fabric' && containerRef.current && !fabricEngine && !isInitialized) {
+      // 延迟初始化，确保 DOM 完全挂载
+      const timeoutId = setTimeout(() => {
+        if (containerRef.current) {
+          initFabricDemo();
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
     }
 
     // Cleanup: 组件卸载时销毁 FabricEngine
@@ -47,10 +55,11 @@ export default function ModernComposerPreviewPage() {
         fabricEngineRef.current = null;
       }
     };
-  }, [activeTab]);
+  }, [activeTab, fabricEngine, isInitialized]);
 
   const initFabricDemo = async () => {
     try {
+      setIsInitialized(true);
       const { FabricEngine } = await import('@/lib/modern-composer/fabric');
 
       // 先销毁之前的实例，防止 "already initialized" 错误
@@ -64,25 +73,28 @@ export default function ModernComposerPreviewPage() {
         setFabricEngine(null);
       }
 
-      // 创建全新的 canvas 元素来避免 Fabric.js 的重复初始化检测
-      const canvasContainer = canvasRef.current?.parentElement;
-      if (!canvasContainer) {
-        throw new Error('Canvas container not found');
+      // 使用容器 ref 获取容器
+      const container = containerRef.current;
+      if (!container) {
+        throw new Error('Canvas container ref is not available');
       }
 
-      // 移除旧 canvas，创建新的
-      const oldCanvas = canvasRef.current;
+      // 清除容器中的旧 canvas
+      container.innerHTML = '';
+
+      // 创建新的 canvas 元素并添加到 DOM（Fabric.js v7 要求 canvas 已挂载）
       const newCanvas = document.createElement('canvas');
       newCanvas.width = 800;
       newCanvas.height = 450;
-      newCanvas.className = oldCanvas?.className || '';
-      newCanvas.style.cssText = oldCanvas?.style.cssText || '';
+      newCanvas.className = 'rounded-lg shadow-2xl';
+      newCanvas.style.cssText = 'max-width: 100%; height: auto;';
+      // 必须先添加到 DOM，Fabric.js 才能正确初始化
+      container.appendChild(newCanvas);
 
-      if (oldCanvas) {
-        canvasContainer.replaceChild(newCanvas, oldCanvas);
-      }
+      // 确保 DOM 已更新
+      await new Promise(resolve => requestAnimationFrame(resolve));
 
-      // 使用新 canvas 初始化 FabricEngine
+      // 使用已挂载的 canvas 初始化 FabricEngine
       const engine = new FabricEngine({
         width: 800,
         height: 450,
@@ -379,12 +391,9 @@ export default function ModernComposerPreviewPage() {
 
               {/* Canvas 容器 */}
               <div className="bg-slate-900 rounded-lg p-4 flex items-center justify-center">
-                <canvas
-                  ref={canvasRef}
-                  width={800}
-                  height={450}
-                  className="rounded-lg shadow-2xl"
-                  style={{ maxWidth: '100%', height: 'auto' }}
+                <div
+                  ref={containerRef}
+                  style={{ width: 800, height: 450, maxWidth: '100%' }}
                 />
               </div>
 

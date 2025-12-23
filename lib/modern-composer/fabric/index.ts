@@ -65,19 +65,23 @@ export class FabricEngine {
   private canvas: fabric.StaticCanvas;
   private elements: Map<string, fabric.FabricObject> = new Map();
   private videoElements: Map<string, HTMLVideoElement> = new Map();
+  private canvasElement: HTMLCanvasElement;
 
   constructor(config: FabricEngineConfig) {
     // 使用传入的 canvas 或创建新的
     const canvasEl = config.canvas ?? document.createElement('canvas');
     canvasEl.width = config.width;
     canvasEl.height = config.height;
+    this.canvasElement = canvasEl;
 
+    // Fabric.js v7: 始终传入 canvas 元素
+    // 注意：canvas 必须已添加到 DOM 中才能正常工作
     this.canvas = new fabric.StaticCanvas(canvasEl, {
       width: config.width,
       height: config.height,
       backgroundColor: config.backgroundColor || '#000000',
       preserveObjectStacking: config.preserveObjectStacking ?? true,
-      renderOnAddRemove: false, // 手动控制渲染
+      renderOnAddRemove: false,
     });
   }
 
@@ -96,14 +100,17 @@ export class FabricEngine {
    * 获取原生 Canvas 元素
    */
   getCanvasElement(): HTMLCanvasElement {
-    return this.canvas.getElement();
+    // 直接返回保存的 canvas 元素引用，避免 Fabric.js 内部状态问题
+    return this.canvasElement;
   }
 
   /**
    * 获取 2D Context
    */
   getContext(): CanvasRenderingContext2D {
-    return this.canvas.getContext();
+    const ctx = this.canvasElement.getContext('2d');
+    if (!ctx) throw new Error('Failed to get 2D context');
+    return ctx;
   }
 
   // ============================================
