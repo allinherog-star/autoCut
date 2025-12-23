@@ -19,9 +19,7 @@ VEIR（Video Editing Intermediate Representation）旨在定义一种：
 - 面向 AI 生成（AI-first）
 - 引擎无关（Engine-agnostic）
 - 可演进（Evolvable）
-- 支持用户低成本微调
-
-的视频剪辑中间表示规范。
+- 支持用户低成本微调的视频剪辑中间表示规范。
 
 ### 0.3 非目标
 - 不定义具体渲染算法
