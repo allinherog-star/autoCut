@@ -212,31 +212,40 @@ export class AnimeEngine {
     // 创建状态对象用于追踪动画值
     const stateObj = this.getOrCreateState(targetId);
 
-    // 转换关键帧为 Anime.js 格式
-    const animeKeyframes = animation.keyframes.map((kf) => ({
-      opacity: kf.opacity,
-      translateX: kf.translateX,
-      translateY: kf.translateY,
-      scale: kf.scale,
-      scaleX: kf.scaleX,
-      scaleY: kf.scaleY,
-      rotate: kf.rotate,
-      blur: kf.blur,
-      duration: kf.duration,
-      delay: kf.delay,
-      ease: kf.easing,
-    }));
+    // 构建动画参数对象
+    const animParams: any = {
+      targets: stateObj,
+      duration: animation.duration,
+      easing: animation.easing || 'easeOutQuad',
+    };
 
-    timeline.add(
-      stateObj,
-      {
-        keyframes: animeKeyframes,
-        duration: animation.duration,
-        delay: animation.delay,
-        ease: animation.easing,
-      },
-      offset
-    );
+    // 从关键帧提取目标值（使用最后一帧的值）
+    const lastFrame = animation.keyframes[animation.keyframes.length - 1];
+    if (lastFrame) {
+      if (lastFrame.opacity !== undefined) animParams.opacity = lastFrame.opacity;
+      if (lastFrame.translateX !== undefined) animParams.translateX = lastFrame.translateX;
+      if (lastFrame.translateY !== undefined) animParams.translateY = lastFrame.translateY;
+      if (lastFrame.scale !== undefined) animParams.scale = lastFrame.scale;
+      if (lastFrame.scaleX !== undefined) animParams.scaleX = lastFrame.scaleX;
+      if (lastFrame.scaleY !== undefined) animParams.scaleY = lastFrame.scaleY;
+      if (lastFrame.rotate !== undefined) animParams.rotate = lastFrame.rotate;
+      if (lastFrame.blur !== undefined) animParams.blur = lastFrame.blur;
+    }
+
+    // 设置初始值（从第一帧）
+    const firstFrame = animation.keyframes[0];
+    if (firstFrame) {
+      if (firstFrame.opacity !== undefined) stateObj.opacity = firstFrame.opacity;
+      if (firstFrame.translateX !== undefined) stateObj.translateX = firstFrame.translateX;
+      if (firstFrame.translateY !== undefined) stateObj.translateY = firstFrame.translateY;
+      if (firstFrame.scale !== undefined) stateObj.scale = firstFrame.scale;
+      if (firstFrame.scaleX !== undefined) stateObj.scaleX = firstFrame.scaleX;
+      if (firstFrame.scaleY !== undefined) stateObj.scaleY = firstFrame.scaleY;
+      if (firstFrame.rotate !== undefined) stateObj.rotate = firstFrame.rotate;
+      if (firstFrame.blur !== undefined) stateObj.blur = firstFrame.blur;
+    }
+
+    timeline.add(animParams, offset);
   }
 
   /**

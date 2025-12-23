@@ -7,10 +7,10 @@
 import {
   Output,
   Mp4OutputFormat,
-  WebmOutputFormat,
+  WebMOutputFormat,
   BufferTarget,
   CanvasSource,
-  AudioSamplesSource,
+  AudioSampleSource,
   getFirstEncodableVideoCodec,
   QUALITY_HIGH,
   QUALITY_MEDIUM,
@@ -83,7 +83,7 @@ export interface CompositionResult {
 export class MediaBunnyComposer {
   private output: Output | null = null;
   private videoSource: CanvasSource | null = null;
-  private audioSource: AudioSamplesSource | null = null;
+  private audioSource: AudioSampleSource | null = null;
   private config: VideoEncoderConfig;
   private audioConfig: AudioEncoderConfig;
   private format: OutputFormat;
@@ -121,7 +121,7 @@ export class MediaBunnyComposer {
     const outputFormat =
       this.format === 'mp4'
         ? new Mp4OutputFormat({ fastStart: 'in-memory' })
-        : new WebmOutputFormat();
+        : new WebMOutputFormat();
 
     // 创建输出实例
     this.output = new Output({
@@ -177,11 +177,9 @@ export class MediaBunnyComposer {
       throw new Error('Composer not initialized');
     }
 
-    // 创建音频采样源
-    this.audioSource = new AudioSamplesSource({
+    // 创建音频采样源 (MediaBunny AudioSampleSource 只需要 codec 和 bitrate)
+    this.audioSource = new AudioSampleSource({
       codec: this.mapAudioCodec(this.audioConfig.codec || 'aac'),
-      sampleRate: this.audioConfig.sampleRate || 48000,
-      numberOfChannels: this.audioConfig.channels || 2,
       bitrate: this.audioConfig.bitrate || 192000,
     });
 
@@ -190,27 +188,32 @@ export class MediaBunnyComposer {
 
   /**
    * 编码一帧视频
+   * @param timestamp - 帧的时间戳（秒）
+   * @param duration - 帧的持续时间（秒），默认为 1/fps
+   * @param options - 可选配置，如 keyFrame
    */
-  async encodeFrame(options?: { keyFrame?: boolean }): Promise<void> {
+  async encodeFrame(timestamp: number, duration?: number, options?: { keyFrame?: boolean }): Promise<void> {
     if (!this.videoSource || !this.isStarted) {
       throw new Error('Composer not started');
     }
 
+    const frameDuration = duration ?? (1 / this.config.frameRate);
     const isKeyFrame = options?.keyFrame ?? this.frameCount % (this.config.keyFrameInterval || 30) === 0;
 
-    await this.videoSource.capture({ keyFrame: isKeyFrame });
+    // MediaBunny CanvasSource 使用 add(timestamp, duration, options) 方法
+    await this.videoSource.add(timestamp, frameDuration, { keyFrame: isKeyFrame });
     this.frameCount++;
   }
 
   /**
-   * 编码音频采样
+   * 编码音频采样 (接受 AudioSample 对象)
    */
-  async encodeAudioSamples(samples: Float32Array, timestamp?: number): Promise<void> {
+  async encodeAudioSamples(audioSample: any): Promise<void> {
     if (!this.audioSource) {
       throw new Error('Audio track not added');
     }
 
-    await this.audioSource.add(samples, timestamp);
+    await this.audioSource.add(audioSample);
   }
 
   /**
@@ -226,6 +229,9 @@ export class MediaBunnyComposer {
 
     // 获取输出缓冲区
     const buffer = (this.output.target as BufferTarget).buffer;
+    if (!buffer) {
+      throw new Error('Output buffer is null');
+    }
     const blob = new Blob([buffer], {
       type: this.format === 'mp4' ? 'video/mp4' : 'video/webm',
     });
@@ -254,18 +260,18 @@ export class MediaBunnyComposer {
   }
 
   /**
-   * 获取默认码率
+   * 获取默认码率 (返回数字类型)
    */
   private getDefaultBitrate(quality?: 'high' | 'medium' | 'low'): number {
     switch (quality) {
       case 'high':
-        return QUALITY_HIGH;
+        return Number(QUALITY_HIGH);
       case 'medium':
-        return QUALITY_MEDIUM;
+        return Number(QUALITY_MEDIUM);
       case 'low':
-        return QUALITY_LOW;
+        return Number(QUALITY_LOW);
       default:
-        return QUALITY_HIGH;
+        return Number(QUALITY_HIGH);
     }
   }
 
@@ -348,14 +354,15 @@ export async function composeFromCanvas(options: {
   onProgress?.(5, 'encoding', '开始编码...');
 
   // 逐帧渲染和编码
+  const frameDuration = 1 / frameRate;
   for (let frame = 0; frame < totalFrames; frame++) {
     const time = frame / frameRate;
 
     // 渲染帧内容
     await renderFrame(time, frame);
 
-    // 编码帧
-    await composer.encodeFrame({
+    // 编码帧 (传入时间戳和持续时间)
+    await composer.encodeFrame(time, frameDuration, {
       keyFrame: frame % 30 === 0,
     });
 
@@ -465,10 +472,10 @@ export function revokeDownloadUrl(result: CompositionResult): void {
 export {
   Output,
   Mp4OutputFormat,
-  WebmOutputFormat,
+  WebMOutputFormat,
   BufferTarget,
   CanvasSource,
-  AudioSamplesSource,
+  AudioSampleSource,
   QUALITY_HIGH,
   QUALITY_MEDIUM,
   QUALITY_LOW,
