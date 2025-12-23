@@ -33,18 +33,26 @@ export default function ModernComposerPreviewPage() {
 
   // 初始化 Fabric 画布
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    
     if (activeTab === 'fabric' && containerRef.current && !fabricEngine && !isInitialized) {
       // 延迟初始化，确保 DOM 完全挂载
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (containerRef.current) {
           initFabricDemo();
         }
       }, 100);
-
-      return () => clearTimeout(timeoutId);
     }
 
-    // Cleanup: 组件卸载时销毁 FabricEngine
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [activeTab, fabricEngine, isInitialized]);
+
+  // Cleanup: 组件卸载时销毁 FabricEngine (单独的 useEffect)
+  useEffect(() => {
     return () => {
       if (fabricEngineRef.current) {
         try {
@@ -55,7 +63,7 @@ export default function ModernComposerPreviewPage() {
         fabricEngineRef.current = null;
       }
     };
-  }, [activeTab, fabricEngine, isInitialized]);
+  }, []);
 
   const initFabricDemo = async () => {
     try {
@@ -160,16 +168,16 @@ export default function ModernComposerPreviewPage() {
     setMessage('播放动画...');
 
     try {
-      // Anime.js v4 使用 createTimeline 代替 anime.timeline
-      const { createTimeline } = await import('animejs');
+      // Anime.js v4 使用 animate 和 createTimeline API
+      const { animate, createTimeline } = await import('animejs');
 
       // 重置元素状态
       fabricEngine.applyRenderState('title-text', {
         x: 400,
         y: 180,
         opacity: 0,
-        scaleX: 1,
-        scaleY: 1,
+        scaleX: 0.5,
+        scaleY: 0.5,
         angle: 0,
       });
 
@@ -177,61 +185,101 @@ export default function ModernComposerPreviewPage() {
         x: 400,
         y: 240,
         opacity: 0,
-        scaleX: 1,
-        scaleY: 1,
+        scaleX: 0.5,
+        scaleY: 0.5,
         angle: 0,
       });
 
       fabricEngine.render();
 
-      // 创建动画状态对象
-      const titleState = { opacity: 0, y: 0, scale: 1, rotate: 0 };
-      const subtitleState = { opacity: 0, y: 0, scale: 1, rotate: 0 };
+      // 创建动画状态对象 - 使用普通对象作为动画目标
+      const titleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
+      const subtitleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
 
-      // 根据动画类型设置参数
-      let animConfig: any = {};
+      // 根据动画类型设置目标值
+      let titleTarget: any = { opacity: 1, scale: 1, y: 0 };
+      let subtitleTarget: any = { opacity: 1, scale: 1, y: 0 };
 
       switch (animeType) {
         case 'fade-in':
-          animConfig = { opacity: [0, 1] };
+          titleTarget = { opacity: 1, scale: 1 };
+          subtitleTarget = { opacity: 1, scale: 1 };
           break;
         case 'zoom-in':
-          animConfig = { opacity: [0, 1], scale: [0.5, 1] };
+          titleTarget = { opacity: 1, scale: 1 };
+          subtitleTarget = { opacity: 1, scale: 1 };
           break;
         case 'slide-up':
-          animConfig = { opacity: [0, 1], y: [50, 0] };
+          titleState.y = 50;
+          subtitleState.y = 50;
+          titleTarget = { opacity: 1, scale: 1, y: 0 };
+          subtitleTarget = { opacity: 1, scale: 1, y: 0 };
           break;
         case 'bounce-in':
-          animConfig = { opacity: [0, 1], scale: [0.3, 1], y: [80, 0] };
+          titleState.y = 80;
+          subtitleState.y = 80;
+          titleState.scale = 0.3;
+          subtitleState.scale = 0.3;
+          titleTarget = { opacity: 1, scale: 1, y: 0 };
+          subtitleTarget = { opacity: 1, scale: 1, y: 0 };
           break;
         case 'rotate-in':
-          animConfig = { opacity: [0, 1], rotate: [-180, 0], scale: [0.5, 1] };
+          titleState.rotate = -180;
+          subtitleState.rotate = -180;
+          titleTarget = { opacity: 1, scale: 1, rotate: 0 };
+          subtitleTarget = { opacity: 1, scale: 1, rotate: 0 };
           break;
         case 'blur-in':
-          animConfig = { opacity: [0, 1] };
+          titleTarget = { opacity: 1, scale: 1 };
+          subtitleTarget = { opacity: 1, scale: 1 };
           break;
         case 'elastic-in':
-          animConfig = { opacity: [0, 1], scale: [0, 1] };
+          titleState.scale = 0;
+          subtitleState.scale = 0;
+          titleTarget = { opacity: 1, scale: 1 };
+          subtitleTarget = { opacity: 1, scale: 1 };
           break;
         case 'pop':
-          animConfig = { scale: [1, 1.2, 1] };
+          titleState.opacity = 1;
+          titleState.scale = 1;
+          subtitleState.opacity = 1;
+          subtitleState.scale = 1;
+          titleTarget = { scale: [1, 1.2, 1] };
+          subtitleTarget = { scale: [1, 1.2, 1] };
           break;
         case 'shake':
-          animConfig = { x: [0, -10, 10, -10, 10, 0] };
+          titleState.opacity = 1;
+          titleState.scale = 1;
+          subtitleState.opacity = 1;
+          subtitleState.scale = 1;
+          titleTarget = { x: [0, -10, 10, -10, 10, 0] };
+          subtitleTarget = { x: [0, -10, 10, -10, 10, 0] };
           break;
         case 'swing':
-          animConfig = { rotate: [0, 15, -10, 5, -5, 0] };
+          titleState.opacity = 1;
+          titleState.scale = 1;
+          subtitleState.opacity = 1;
+          subtitleState.scale = 1;
+          titleTarget = { rotate: [0, 15, -10, 5, -5, 0] };
+          subtitleTarget = { rotate: [0, 15, -10, 5, -5, 0] };
           break;
         case 'pulse':
-          animConfig = { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] };
+          titleState.opacity = 1;
+          titleState.scale = 1;
+          subtitleState.opacity = 1;
+          subtitleState.scale = 1;
+          titleTarget = { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] };
+          subtitleTarget = { scale: [1, 1.1, 1], opacity: [1, 0.8, 1] };
           break;
         default:
-          animConfig = { opacity: [0, 1] };
+          titleTarget = { opacity: 1, scale: 1 };
+          subtitleTarget = { opacity: 1, scale: 1 };
       }
 
       // 更新 Fabric 渲染的函数
       const updateFabric = () => {
         fabricEngine.applyRenderState('title-text', {
+          x: 400 + (titleState.x || 0),
           y: 180 + (titleState.y || 0),
           opacity: titleState.opacity,
           scaleX: titleState.scale,
@@ -240,6 +288,7 @@ export default function ModernComposerPreviewPage() {
         });
 
         fabricEngine.applyRenderState('subtitle-text', {
+          x: 400 + (subtitleState.x || 0),
           y: 240 + (subtitleState.y || 0),
           opacity: subtitleState.opacity,
           scaleX: subtitleState.scale,
@@ -250,29 +299,28 @@ export default function ModernComposerPreviewPage() {
         fabricEngine.render();
       };
 
-      // 创建时间轴 (Anime.js v4 API)
-      const timeline = createTimeline({
-        defaults: {
-          ease: 'outExpo',
-        },
+      // 使用 Anime.js v4 的 animate API 驱动动画
+      // 先为标题创建动画
+      const titleAnim = animate(titleState, {
+        ...titleTarget,
+        duration: 1000,
+        ease: 'outExpo',
         onUpdate: updateFabric,
-        onComplete: () => {
-          setIsPlaying(false);
-          setMessage('动画完成');
-        },
       });
 
-      // 添加标题动画
-      timeline.add(titleState, {
-        duration: 1000,
-        ...animConfig,
-      });
-
-      // 添加副标题动画（延迟）
-      timeline.add(subtitleState, {
-        duration: 1000,
-        ...animConfig,
-      }, '-=800'); // 重叠 800ms
+      // 延迟 200ms 后为副标题创建动画
+      setTimeout(() => {
+        animate(subtitleState, {
+          ...subtitleTarget,
+          duration: 1000,
+          ease: 'outExpo',
+          onUpdate: updateFabric,
+          onComplete: () => {
+            setIsPlaying(false);
+            setMessage('动画完成');
+          },
+        });
+      }, 200);
 
     } catch (error) {
       console.error('Animation failed:', error);
