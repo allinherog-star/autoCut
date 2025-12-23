@@ -1,4 +1,4 @@
-# VEIR Specification v1.0 (Draft)
+# VEIR Specification v1.0
 ## Video Editing Intermediate Representation
 
 > 面向 AI 的多模态视频剪辑中间表示规范  
