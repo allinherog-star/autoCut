@@ -15,6 +15,8 @@ export interface FabricEngineConfig {
   height: number;
   backgroundColor?: string;
   preserveObjectStacking?: boolean;
+  /** 可选：使用已有的 Canvas 元素，而不是创建新的 */
+  canvas?: HTMLCanvasElement;
 }
 
 export interface ElementConfig {
@@ -65,8 +67,8 @@ export class FabricEngine {
   private videoElements: Map<string, HTMLVideoElement> = new Map();
 
   constructor(config: FabricEngineConfig) {
-    // 创建 StaticCanvas（用于渲染/导出，不需要交互）
-    const canvasEl = document.createElement('canvas');
+    // 使用传入的 canvas 或创建新的
+    const canvasEl = config.canvas ?? document.createElement('canvas');
     canvasEl.width = config.width;
     canvasEl.height = config.height;
 

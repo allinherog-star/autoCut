@@ -21,6 +21,7 @@ export default function ModernComposerPreviewPage() {
 
   // Fabric.js 演示
   const [fabricEngine, setFabricEngine] = useState<any>(null);
+  const fabricEngineRef = useRef<any>(null); // 用于 cleanup
 
   // Anime.js 演示
   const [animeType, setAnimeType] = useState('fade-in');
@@ -34,16 +35,59 @@ export default function ModernComposerPreviewPage() {
     if (activeTab === 'fabric' && canvasRef.current && !fabricEngine) {
       initFabricDemo();
     }
+
+    // Cleanup: 组件卸载时销毁 FabricEngine
+    return () => {
+      if (fabricEngineRef.current) {
+        try {
+          fabricEngineRef.current.destroy();
+        } catch (e) {
+          console.warn('FabricEngine cleanup error:', e);
+        }
+        fabricEngineRef.current = null;
+      }
+    };
   }, [activeTab]);
 
   const initFabricDemo = async () => {
     try {
       const { FabricEngine } = await import('@/lib/modern-composer/fabric');
 
+      // 先销毁之前的实例，防止 "already initialized" 错误
+      if (fabricEngineRef.current) {
+        try {
+          fabricEngineRef.current.destroy();
+        } catch (e) {
+          console.warn('Previous engine cleanup error:', e);
+        }
+        fabricEngineRef.current = null;
+        setFabricEngine(null);
+      }
+
+      // 创建全新的 canvas 元素来避免 Fabric.js 的重复初始化检测
+      const canvasContainer = canvasRef.current?.parentElement;
+      if (!canvasContainer) {
+        throw new Error('Canvas container not found');
+      }
+
+      // 移除旧 canvas，创建新的
+      const oldCanvas = canvasRef.current;
+      const newCanvas = document.createElement('canvas');
+      newCanvas.width = 800;
+      newCanvas.height = 450;
+      newCanvas.className = oldCanvas?.className || '';
+      newCanvas.style.cssText = oldCanvas?.style.cssText || '';
+
+      if (oldCanvas) {
+        canvasContainer.replaceChild(newCanvas, oldCanvas);
+      }
+
+      // 使用新 canvas 初始化 FabricEngine
       const engine = new FabricEngine({
         width: 800,
         height: 450,
         backgroundColor: '#1a1a2e',
+        canvas: newCanvas,
       });
 
       // 添加背景矩形
@@ -85,6 +129,7 @@ export default function ModernComposerPreviewPage() {
       // 渲染
       engine.render();
 
+      fabricEngineRef.current = engine; // 保存到 ref 供 cleanup 使用
       setFabricEngine(engine);
       setMessage('Fabric.js 画布已初始化');
     } catch (error) {
