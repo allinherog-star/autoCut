@@ -345,6 +345,9 @@ export default function ModernComposerPreviewPage() {
       const canvas = fabricEngine.getCanvasElement();
       const duration = 3; // 3秒视频
       const frameRate = 30;
+      const enterDuration = 0.8; // 入场动画持续时间（秒）
+
+      console.log('[composeVideo] 使用动画类型:', animeType);
 
       const result = await composeFromCanvas({
         canvas,
@@ -353,27 +356,169 @@ export default function ModernComposerPreviewPage() {
         format: videoFormat,
         quality: videoQuality,
         renderFrame: async (time, frameIndex) => {
-          // 动态渲染每一帧
+          // 动态渲染每一帧 - 使用用户选择的动画类型
           const progress = time / duration;
+          const enterProgress = Math.min(1, time / enterDuration);
+          const easedEnter = 1 - Math.pow(1 - enterProgress, 3); // easeOut
 
-          // 标题动画
+          // 根据动画类型计算标题状态
+          let titleState = { x: 400, y: 180, opacity: 1, scaleX: 1, scaleY: 1, angle: 0 };
+          let subtitleState = { x: 400, y: 240, opacity: 1, scaleX: 1, scaleY: 1, angle: 0 };
+
+          // 副标题延迟
+          const subtitleDelay = 0.2;
+          const subtitleTime = Math.max(0, time - subtitleDelay);
+          const subtitleEnterProgress = Math.min(1, subtitleTime / enterDuration);
+          const subtitleEasedEnter = 1 - Math.pow(1 - subtitleEnterProgress, 3);
+
+          switch (animeType) {
+            case 'fade-in':
+              titleState.opacity = easedEnter;
+              subtitleState.opacity = subtitleEasedEnter;
+              break;
+
+            case 'zoom-in':
+              titleState.opacity = easedEnter;
+              titleState.scaleX = titleState.scaleY = 0.5 + 0.5 * easedEnter;
+              subtitleState.opacity = subtitleEasedEnter;
+              subtitleState.scaleX = subtitleState.scaleY = 0.5 + 0.5 * subtitleEasedEnter;
+              break;
+
+            case 'slide-up':
+              titleState.opacity = easedEnter;
+              titleState.y = 180 + 50 * (1 - easedEnter);
+              subtitleState.opacity = subtitleEasedEnter;
+              subtitleState.y = 240 + 50 * (1 - subtitleEasedEnter);
+              break;
+
+            case 'bounce-in':
+              titleState.opacity = easedEnter;
+              titleState.y = 180 + 80 * (1 - easedEnter);
+              titleState.scaleX = titleState.scaleY = 0.3 + 0.7 * easedEnter;
+              subtitleState.opacity = subtitleEasedEnter;
+              subtitleState.y = 240 + 80 * (1 - subtitleEasedEnter);
+              subtitleState.scaleX = subtitleState.scaleY = 0.3 + 0.7 * subtitleEasedEnter;
+              break;
+
+            case 'rotate-in':
+              titleState.opacity = easedEnter;
+              titleState.angle = -180 * (1 - easedEnter);
+              titleState.scaleX = titleState.scaleY = 0.5 + 0.5 * easedEnter;
+              subtitleState.opacity = subtitleEasedEnter;
+              subtitleState.angle = -180 * (1 - subtitleEasedEnter);
+              subtitleState.scaleX = subtitleState.scaleY = 0.5 + 0.5 * subtitleEasedEnter;
+              break;
+
+            case 'elastic-in':
+              const elasticT = easedEnter;
+              titleState.opacity = elasticT;
+              titleState.scaleX = titleState.scaleY = elasticT * (1 + Math.sin(elasticT * Math.PI * 3) * 0.1 * (1 - elasticT));
+              const subtitleElasticT = subtitleEasedEnter;
+              subtitleState.opacity = subtitleElasticT;
+              subtitleState.scaleX = subtitleState.scaleY = subtitleElasticT * (1 + Math.sin(subtitleElasticT * Math.PI * 3) * 0.1 * (1 - subtitleElasticT));
+              break;
+
+            case 'pop':
+              // pop: 先入场，然后弹出效果
+              if (enterProgress < 1) {
+                titleState.opacity = easedEnter;
+                titleState.scaleX = titleState.scaleY = easedEnter;
+              } else {
+                const popTime = time - enterDuration;
+                const popCycle = Math.sin(popTime * 5) * 0.2;
+                titleState.scaleX = titleState.scaleY = 1 + popCycle;
+              }
+              if (subtitleEnterProgress < 1) {
+                subtitleState.opacity = subtitleEasedEnter;
+                subtitleState.scaleX = subtitleState.scaleY = subtitleEasedEnter;
+              } else {
+                const subPopTime = subtitleTime - enterDuration;
+                const subPopCycle = Math.sin(subPopTime * 5) * 0.2;
+                subtitleState.scaleX = subtitleState.scaleY = 1 + subPopCycle;
+              }
+              break;
+
+            case 'shake':
+              // shake: 入场后持续抖动
+              if (enterProgress < 1) {
+                titleState.opacity = easedEnter;
+              } else {
+                // 持续抖动效果
+                const shakeTime = time * 30;
+                titleState.x = 400 + Math.sin(shakeTime) * 10;
+              }
+              if (subtitleEnterProgress < 1) {
+                subtitleState.opacity = subtitleEasedEnter;
+              } else {
+                const subShakeTime = subtitleTime * 30;
+                subtitleState.x = 400 + Math.sin(subShakeTime) * 10;
+              }
+              break;
+
+            case 'swing':
+              // swing: 入场后摇摆
+              if (enterProgress < 1) {
+                titleState.opacity = easedEnter;
+              } else {
+                const swingTime = (time - enterDuration) * 8;
+                titleState.angle = Math.sin(swingTime) * 15 * Math.exp(-(time - enterDuration) * 0.5);
+              }
+              if (subtitleEnterProgress < 1) {
+                subtitleState.opacity = subtitleEasedEnter;
+              } else {
+                const subSwingTime = (subtitleTime - enterDuration) * 8;
+                subtitleState.angle = Math.sin(subSwingTime) * 15 * Math.exp(-(subtitleTime - enterDuration) * 0.5);
+              }
+              break;
+
+            case 'pulse':
+              // pulse: 入场后脉冲
+              if (enterProgress < 1) {
+                titleState.opacity = easedEnter;
+              } else {
+                const pulseTime = (time - enterDuration) * 6;
+                const pulseScale = 1 + Math.sin(pulseTime) * 0.1;
+                titleState.scaleX = titleState.scaleY = pulseScale;
+                titleState.opacity = 0.8 + Math.sin(pulseTime) * 0.2;
+              }
+              if (subtitleEnterProgress < 1) {
+                subtitleState.opacity = subtitleEasedEnter;
+              } else {
+                const subPulseTime = (subtitleTime - enterDuration) * 6;
+                const subPulseScale = 1 + Math.sin(subPulseTime) * 0.1;
+                subtitleState.scaleX = subtitleState.scaleY = subPulseScale;
+                subtitleState.opacity = 0.8 + Math.sin(subPulseTime) * 0.2;
+              }
+              break;
+
+            default:
+              // 默认淡入
+              titleState.opacity = easedEnter;
+              subtitleState.opacity = subtitleEasedEnter;
+          }
+
+          // 应用状态到 Fabric 引擎
           fabricEngine.applyRenderState('title-text', {
-            opacity: Math.min(progress * 2, 1),
-            y: 180 - 50 * Math.max(0, 1 - progress * 2),
-            scaleX: 0.5 + 0.5 * Math.min(progress * 2, 1),
-            scaleY: 0.5 + 0.5 * Math.min(progress * 2, 1),
+            x: titleState.x,
+            y: titleState.y,
+            opacity: titleState.opacity,
+            scaleX: titleState.scaleX,
+            scaleY: titleState.scaleY,
+            angle: titleState.angle,
           });
 
-          // 副标题动画（延迟0.2秒）
-          const subtitleProgress = Math.max(0, (time - 0.2) / duration);
           fabricEngine.applyRenderState('subtitle-text', {
-            opacity: Math.min(subtitleProgress * 2, 1),
-            y: 240 - 50 * Math.max(0, 1 - subtitleProgress * 2),
+            x: subtitleState.x,
+            y: subtitleState.y,
+            opacity: subtitleState.opacity,
+            scaleX: subtitleState.scaleX,
+            scaleY: subtitleState.scaleY,
+            angle: subtitleState.angle,
           });
 
-          // 背景旋转
+          // 背景微旋转
           fabricEngine.applyRenderState('bg-rect', {
-            angle: progress * 10,
+            angle: progress * 5,
           });
 
           fabricEngine.render();
@@ -385,7 +530,7 @@ export default function ModernComposerPreviewPage() {
       });
 
       setVideoUrl(result.downloadUrl);
-      setMessage(`视频合成完成！大小: ${(result.size / 1024 / 1024).toFixed(2)} MB`);
+      setMessage(`视频合成完成！大小: ${(result.size / 1024 / 1024).toFixed(2)} MB，动画类型: ${animeType}`);
       setIsPlaying(false);
     } catch (error) {
       console.error('Composition failed:', error);

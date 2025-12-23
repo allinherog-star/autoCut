@@ -354,6 +354,11 @@ export class ModernComposer {
   /**
    * 计算 Clip 动画状态
    * 必须与 veir-preview/page.tsx 中的 TextOverlay 动画逻辑保持一致
+   * 
+   * 动画分为三个阶段：
+   * 1. 入场阶段 (0 ~ enterDuration): 元素进入的动画
+   * 2. 持续阶段 (enterDuration ~ 1-exitDuration): 循环动画（如 shake、pulse）
+   * 3. 出场阶段 (1-exitDuration ~ 1): 元素退出的动画
    */
   private calculateClipAnimation(
     clip: Clip,
@@ -375,6 +380,67 @@ export class ModernComposer {
     // 获取入场/出场动画类型
     const enterType = clip.behavior?.enter || 'fade-in';
     const exitType = clip.behavior?.exit || 'fade-out';
+    
+    // 当前绝对时间（秒）
+    const currentTime = progress * duration;
+    // 入场动画持续时间（秒）
+    const enterDurSeconds = enterDuration * duration;
+    // 入场完成后的时间
+    const timeAfterEnter = Math.max(0, currentTime - enterDurSeconds);
+    
+    // 调试日志
+    if (Math.floor(currentTime * 2) !== Math.floor((currentTime - 0.5) * 2)) {
+      console.log('[ModernComposer] Animation:', {
+        clipId: clip.id,
+        enterType,
+        currentTime: currentTime.toFixed(2),
+        progress: progress.toFixed(3),
+      });
+    }
+
+    // 处理特殊的循环动画类型（shake、pulse 等）
+    // 这些动画需要在整个显示期间持续运行
+    if (enterType === 'shake' || enterType === 'pulse') {
+      // 计算基础透明度（入场/出场渐变）
+      let baseOpacity = 1;
+      if (progress < enterDuration) {
+        baseOpacity = progress / enterDuration;
+      } else if (progress > 1 - exitDuration) {
+        baseOpacity = (1 - progress) / exitDuration;
+      }
+      state.opacity = baseOpacity;
+
+      if (enterType === 'shake') {
+        // shake: 整个显示期间持续抖动
+        const shakeTime = currentTime * 30;  // 抖动频率
+        let shakeIntensity = 1;
+        
+        // 入场时逐渐增加抖动
+        if (progress < enterDuration) {
+          shakeIntensity = progress / enterDuration;
+        }
+        // 出场时逐渐减少抖动
+        else if (progress > 1 - exitDuration) {
+          shakeIntensity = (1 - progress) / exitDuration;
+        }
+        
+        state.translateX = Math.sin(shakeTime) * 8 * shakeIntensity;  // 8px 幅度
+      } else if (enterType === 'pulse') {
+        // pulse: 脉冲缩放效果
+        const pulseTime = currentTime * 8;
+        let pulseIntensity = 1;
+        
+        if (progress < enterDuration) {
+          pulseIntensity = progress / enterDuration;
+        } else if (progress > 1 - exitDuration) {
+          pulseIntensity = (1 - progress) / exitDuration;
+        }
+        
+        state.scale = 1 + Math.sin(pulseTime) * 0.1 * pulseIntensity;  // 10% 缩放幅度
+      }
+      
+      return state;
+    }
 
     // 入场动画
     if (progress < enterDuration) {
