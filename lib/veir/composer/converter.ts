@@ -314,9 +314,19 @@ function convertTextAsset(
 
 /**
  * 从行为定义获取动画效果
+ * behavior.enter 映射到 AnimationEffect.type
  */
 function getAnimationFromBehavior(behavior?: { enter?: string; exit?: string }): AnimationEffect {
-  const enterType = behavior?.enter ? behaviorToAnimationMap[behavior.enter] : 'fade';
+  // 获取入场动画类型
+  const behaviorEnter = behavior?.enter;
+  const enterType = behaviorEnter ? behaviorToAnimationMap[behaviorEnter] : 'fade';
+  
+  // 调试日志：确认动画类型映射
+  console.log('[VEIR Converter] Animation mapping:', {
+    behaviorEnter,
+    mappedType: enterType,
+    behaviorExit: behavior?.exit,
+  });
   
   return {
     type: enterType || 'fade',

@@ -31,6 +31,15 @@ interface AnimationState {
   rotate: number
 }
 
+/**
+ * 计算动画状态
+ * 这个函数必须与预览组件的动画实现保持一致
+ * 
+ * 动画分为三个阶段：
+ * 1. 入场阶段 (0 ~ enterDur): 元素进入的动画
+ * 2. 持续阶段 (enterDur ~ duration-exitDur): 循环动画（如 shake、pulse）
+ * 3. 出场阶段 (duration-exitDur ~ duration): 元素退出的动画
+ */
 function calculateAnimationState(
   animation: AnimationEffect | undefined,
   progress: number, // 0-1
@@ -61,6 +70,11 @@ function calculateAnimationState(
   const enterProgress = Math.min(1, (progress * duration) / enterDur)
   const exitStart = 1 - exitDur / duration
   const exitProgress = progress > exitStart ? (progress - exitStart) / (1 - exitStart) : 0
+  
+  // 当前绝对时间（秒）
+  const currentTime = progress * duration
+  // 入场完成后的时间
+  const timeAfterEnter = Math.max(0, currentTime - enterDur)
 
   switch (animation.type) {
     case 'slide-up':
@@ -79,31 +93,68 @@ function calculateAnimationState(
       break
 
     case 'bounce':
-      state.opacity = Math.min(enterProgress, 1 - exitProgress)
+      // bounce: 入场时 opacity 始终为 1，弹跳效果
       if (enterProgress < 1) {
         const t = enterProgress
         state.scale = 0.3 + t * 0.7 + Math.sin(t * Math.PI * 3) * 0.15 * (1 - t)
         state.translateY = (1 - t) * 60
+        state.opacity = 1
+      } else {
+        state.opacity = 1 - exitProgress
       }
       break
 
     case 'shake':
+      // shake: 整个显示期间持续抖动
+      // 与 CSS @keyframes subtitle-shake 保持一致
       state.opacity = Math.min(enterProgress, 1 - exitProgress)
-      if (enterProgress >= 1 && exitProgress === 0) {
-        const t = (progress - enterDur / duration) * duration * 15
-        state.translateX = Math.sin(t) * 3
+      
+      // 入场时从静止开始抖动
+      if (enterProgress < 1) {
+        // 入场期间逐渐增加抖动幅度
+        const shakeIntensity = enterProgress
+        const shakeTime = currentTime * 30  // 抖动频率
+        state.translateX = Math.sin(shakeTime) * 8 * shakeIntensity  // 8px 幅度
+      } else if (exitProgress === 0) {
+        // 持续抖动阶段 - 使用高频抖动
+        const shakeTime = timeAfterEnter * 30  // 高频抖动
+        state.translateX = Math.sin(shakeTime) * 8  // 8px 幅度，与预览一致
+      } else {
+        // 出场时逐渐减少抖动
+        const shakeIntensity = 1 - exitProgress
+        const shakeTime = currentTime * 30
+        state.translateX = Math.sin(shakeTime) * 8 * shakeIntensity
       }
       break
 
     case 'pulse':
+      // pulse: 脉冲效果，持续缩放
       state.opacity = Math.min(enterProgress, 1 - exitProgress)
-      if (enterProgress >= 1 && exitProgress === 0) {
-        const t = (progress - enterDur / duration) * duration * 5
-        state.scale = 1 + Math.sin(t) * 0.05
+      
+      if (enterProgress < 1) {
+        // 入场时逐渐开始脉冲
+        const pulseIntensity = enterProgress
+        const pulseTime = currentTime * 8
+        state.scale = 1 + Math.sin(pulseTime) * 0.1 * pulseIntensity
+      } else if (exitProgress === 0) {
+        // 持续脉冲
+        const pulseTime = timeAfterEnter * 8
+        state.scale = 1 + Math.sin(pulseTime) * 0.1  // 10% 缩放幅度
+      } else {
+        // 出场时逐渐减少脉冲
+        const pulseIntensity = 1 - exitProgress
+        const pulseTime = currentTime * 8
+        state.scale = 1 + Math.sin(pulseTime) * 0.1 * pulseIntensity
       }
       break
 
     case 'glow':
+      // glow: 发光效果（主要通过样式实现，这里只处理透明度）
+      state.opacity = Math.min(enterProgress, 1 - exitProgress)
+      break
+
+    case 'typewriter':
+      // typewriter: 打字机效果（需要在文本渲染时处理）
       state.opacity = Math.min(enterProgress, 1 - exitProgress)
       break
 
@@ -448,6 +499,20 @@ export class VideoComposer {
     const localTime = time - asset.timelineStart
     const progress = localTime / asset.duration
     const animState = calculateAnimationState(asset.animation, progress, asset.duration)
+
+    // 调试日志：每秒输出一次动画状态
+    if (Math.floor(time * 2) !== Math.floor((time - 0.5) * 2)) {
+      console.log('[VideoComposer] Animation state:', {
+        assetId: asset.id,
+        animationType: asset.animation?.type,
+        time: time.toFixed(2),
+        progress: progress.toFixed(3),
+        translateX: animState.translateX.toFixed(1),
+        translateY: animState.translateY.toFixed(1),
+        scale: animState.scale.toFixed(2),
+        opacity: animState.opacity.toFixed(2),
+      })
+    }
 
     if (animState.opacity <= 0) return
 

@@ -275,34 +275,87 @@ export class VEIRComposer {
 
   /**
    * 必须与 TextOverlay 中的动画逻辑保持一致
+   * 动画类型来自 clip.behavior?.enter，需要与 veir-preview/page.tsx 中的 getInitialState 保持同步
    */
   private calculateAnimation(clip: Clip, progress: number, duration: number) {
-    const enterDuration = 0.15; // 比例，不是秒？ TextOverlay里是0.15与progress(0-1)比较，所以是15%的时长
-    const exitDuration = 0.15;
+    const enterDuration = 0.15; // 入场动画占总时长的比例（15%）
+    const exitDuration = 0.15;  // 出场动画占总时长的比例（15%）
 
     let state = { opacity: 1, scale: 1, y: 0 };
 
-    // Enter
+    // 获取入场动画类型
+    const enterBehavior = clip.behavior?.enter;
+    // 获取出场动画类型
+    const exitBehavior = clip.behavior?.exit;
+
+    // Enter - 入场动画
     if (progress < enterDuration) {
       const t = progress / enterDuration; // 0 -> 1
-      const behavior = clip.behavior?.enter;
+      // 使用 easeOut 缓动让动画更自然
+      const easedT = 1 - Math.pow(1 - t, 3);
 
-      if (behavior === 'bounce') {
-        // 模拟 spring: 簡單插值
-        state.scale = t;
-        state.y = (1 - t) * 50;
-        state.opacity = t;
-      } else if (behavior === 'slide-up') {
-        state.y = (1 - t) * 100;
-        state.opacity = t;
-      } else { // fade-in
-        state.opacity = t;
+      switch (enterBehavior) {
+        case 'bounce':
+          // bounce: 初始 scale=0, y=50, opacity=1，动画到 scale=1, y=0, opacity=1
+          // 注意：bounce 的 opacity 始终为 1，不会渐变
+          state.scale = easedT;
+          state.y = (1 - easedT) * 50;
+          state.opacity = 1; // bounce 动画不改变透明度
+          break;
+
+        case 'slide-up':
+          // slide-up: 初始 y=100, opacity=0，动画到 y=0, opacity=1
+          state.y = (1 - easedT) * 100;
+          state.opacity = easedT;
+          break;
+
+        case 'slide-down':
+          // slide-down: 初始 y=-100, opacity=0，动画到 y=0, opacity=1
+          state.y = -(1 - easedT) * 100;
+          state.opacity = easedT;
+          break;
+
+        case 'zoom':
+          // zoom: 初始 scale=0.5, opacity=0，动画到 scale=1, opacity=1
+          state.scale = 0.5 + easedT * 0.5;
+          state.opacity = easedT;
+          break;
+
+        case 'fade-in':
+        default:
+          // fade-in: 仅透明度变化
+          state.opacity = easedT;
+          break;
       }
     }
-    // Exit
+    // Exit - 出场动画
     else if (progress > (1 - exitDuration)) {
       const t = (progress - (1 - exitDuration)) / exitDuration; // 0 -> 1
-      state.opacity = 1 - t;
+      // 使用 easeIn 缓动让出场更自然
+      const easedT = t * t * t;
+
+      switch (exitBehavior) {
+        case 'zoom':
+          state.scale = 1 - easedT * 0.2; // 缩小到 0.8
+          state.opacity = 1 - easedT;
+          break;
+
+        case 'slide-up':
+          state.y = -easedT * 30;
+          state.opacity = 1 - easedT;
+          break;
+
+        case 'slide-down':
+          state.y = easedT * 30;
+          state.opacity = 1 - easedT;
+          break;
+
+        case 'fade-out':
+        default:
+          // fade-out: 仅透明度变化
+          state.opacity = 1 - easedT;
+          break;
+      }
     }
 
     return state;
