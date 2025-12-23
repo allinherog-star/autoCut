@@ -1,0 +1,171 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "timeline.schema.json",
+    "$comment": "时间轴 DSL：定义什么时候、用什么素材、如何表达",
+    "type": "object",
+    "required": [
+        "tracks"
+    ],
+    "properties": {
+        "tracks": {
+            "type": "array",
+            "$comment": "轨道列表（视频 / 字幕 / 画中画等）",
+            "items": {
+                "$ref": "#/definitions/track"
+            }
+        }
+    },
+    "definitions": {
+        "track": {
+            "type": "object",
+            "required": [
+                "id",
+                "type",
+                "layer",
+                "clips"
+            ],
+            "$comment": "时间轴轨道",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "轨道 ID"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "text",
+                        "pip",
+                        "image"
+                    ],
+                    "$comment": "轨道类型"
+                },
+                "layer": {
+                    "type": "integer",
+                    "$comment": "渲染层级（越大越靠上）"
+                },
+                "clips": {
+                    "type": "array",
+                    "$comment": "该轨道上的剪辑片段",
+                    "items": {
+                        "$ref": "#/definitions/clip"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "clip": {
+            "type": "object",
+            "required": [
+                "id",
+                "asset",
+                "time"
+            ],
+            "$comment": "剪辑片段（表达实例）",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "片段 ID"
+                },
+                "asset": {
+                    "type": "string",
+                    "$comment": "引用的 assetId"
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "$comment": "是否启用该片段"
+                },
+                "time": {
+                    "$ref": "#/definitions/timeRange"
+                },
+                "sourceSemantic": {
+                    "type": "string",
+                    "$comment": "来源语义（如 hook / explain）"
+                },
+                "expression": {
+                    "$ref": "#/definitions/expressionRef"
+                },
+                "behavior": {
+                    "$ref": "#/definitions/behavior"
+                },
+                "layout": {
+                    "$ref": "#/definitions/layout"
+                }
+            },
+            "additionalProperties": false
+        },
+        "timeRange": {
+            "type": "object",
+            "required": [
+                "start",
+                "end"
+            ],
+            "$comment": "时间范围（秒）",
+            "properties": {
+                "start": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "end": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "additionalProperties": false
+        },
+        "expressionRef": {
+            "type": "object",
+            "$comment": "视觉风格引用",
+            "properties": {
+                "preset": {
+                    "type": "string",
+                    "$comment": "引用 presets 中的风格"
+                },
+                "intensity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "$comment": "表现强度"
+                }
+            },
+            "additionalProperties": false
+        },
+        "behavior": {
+            "type": "object",
+            "$comment": "行为引用（入场 / 出场 / 强调）",
+            "properties": {
+                "enter": {
+                    "type": "string"
+                },
+                "exit": {
+                    "type": "string"
+                },
+                "emphasis": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "layout": {
+            "type": "object",
+            "$comment": "布局控制",
+            "properties": {
+                "zone": {
+                    "type": "string"
+                },
+                "safeArea": {
+                    "type": "boolean"
+                },
+                "preset": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

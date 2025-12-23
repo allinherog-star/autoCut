@@ -1,0 +1,334 @@
+{
+    "meta": {
+        "projectId": "demo-project-001",
+        "version": "1.0.0",
+        "fps": 30,
+        "resolution": [
+            1920,
+            1080
+        ],
+        "duration": 120,
+        "colorSpace": "sRGB",
+        "safeArea": {
+            "top": 0.1,
+            "bottom": 0.15
+        }
+    },
+    "assets": {
+        "assets": {
+            "main-video": {
+                "type": "video",
+                "src": "/assets/videos/main.mp4",
+                "semanticRole": "main",
+                "editable": false
+            },
+            "bgm-track": {
+                "type": "audio",
+                "src": "/assets/audio/bgm.mp3",
+                "loop": true,
+                "optional": true,
+                "defaultEnabled": true
+            },
+            "speaker-pip": {
+                "type": "video",
+                "src": "/assets/videos/speaker.mp4",
+                "semanticRole": "speaker",
+                "autoReplace": true
+            },
+            "title-text": {
+                "type": "text",
+                "content": "欢迎来到智能剪辑演示",
+                "editable": true
+            },
+            "subtitle-1": {
+                "type": "text",
+                "content": "这是第一段字幕内容",
+                "editable": true,
+                "semanticRole": "subtitle"
+            },
+            "logo-image": {
+                "type": "image",
+                "src": "/assets/images/logo.png",
+                "optional": true,
+                "defaultEnabled": true
+            }
+        }
+    },
+    "expressions": {
+        "entrances": {
+            "fade-in": {
+                "semantic": "渐入效果，适合平滑过渡",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "slide-up": {
+                "semantic": "从下往上滑入，适合标题或重要信息",
+                "intensityRange": [
+                    0.5,
+                    1.0
+                ]
+            },
+            "zoom-in": {
+                "semantic": "缩放进入，适合强调内容",
+                "intensityRange": [
+                    0.2,
+                    0.8
+                ]
+            },
+            "bounce": {
+                "semantic": "弹跳进入，适合综艺风格",
+                "intensityRange": [
+                    0.4,
+                    1.0
+                ]
+            }
+        },
+        "exits": {
+            "fade-out": {
+                "semantic": "渐出效果",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "slide-down": {
+                "semantic": "向下滑出",
+                "intensityRange": [
+                    0.5,
+                    1.0
+                ]
+            },
+            "zoom-out": {
+                "semantic": "缩小消失",
+                "intensityRange": [
+                    0.2,
+                    0.8
+                ]
+            }
+        },
+        "emphasis": {
+            "shake": {
+                "semantic": "抖动强调，适合惊讶或搞笑场景",
+                "intensityRange": [
+                    0.3,
+                    0.9
+                ]
+            },
+            "pulse": {
+                "semantic": "脉冲闪烁，适合重要提示",
+                "intensityRange": [
+                    0.2,
+                    0.7
+                ]
+            },
+            "glow": {
+                "semantic": "发光效果，适合高亮关键词",
+                "intensityRange": [
+                    0.4,
+                    1.0
+                ]
+            }
+        }
+    },
+    "presets": {
+        "textStyles": {
+            "title-variety": {
+                "category": "综艺",
+                "layers": [
+                    "shadow",
+                    "stroke",
+                    "fill",
+                    "glow"
+                ],
+                "defaultIntensity": 0.8
+            },
+            "subtitle-info": {
+                "category": "信息",
+                "layers": [
+                    "background",
+                    "fill"
+                ],
+                "defaultIntensity": 0.6
+            },
+            "emotion-pop": {
+                "category": "情绪",
+                "layers": [
+                    "stroke",
+                    "fill",
+                    "emoji"
+                ],
+                "defaultIntensity": 0.9
+            }
+        },
+        "pipLayouts": {
+            "speaker-corner": {
+                "anchor": "bottom-right",
+                "size": [
+                    0.25,
+                    0.25
+                ],
+                "radius": 12
+            },
+            "reaction-top": {
+                "anchor": "top-right",
+                "size": [
+                    0.2,
+                    0.2
+                ],
+                "radius": 8
+            },
+            "center-focus": {
+                "anchor": "center",
+                "size": [
+                    0.5,
+                    0.5
+                ],
+                "radius": 0
+            }
+        }
+    },
+    "timeline": {
+        "tracks": [
+            {
+                "id": "main-video-track",
+                "type": "video",
+                "layer": 0,
+                "clips": [
+                    {
+                        "id": "clip-main-1",
+                        "asset": "main-video",
+                        "enabled": true,
+                        "time": {
+                            "start": 0,
+                            "end": 120
+                        },
+                        "sourceSemantic": "main-content"
+                    }
+                ]
+            },
+            {
+                "id": "audio-track",
+                "type": "audio",
+                "layer": 1,
+                "clips": [
+                    {
+                        "id": "clip-bgm-1",
+                        "asset": "bgm-track",
+                        "enabled": true,
+                        "time": {
+                            "start": 0,
+                            "end": 120
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "pip-track",
+                "type": "pip",
+                "layer": 2,
+                "clips": [
+                    {
+                        "id": "clip-speaker-1",
+                        "asset": "speaker-pip",
+                        "enabled": true,
+                        "time": {
+                            "start": 10,
+                            "end": 60
+                        },
+                        "behavior": {
+                            "enter": "fade-in",
+                            "exit": "fade-out"
+                        },
+                        "layout": {
+                            "preset": "speaker-corner",
+                            "safeArea": true
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "text-title-track",
+                "type": "text",
+                "layer": 3,
+                "clips": [
+                    {
+                        "id": "clip-title-1",
+                        "asset": "title-text",
+                        "enabled": true,
+                        "time": {
+                            "start": 0,
+                            "end": 5
+                        },
+                        "sourceSemantic": "hook",
+                        "expression": {
+                            "preset": "title-variety",
+                            "intensity": 0.9
+                        },
+                        "behavior": {
+                            "enter": "bounce",
+                            "exit": "fade-out",
+                            "emphasis": [
+                                "pulse"
+                            ]
+                        },
+                        "layout": {
+                            "zone": "center",
+                            "safeArea": true
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "subtitle-track",
+                "type": "text",
+                "layer": 4,
+                "clips": [
+                    {
+                        "id": "clip-subtitle-1",
+                        "asset": "subtitle-1",
+                        "enabled": true,
+                        "time": {
+                            "start": 5,
+                            "end": 10
+                        },
+                        "sourceSemantic": "explain",
+                        "expression": {
+                            "preset": "subtitle-info",
+                            "intensity": 0.7
+                        },
+                        "behavior": {
+                            "enter": "slide-up",
+                            "exit": "fade-out"
+                        },
+                        "layout": {
+                            "zone": "bottom",
+                            "safeArea": true
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "logo-track",
+                "type": "image",
+                "layer": 5,
+                "clips": [
+                    {
+                        "id": "clip-logo-1",
+                        "asset": "logo-image",
+                        "enabled": true,
+                        "time": {
+                            "start": 0,
+                            "end": 120
+                        },
+                        "layout": {
+                            "zone": "top-right",
+                            "safeArea": true
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
