@@ -1,0 +1,64 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "annotations.schema.json",
+    "$comment": "素材可修改点标注（用户入口）- 解决用户不知道从哪里开始改的问题",
+    "type": "object",
+    "properties": {
+        "clips": {
+            "type": "object",
+            "$comment": "key 为 clipId，value 为该 clip 的锚点配置",
+            "additionalProperties": {
+                "$ref": "#/definitions/clipAnnotation"
+            }
+        }
+    },
+    "definitions": {
+        "clipAnnotation": {
+            "type": "object",
+            "$comment": "单个 clip 的可编辑锚点配置",
+            "properties": {
+                "anchors": {
+                    "type": "array",
+                    "$comment": "锚点列表",
+                    "items": {
+                        "$ref": "#/definitions/anchor"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "anchor": {
+            "type": "object",
+            "required": [
+                "id",
+                "frame",
+                "editable"
+            ],
+            "$comment": "可编辑锚点",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "锚点唯一 ID"
+                },
+                "label": {
+                    "type": "string",
+                    "$comment": "锚点显示标签（用于 UI）"
+                },
+                "frame": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "$comment": "锚点帧位置（基于 fps 计算）"
+                },
+                "editable": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "$comment": "可编辑能力列表（如 text / position / style）"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

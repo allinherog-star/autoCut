@@ -1,0 +1,39 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "veir.schema.json",
+    "$comment": "VEIR v1.0 总入口 Schema - Video Editing Intermediate Representation",
+    "type": "object",
+    "required": [
+        "meta",
+        "assets",
+        "vocabulary",
+        "timeline"
+    ],
+    "properties": {
+        "meta": {
+            "$ref": "./meta.schema.json",
+            "$comment": "项目环境与运行假设"
+        },
+        "assets": {
+            "$ref": "./assets.schema.json",
+            "$comment": "多模态素材池"
+        },
+        "vocabulary": {
+            "$ref": "./vocabulary.schema.json",
+            "$comment": "表达词汇表（行为/样式/滤镜）"
+        },
+        "timeline": {
+            "$ref": "./timeline.schema.json",
+            "$comment": "剪辑中间表示（核心 IR）"
+        },
+        "annotations": {
+            "$ref": "./annotations.schema.json",
+            "$comment": "素材可修改点标注（用户入口）"
+        },
+        "adjustments": {
+            "$ref": "./adjustments.schema.json",
+            "$comment": "VEIR 表达微调层（差量补丁）"
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * DSL 视频预览页面
- * 基于 example-project.json 渲染多轨道时间轴预览
+ * VEIR 视频预览页面
+ * 基于 VEIR v1.0 规范渲染多轨道时间轴预览
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -15,19 +15,25 @@ import {
     VolumeX,
     SkipBack,
     SkipForward,
-    Settings,
     Layers,
     Type,
-    Image as ImageIcon,
     Video,
     Music,
+    Settings,
+    Download
 } from 'lucide-react';
 
-// DSL 类型导入
-import type { DSLProject, Track, Clip, TimeRange } from '@/dsl_schema/types';
+// VEIR 类型导入
+import type {
+    VEIRProject,
+    Track,
+    Clip,
+    VEIRVocabulary,
+    VEIRAssets
+} from '@/lib/veir/types';
 
 // 示例项目数据
-import exampleProject from '@/dsl_schema/example-project.json';
+import exampleProject from '@/lib/veir/example-project.json';
 
 // ============================================
 // 工具函数
@@ -52,8 +58,6 @@ function TrackIcon({ type }: { type: string }) {
             return <Music className={iconClass} />;
         case 'text':
             return <Type className={iconClass} />;
-        case 'image':
-            return <ImageIcon className={iconClass} />;
         case 'pip':
             return <Layers className={iconClass} />;
         default:
@@ -62,66 +66,46 @@ function TrackIcon({ type }: { type: string }) {
 }
 
 // ============================================
-// 文字叠加渲染组件
+// 文字叠加渲染
 // ============================================
 
 interface TextOverlayProps {
     clip: Clip;
-    project: DSLProject;
+    vocabulary: VEIRVocabulary;
+    assets: VEIRAssets;
     isActive: boolean;
-    progress: number; // 0-1 片段内进度
+    progress: number;
 }
 
-function TextOverlay({ clip, project, isActive, progress }: TextOverlayProps) {
-    const asset = project.assets.assets[clip.asset];
+function TextOverlay({ clip, vocabulary, assets, isActive, progress }: TextOverlayProps) {
+    const asset = assets.assets[clip.asset];
     if (!asset || asset.type !== 'text') return null;
 
     const text = asset.content || '';
-    const expression = clip.expression;
-    const behavior = clip.behavior;
-    const layout = clip.layout;
+    const presetId = clip.expression?.preset;
+    const preset = presetId ? vocabulary.presets[presetId] : null;
 
-    // 获取预设样式
-    const preset = expression?.preset
-        ? project.presets?.textStyles?.[expression.preset]
-        : null;
-
-    // 计算入场/出场动画
-    const enterDuration = 0.15; // 入场动画占比
-    const exitDuration = 0.15; // 出场动画占比
+    // 动画逻辑
+    const enterDuration = 0.15;
+    const exitDuration = 0.15;
     const isEntering = progress < enterDuration;
     const isExiting = progress > 1 - exitDuration;
 
-    // 动画变体
-    const getEnterAnimation = (type?: string) => {
+    // 入场动画类型
+    const getInitialState = (type?: string) => {
         switch (type) {
             case 'bounce':
-                return { scale: [0, 1.2, 1], y: [50, -10, 0] };
+                return { scale: 0, y: 50, opacity: 1 };
             case 'slide-up':
-                return { y: [100, 0], opacity: [0, 1] };
-            case 'zoom-in':
-                return { scale: [0.5, 1], opacity: [0, 1] };
+                return { y: 100, opacity: 0 };
             case 'fade-in':
             default:
-                return { opacity: [0, 1] };
+                return { opacity: 0 };
         }
     };
 
-    const getExitAnimation = (type?: string) => {
-        switch (type) {
-            case 'slide-down':
-                return { y: [0, 100], opacity: [1, 0] };
-            case 'zoom-out':
-                return { scale: [1, 0.5], opacity: [1, 0] };
-            case 'fade-out':
-            default:
-                return { opacity: [1, 0] };
-        }
-    };
-
-    // 位置计算
-    const getPosition = (zone?: string) => {
-        switch (zone) {
+    const getPosition = (anchor?: string) => {
+        switch (anchor) {
             case 'top':
             case 'top-left':
             case 'top-right':
@@ -136,23 +120,10 @@ function TextOverlay({ clip, project, isActive, progress }: TextOverlayProps) {
         }
     };
 
-    // 样式变量
-    const intensity = expression?.intensity ?? preset?.defaultIntensity ?? 0.8;
-    const category = preset?.category;
-
-    // 基础样式
-    const baseStyle: React.CSSProperties = {
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        ...getPosition(layout?.zone),
-        zIndex: 100,
-        textAlign: 'center',
-        maxWidth: '90%',
-    };
-
-    // 根据分类应用不同风格
     const getCategoryStyle = (): React.CSSProperties => {
+        const category = preset?.category;
+        const intensity = clip.expression?.intensity ?? 0.8;
+
         switch (category) {
             case '综艺':
                 return {
@@ -165,7 +136,6 @@ function TextOverlay({ clip, project, isActive, progress }: TextOverlayProps) {
             4px 4px 0 #4ECDC4,
             6px 6px 10px rgba(0,0,0,0.5)
           `,
-                    letterSpacing: '0.1em',
                 };
             case '信息':
                 return {
@@ -175,13 +145,6 @@ function TextOverlay({ clip, project, isActive, progress }: TextOverlayProps) {
                     backgroundColor: 'rgba(0,0,0,0.7)',
                     padding: '8px 16px',
                     borderRadius: '4px',
-                };
-            case '情绪':
-                return {
-                    fontSize: `${1.5 + intensity}rem`,
-                    fontWeight: 700,
-                    color: '#FF1493',
-                    textShadow: '0 0 20px rgba(255,20,147,0.8)',
                 };
             default:
                 return {
@@ -195,60 +158,53 @@ function TextOverlay({ clip, project, isActive, progress }: TextOverlayProps) {
 
     if (!isActive) return null;
 
+    const baseStyle: React.CSSProperties = {
+        position: 'absolute',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        ...getPosition(preset?.anchor as string),
+        zIndex: 100,
+        textAlign: 'center',
+        maxWidth: '90%',
+    };
+
     return (
         <motion.div
-            initial={getEnterAnimation(behavior?.enter)}
-            animate={
-                isExiting
-                    ? getExitAnimation(behavior?.exit)
-                    : { opacity: 1, scale: 1, y: 0 }
-            }
+            initial={getInitialState(clip.behavior?.enter)}
+            animate={isExiting ? { opacity: 0 } : { opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{ ...baseStyle, ...getCategoryStyle() }}
         >
             {text}
-            {/* 强调动画 */}
-            {behavior?.emphasis?.includes('pulse') && (
-                <motion.div
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 0.5, repeat: Infinity }}
-                    style={{ position: 'absolute', inset: 0 }}
-                />
-            )}
         </motion.div>
     );
 }
 
 // ============================================
-// 画中画渲染组件
+// 画中画渲染
 // ============================================
 
 interface PipOverlayProps {
     clip: Clip;
-    project: DSLProject;
+    vocabulary: VEIRVocabulary;
     isActive: boolean;
-    progress: number;
 }
 
-function PipOverlay({ clip, project, isActive, progress }: PipOverlayProps) {
-    const layout = clip.layout;
-    const pipPreset = layout?.preset
-        ? project.presets?.pipLayouts?.[layout.preset]
-        : null;
+function PipOverlay({ clip, vocabulary, isActive }: PipOverlayProps) {
+    const presetId = clip.expression?.preset;
+    const preset = presetId ? vocabulary.presets[presetId] : null;
 
     if (!isActive) return null;
 
-    // 获取锚点位置
-    const getAnchorStyle = (): React.CSSProperties => {
-        const anchor = pipPreset?.anchor || 'bottom-right';
-        const size = pipPreset?.size || [0.25, 0.25];
-        const radius = pipPreset?.radius || 8;
+    const anchor = (preset?.anchor as string) || 'bottom-right';
+    const size = (preset?.size as [number, number]) || [0.25, 0.25];
 
+    const getAnchorStyle = (): React.CSSProperties => {
         const baseStyle: React.CSSProperties = {
             position: 'absolute',
             width: `${size[0] * 100}%`,
             height: `${size[1] * 100}%`,
-            borderRadius: `${radius}px`,
+            borderRadius: '12px',
             overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             border: '2px solid rgba(255,255,255,0.3)',
@@ -264,18 +220,12 @@ function PipOverlay({ clip, project, isActive, progress }: PipOverlayProps) {
             case 'bottom-right':
                 return { ...baseStyle, bottom: '5%', right: '5%' };
             case 'center':
-                return {
-                    ...baseStyle,
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                };
+                return { ...baseStyle, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
             default:
                 return { ...baseStyle, bottom: '5%', right: '5%' };
         }
     };
 
-    // 模拟画中画内容
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -286,9 +236,7 @@ function PipOverlay({ clip, project, isActive, progress }: PipOverlayProps) {
         >
             <div
                 className="w-full h-full flex items-center justify-center"
-                style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                }}
+                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
             >
                 <div className="text-white text-center">
                     <Layers className="w-8 h-8 mx-auto mb-2 opacity-80" />
@@ -300,79 +248,17 @@ function PipOverlay({ clip, project, isActive, progress }: PipOverlayProps) {
 }
 
 // ============================================
-// 图片叠加组件
-// ============================================
-
-interface ImageOverlayProps {
-    clip: Clip;
-    project: DSLProject;
-    isActive: boolean;
-}
-
-function ImageOverlay({ clip, project, isActive }: ImageOverlayProps) {
-    const layout = clip.layout;
-
-    if (!isActive) return null;
-
-    // 获取位置
-    const getPosition = (): React.CSSProperties => {
-        const zone = layout?.zone || 'top-right';
-        const base: React.CSSProperties = {
-            position: 'absolute',
-            width: '80px',
-            height: '80px',
-        };
-
-        switch (zone) {
-            case 'top-left':
-                return { ...base, top: '3%', left: '3%' };
-            case 'top-right':
-                return { ...base, top: '3%', right: '3%' };
-            case 'bottom-left':
-                return { ...base, bottom: '3%', left: '3%' };
-            case 'bottom-right':
-                return { ...base, bottom: '3%', right: '3%' };
-            default:
-                return { ...base, top: '3%', right: '3%' };
-        }
-    };
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.9 }}
-            style={getPosition()}
-        >
-            <div
-                className="w-full h-full rounded-lg flex items-center justify-center"
-                style={{
-                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-                }}
-            >
-                <ImageIcon className="w-8 h-8 text-white opacity-80" />
-            </div>
-        </motion.div>
-    );
-}
-
-// ============================================
-// 时间轴可视化组件
+// 时间轴可视化
 // ============================================
 
 interface TimelineVisualizerProps {
-    project: DSLProject;
+    project: VEIRProject;
     currentTime: number;
     duration: number;
     onSeek: (time: number) => void;
 }
 
-function TimelineVisualizer({
-    project,
-    currentTime,
-    duration,
-    onSeek,
-}: TimelineVisualizerProps) {
+function TimelineVisualizer({ project, currentTime, duration, onSeek }: TimelineVisualizerProps) {
     const tracks = project.timeline.tracks;
     const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -384,61 +270,43 @@ function TimelineVisualizer({
         onSeek(percent * duration);
     };
 
+    const getTrackColor = (type: string) => {
+        switch (type) {
+            case 'video': return 'bg-blue-500';
+            case 'audio': return 'bg-green-500';
+            case 'text': return 'bg-yellow-500';
+            case 'pip': return 'bg-purple-500';
+            default: return 'bg-gray-500';
+        }
+    };
+
     return (
         <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg p-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-semibold text-sm">时间轴</h3>
+                <h3 className="text-white font-semibold text-sm">VEIR 时间轴</h3>
                 <span className="text-gray-400 text-xs">
                     {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
             </div>
 
-            {/* 时间轴轨道 */}
-            <div
-                ref={timelineRef}
-                className="space-y-2 cursor-pointer"
-                onClick={handleClick}
-            >
+            <div ref={timelineRef} className="space-y-2 cursor-pointer" onClick={handleClick}>
                 {tracks.map((track) => (
                     <div key={track.id} className="flex items-center gap-2">
-                        {/* 轨道标签 */}
                         <div className="w-20 flex items-center gap-1 text-gray-400 text-xs">
                             <TrackIcon type={track.type} />
                             <span className="truncate">{track.type}</span>
                         </div>
 
-                        {/* 轨道内容 */}
                         <div className="flex-1 h-6 bg-gray-800 rounded relative overflow-hidden">
                             {track.clips.map((clip) => {
                                 const left = (clip.time.start / duration) * 100;
-                                const width =
-                                    ((clip.time.end - clip.time.start) / duration) * 100;
-                                const isActive =
-                                    currentTime >= clip.time.start &&
-                                    currentTime <= clip.time.end;
-
-                                // 轨道颜色
-                                const getTrackColor = () => {
-                                    switch (track.type) {
-                                        case 'video':
-                                            return 'bg-blue-500';
-                                        case 'audio':
-                                            return 'bg-green-500';
-                                        case 'text':
-                                            return 'bg-yellow-500';
-                                        case 'pip':
-                                            return 'bg-purple-500';
-                                        case 'image':
-                                            return 'bg-pink-500';
-                                        default:
-                                            return 'bg-gray-500';
-                                    }
-                                };
+                                const width = ((clip.time.end - clip.time.start) / duration) * 100;
+                                const isActive = currentTime >= clip.time.start && currentTime <= clip.time.end;
 
                                 return (
                                     <div
                                         key={clip.id}
-                                        className={`absolute top-0.5 bottom-0.5 rounded ${getTrackColor()} ${isActive ? 'ring-2 ring-white ring-opacity-50' : ''
+                                        className={`absolute top-0.5 bottom-0.5 rounded ${getTrackColor(track.type)} ${isActive ? 'ring-2 ring-white ring-opacity-50' : ''
                                             }`}
                                         style={{ left: `${left}%`, width: `${width}%` }}
                                         title={`${clip.asset}: ${formatTime(clip.time.start)} - ${formatTime(clip.time.end)}`}
@@ -446,7 +314,6 @@ function TimelineVisualizer({
                                 );
                             })}
 
-                            {/* 播放头 */}
                             <div
                                 className="absolute top-0 bottom-0 w-0.5 bg-red-500"
                                 style={{ left: `${(currentTime / duration) * 100}%` }}
@@ -456,7 +323,6 @@ function TimelineVisualizer({
                 ))}
             </div>
 
-            {/* 时间刻度 */}
             <div className="flex justify-between mt-2 text-gray-500 text-xs">
                 {[0, 0.25, 0.5, 0.75, 1].map((p) => (
                     <span key={p}>{formatTime(p * duration)}</span>
@@ -470,18 +336,18 @@ function TimelineVisualizer({
 // 主预览组件
 // ============================================
 
-export default function DSLPreviewPage() {
-    const project = exampleProject as unknown as DSLProject;
+export default function VEIRPreviewPage() {
+    const project = exampleProject as unknown as VEIRProject;
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [showTimeline, setShowTimeline] = useState(true);
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(0);
 
-    const duration = project.meta.duration;
-    const resolution = project.meta.resolution;
-    const fps = project.meta.fps;
+    const { meta, vocabulary, assets, timeline } = project;
+    const duration = meta.duration;
+    const resolution = meta.resolution;
 
     // 播放循环
     useEffect(() => {
@@ -508,23 +374,17 @@ export default function DSLPreviewPage() {
         animationRef.current = requestAnimationFrame(animate);
 
         return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
         };
     }, [isPlaying, duration]);
 
-    // 获取当前活跃的片段
+    // 获取活跃片段
     const getActiveClips = useCallback(() => {
         const activeClips: { track: Track; clip: Clip; progress: number }[] = [];
 
-        project.timeline.tracks.forEach((track) => {
+        timeline.tracks.forEach((track) => {
             track.clips.forEach((clip) => {
-                if (
-                    clip.enabled !== false &&
-                    currentTime >= clip.time.start &&
-                    currentTime <= clip.time.end
-                ) {
+                if (currentTime >= clip.time.start && currentTime <= clip.time.end) {
                     const clipDuration = clip.time.end - clip.time.start;
                     const progress = (currentTime - clip.time.start) / clipDuration;
                     activeClips.push({ track, clip, progress });
@@ -533,42 +393,64 @@ export default function DSLPreviewPage() {
         });
 
         return activeClips.sort((a, b) => a.track.layer - b.track.layer);
-    }, [project, currentTime]);
+    }, [timeline, currentTime]);
 
     const activeClips = getActiveClips();
 
-    // 控制函数
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
+
     const togglePlay = () => setIsPlaying(!isPlaying);
-    const reset = () => {
-        setCurrentTime(0);
-        setIsPlaying(false);
-    };
+    const reset = () => { setCurrentTime(0); setIsPlaying(false); };
     const seek = (time: number) => setCurrentTime(Math.max(0, Math.min(time, duration)));
-    const skipBack = () => seek(currentTime - 5);
-    const skipForward = () => seek(currentTime + 5);
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        setIsPlaying(false);
+        try {
+            const { VEIRComposer } = await import('@/lib/canvas-video-composer');
+            const composer = new VEIRComposer(project);
+
+            const blob = await composer.exportVideo((progress, msg) => {
+                setExportProgress(progress);
+                console.log(msg);
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'veir_export.webm';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('导出失败，请检查控制台');
+        } finally {
+            setIsExporting(false);
+            setExportProgress(0);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
             <div className="max-w-6xl mx-auto">
                 {/* 标题 */}
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                        🎬 DSL 视频预览
-                    </h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">🎬 VEIR 视频预览</h1>
                     <p className="text-gray-400">
-                        基于 <code className="bg-gray-700 px-2 py-0.5 rounded">example-project.json</code> 的多轨道时间轴渲染
+                        基于 <code className="bg-gray-700 px-2 py-0.5 rounded">VEIR v1.0</code> 规范的多轨道时间轴渲染
                     </p>
                 </div>
 
                 {/* 项目信息 */}
-                <div className="flex justify-center gap-4 mb-6">
+                <div className="flex justify-center gap-4 mb-6 flex-wrap">
                     <div className="bg-gray-800/50 px-4 py-2 rounded-lg text-sm">
                         <span className="text-gray-400">分辨率：</span>
                         <span className="text-white">{resolution[0]}x{resolution[1]}</span>
                     </div>
                     <div className="bg-gray-800/50 px-4 py-2 rounded-lg text-sm">
                         <span className="text-gray-400">帧率：</span>
-                        <span className="text-white">{fps} fps</span>
+                        <span className="text-white">{meta.fps} fps</span>
                     </div>
                     <div className="bg-gray-800/50 px-4 py-2 rounded-lg text-sm">
                         <span className="text-gray-400">时长：</span>
@@ -576,7 +458,7 @@ export default function DSLPreviewPage() {
                     </div>
                     <div className="bg-gray-800/50 px-4 py-2 rounded-lg text-sm">
                         <span className="text-gray-400">轨道数：</span>
-                        <span className="text-white">{project.timeline.tracks.length}</span>
+                        <span className="text-white">{timeline.tracks.length}</span>
                     </div>
                 </div>
 
@@ -584,53 +466,25 @@ export default function DSLPreviewPage() {
                 <div className="flex justify-center">
                     <div
                         className="relative bg-black rounded-2xl overflow-hidden shadow-2xl"
-                        style={{
-                            width: '540px',
-                            height: '960px',
-                            aspectRatio: `${resolution[0]}/${resolution[1]}`,
-                        }}
+                        style={{ width: '405px', height: '720px' }}
                     >
-                        {/* 背景层 - 模拟主视频 */}
+                        {/* 背景 */}
                         <div
                             className="absolute inset-0"
                             style={{
-                                background: `
-                  linear-gradient(
-                    ${(currentTime * 10) % 360}deg,
-                    #1a1a2e 0%,
-                    #16213e 50%,
-                    #0f3460 100%
-                  )
-                `,
+                                background: `linear-gradient(${(currentTime * 10) % 360}deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)`,
                             }}
                         >
-                            {/* 动态网格背景 */}
                             <div
                                 className="absolute inset-0 opacity-20"
                                 style={{
-                                    backgroundImage: `
-                    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-                  `,
+                                    backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
                                     backgroundSize: '50px 50px',
                                     transform: `translateY(${(currentTime * 20) % 50}px)`,
                                 }}
                             />
                         </div>
-
-                        {/* 安全区指示 */}
-                        {project.meta.safeArea && (
-                            <>
-                                <div
-                                    className="absolute left-0 right-0 border-b border-dashed border-yellow-500/30"
-                                    style={{ top: `${(project.meta.safeArea.top || 0) * 100}%` }}
-                                />
-                                <div
-                                    className="absolute left-0 right-0 border-t border-dashed border-yellow-500/30"
-                                    style={{ bottom: `${(project.meta.safeArea.bottom || 0) * 100}%` }}
-                                />
-                            </>
-                        )}
 
                         {/* 渲染活跃片段 */}
                         <AnimatePresence>
@@ -641,7 +495,8 @@ export default function DSLPreviewPage() {
                                             <TextOverlay
                                                 key={clip.id}
                                                 clip={clip}
-                                                project={project}
+                                                vocabulary={vocabulary}
+                                                assets={assets}
                                                 isActive={true}
                                                 progress={progress}
                                             />
@@ -651,17 +506,7 @@ export default function DSLPreviewPage() {
                                             <PipOverlay
                                                 key={clip.id}
                                                 clip={clip}
-                                                project={project}
-                                                isActive={true}
-                                                progress={progress}
-                                            />
-                                        );
-                                    case 'image':
-                                        return (
-                                            <ImageOverlay
-                                                key={clip.id}
-                                                clip={clip}
-                                                project={project}
+                                                vocabulary={vocabulary}
                                                 isActive={true}
                                             />
                                         );
@@ -671,9 +516,8 @@ export default function DSLPreviewPage() {
                             })}
                         </AnimatePresence>
 
-                        {/* 播放器控制条 */}
+                        {/* 控制条 */}
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                            {/* 进度条 */}
                             <div
                                 className="h-1 bg-gray-600 rounded-full mb-3 cursor-pointer"
                                 onClick={(e) => {
@@ -690,35 +534,18 @@ export default function DSLPreviewPage() {
                                 </div>
                             </div>
 
-                            {/* 控制按钮 */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={skipBack}
-                                        className="p-2 text-white/80 hover:text-white transition-colors"
-                                    >
+                                    <button onClick={() => seek(currentTime - 5)} className="p-2 text-white/80 hover:text-white">
                                         <SkipBack className="w-5 h-5" />
                                     </button>
-                                    <button
-                                        onClick={togglePlay}
-                                        className="p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
-                                    >
-                                        {isPlaying ? (
-                                            <Pause className="w-6 h-6" />
-                                        ) : (
-                                            <Play className="w-6 h-6 ml-0.5" />
-                                        )}
+                                    <button onClick={togglePlay} className="p-3 bg-white/20 hover:bg-white/30 rounded-full text-white">
+                                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
                                     </button>
-                                    <button
-                                        onClick={skipForward}
-                                        className="p-2 text-white/80 hover:text-white transition-colors"
-                                    >
+                                    <button onClick={() => seek(currentTime + 5)} className="p-2 text-white/80 hover:text-white">
                                         <SkipForward className="w-5 h-5" />
                                     </button>
-                                    <button
-                                        onClick={reset}
-                                        className="p-2 text-white/80 hover:text-white transition-colors"
-                                    >
+                                    <button onClick={reset} className="p-2 text-white/80 hover:text-white">
                                         <RotateCcw className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -728,41 +555,41 @@ export default function DSLPreviewPage() {
                                 </span>
 
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsMuted(!isMuted)}
-                                        className="p-2 text-white/80 hover:text-white transition-colors"
-                                    >
-                                        {isMuted ? (
-                                            <VolumeX className="w-5 h-5" />
-                                        ) : (
-                                            <Volume2 className="w-5 h-5" />
-                                        )}
+                                    <button onClick={() => setIsMuted(!isMuted)} className="p-2 text-white/80 hover:text-white">
+                                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                    </button>
+                                    <button onClick={() => setShowTimeline(!showTimeline)} className="p-2 text-white/80 hover:text-white" title="切换时间轴">
+                                        <Layers className="w-5 h-5" />
                                     </button>
                                     <button
-                                        onClick={() => setShowTimeline(!showTimeline)}
-                                        className="p-2 text-white/80 hover:text-white transition-colors"
+                                        onClick={handleExport}
+                                        disabled={isExporting}
+                                        className={`p-2 text-white/80 hover:text-white ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        title="导出视频"
                                     >
-                                        <Layers className="w-5 h-5" />
+                                        <Download className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
+
+                            {/* 导出进度条 */}
+                            {isExporting && (
+                                <div className="absolute top-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg text-sm z-50">
+                                    导出中: {exportProgress.toFixed(0)}%
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* 时间轴可视化 */}
+                {/* 时间轴 */}
                 {showTimeline && (
                     <div className="max-w-3xl mx-auto">
-                        <TimelineVisualizer
-                            project={project}
-                            currentTime={currentTime}
-                            duration={duration}
-                            onSeek={seek}
-                        />
+                        <TimelineVisualizer project={project} currentTime={currentTime} duration={duration} onSeek={seek} />
                     </div>
                 )}
 
-                {/* 当前活跃片段信息 */}
+                {/* 活跃片段 */}
                 <div className="mt-6 max-w-3xl mx-auto">
                     <div className="bg-gray-800/50 rounded-lg p-4">
                         <h3 className="text-white font-semibold mb-3">当前活跃片段</h3>
@@ -771,10 +598,7 @@ export default function DSLPreviewPage() {
                         ) : (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                 {activeClips.map(({ track, clip }) => (
-                                    <div
-                                        key={clip.id}
-                                        className="bg-gray-700/50 rounded px-3 py-2 text-sm"
-                                    >
+                                    <div key={clip.id} className="bg-gray-700/50 rounded px-3 py-2 text-sm">
                                         <div className="flex items-center gap-2 text-white">
                                             <TrackIcon type={track.type} />
                                             <span className="truncate">{clip.asset}</span>

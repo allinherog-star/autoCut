@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "resolution": [1080, 1920],
+    "fps": 30,
+    "duration": 20,
+    "colorSpace": "sRGB"
+  },
+  "assets": {
+    "assets": {
+      "bg-video": {
+        "type": "video",
+        "src": "/test-video.mp4",
+        "semanticRole": "background"
+      },
+      "intro-text": {
+        "type": "text",
+        "content": "多轨道时间轴演示",
+        "editable": true
+      },
+      "text-line-1": {
+        "type": "text",
+        "content": "第一行字幕 - 滑入效果",
+        "editable": true
+      },
+      "text-line-2": {
+        "type": "text",
+        "content": "第二行字幕 - 弹跳效果",
+        "editable": true
+      },
+      "text-line-3": {
+        "type": "text",
+        "content": "第三行字幕 - 缩放效果",
+        "editable": true
+      },
+      "text-line-4": {
+        "type": "text",
+        "content": "第四行字幕 - 渐入效果",
+        "editable": true
+      },
+      "overlay-top": {
+        "type": "text",
+        "content": "📍 顶部浮层",
+        "editable": true
+      },
+      "overlay-center": {
+        "type": "text",
+        "content": "⭐ 中央强调",
+        "editable": true
+      },
+      "counter-1": {
+        "type": "text",
+        "content": "① 第一步",
+        "editable": true
+      },
+      "counter-2": {
+        "type": "text",
+        "content": "② 第二步",
+        "editable": true
+      },
+      "counter-3": {
+        "type": "text",
+        "content": "③ 第三步",
+        "editable": true
+      },
+      "ending": {
+        "type": "text",
+        "content": "感谢观看 🎉",
+        "editable": true
+      }
+    }
+  },
+  "vocabulary": {
+    "expressions": {
+      "fade-in": { "category": "entrance", "semantic": "渐入" },
+      "fade-out": { "category": "exit", "semantic": "渐出" },
+      "bounce": { "category": "entrance", "semantic": "弹跳" },
+      "slide-up": { "category": "entrance", "semantic": "上滑" },
+      "zoom": { "category": "entrance", "semantic": "缩放" },
+      "pulse": { "category": "emphasis", "semantic": "脉冲" }
+    },
+    "presets": {
+      "title-variety": { "type": "textStyle", "category": "综艺", "anchor": "center" },
+      "subtitle-bottom": { "type": "textStyle", "category": "信息", "anchor": "bottom" },
+      "caption-top": { "type": "textStyle", "category": "信息", "anchor": "top" },
+      "emphasis-center": { "type": "textStyle", "category": "强调", "anchor": "center" }
+    },
+    "filters": {
+      "warm": { "semantic": "暖色调", "supportsIntensity": true }
+    }
+  },
+  "timeline": {
+    "tracks": [
+      {
+        "id": "track-bg",
+        "type": "video",
+        "layer": 0,
+        "clips": [
+          {
+            "id": "clip-bg",
+            "asset": "bg-video",
+            "time": { "start": 0, "end": 20 }
+          }
+        ]
+      },
+      {
+        "id": "track-top-overlay",
+        "type": "text",
+        "layer": 1,
+        "clips": [
+          {
+            "id": "clip-top",
+            "asset": "overlay-top",
+            "time": { "start": 0, "end": 20 },
+            "expression": { "preset": "caption-top", "intensity": 0.6 },
+            "behavior": { "enter": "fade-in" }
+          }
+        ]
+      },
+      {
+        "id": "track-intro",
+        "type": "text",
+        "layer": 2,
+        "clips": [
+          {
+            "id": "clip-intro",
+            "asset": "intro-text",
+            "time": { "start": 0, "end": 3.5 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-subtitles",
+        "type": "text",
+        "layer": 3,
+        "clips": [
+          {
+            "id": "clip-sub-1",
+            "asset": "text-line-1",
+            "time": { "start": 4, "end": 7 },
+            "expression": { "preset": "subtitle-bottom", "intensity": 0.8 },
+            "behavior": { "enter": "slide-up", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-sub-2",
+            "asset": "text-line-2",
+            "time": { "start": 7.5, "end": 10.5 },
+            "expression": { "preset": "subtitle-bottom", "intensity": 0.8 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-sub-3",
+            "asset": "text-line-3",
+            "time": { "start": 11, "end": 14 },
+            "expression": { "preset": "subtitle-bottom", "intensity": 0.8 },
+            "behavior": { "enter": "zoom", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-sub-4",
+            "asset": "text-line-4",
+            "time": { "start": 14.5, "end": 17.5 },
+            "expression": { "preset": "subtitle-bottom", "intensity": 0.8 },
+            "behavior": { "enter": "fade-in", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-counter",
+        "type": "text",
+        "layer": 4,
+        "clips": [
+          {
+            "id": "clip-c1",
+            "asset": "counter-1",
+            "time": { "start": 4, "end": 7 },
+            "expression": { "preset": "emphasis-center", "intensity": 0.7 },
+            "behavior": { "enter": "zoom", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-c2",
+            "asset": "counter-2",
+            "time": { "start": 7.5, "end": 10.5 },
+            "expression": { "preset": "emphasis-center", "intensity": 0.7 },
+            "behavior": { "enter": "zoom", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-c3",
+            "asset": "counter-3",
+            "time": { "start": 11, "end": 14 },
+            "expression": { "preset": "emphasis-center", "intensity": 0.7 },
+            "behavior": { "enter": "zoom", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-ending",
+        "type": "text",
+        "layer": 5,
+        "clips": [
+          {
+            "id": "clip-end",
+            "asset": "ending",
+            "time": { "start": 17, "end": 20 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          }
+        ]
+      }
+    ]
+  },
+  "adjustments": {
+    "clipOverrides": {
+      "clip-bg": {
+        "video": {
+          "filter": { "id": "warm", "intensity": 0.2 }
+        }
+      }
+    }
+  }
+}
+

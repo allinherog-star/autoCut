@@ -1,0 +1,308 @@
+{
+    "meta": {
+        "resolution": [
+            1080,
+            1920
+        ],
+        "fps": 30,
+        "duration": 60,
+        "colorSpace": "sRGB"
+    },
+    "assets": {
+        "assets": {
+            "main-video": {
+                "type": "video",
+                "src": "/assets/videos/main.mp4",
+                "semanticRole": "main"
+            },
+            "bgm": {
+                "type": "audio",
+                "src": "/assets/audio/bgm.mp3",
+                "optional": true
+            },
+            "speaker-pip": {
+                "type": "video",
+                "src": "/assets/videos/speaker.mp4",
+                "semanticRole": "speaker",
+                "autoReplace": true
+            },
+            "title-text": {
+                "type": "text",
+                "content": "欢迎来到懂剪智能剪辑",
+                "editable": true
+            },
+            "subtitle-1": {
+                "type": "text",
+                "content": "这是第一段字幕",
+                "editable": true
+            },
+            "subtitle-2": {
+                "type": "text",
+                "content": "AI 自动生成，一键爆款",
+                "editable": true
+            }
+        }
+    },
+    "vocabulary": {
+        "expressions": {
+            "fade-in": {
+                "category": "entrance",
+                "semantic": "渐入效果，适合平滑过渡",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "fade-out": {
+                "category": "exit",
+                "semantic": "渐出效果",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "bounce": {
+                "category": "entrance",
+                "semantic": "弹跳进入，适合综艺风格",
+                "intensityRange": [
+                    0.4,
+                    1.0
+                ]
+            },
+            "slide-up": {
+                "category": "entrance",
+                "semantic": "从下往上滑入",
+                "intensityRange": [
+                    0.5,
+                    1.0
+                ]
+            },
+            "shake": {
+                "category": "emphasis",
+                "semantic": "抖动强调，适合惊讶场景",
+                "intensityRange": [
+                    0.3,
+                    0.9
+                ]
+            }
+        },
+        "presets": {
+            "title-variety": {
+                "type": "textStyle",
+                "category": "综艺",
+                "anchor": "center"
+            },
+            "subtitle-bottom": {
+                "type": "textStyle",
+                "category": "信息",
+                "anchor": "bottom"
+            },
+            "pip-corner": {
+                "type": "pipLayout",
+                "anchor": "bottom-right",
+                "size": [
+                    0.25,
+                    0.25
+                ]
+            }
+        },
+        "filters": {
+            "vintage": {
+                "semantic": "复古胶片风格",
+                "supportsIntensity": true
+            },
+            "warm": {
+                "semantic": "暖色调",
+                "supportsIntensity": true
+            }
+        }
+    },
+    "timeline": {
+        "tracks": [
+            {
+                "id": "video-main",
+                "type": "video",
+                "layer": 0,
+                "clips": [
+                    {
+                        "id": "clip-main",
+                        "asset": "main-video",
+                        "time": {
+                            "start": 0,
+                            "end": 60
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "audio-bgm",
+                "type": "audio",
+                "layer": 1,
+                "clips": [
+                    {
+                        "id": "clip-bgm",
+                        "asset": "bgm",
+                        "time": {
+                            "start": 0,
+                            "end": 60
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "pip-speaker",
+                "type": "pip",
+                "layer": 2,
+                "clips": [
+                    {
+                        "id": "clip-pip",
+                        "asset": "speaker-pip",
+                        "time": {
+                            "start": 5,
+                            "end": 30
+                        },
+                        "expression": {
+                            "preset": "pip-corner",
+                            "intensity": 0.8
+                        },
+                        "behavior": {
+                            "enter": "fade-in",
+                            "exit": "fade-out"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "text-title",
+                "type": "text",
+                "layer": 3,
+                "clips": [
+                    {
+                        "id": "clip-title",
+                        "asset": "title-text",
+                        "time": {
+                            "start": 0,
+                            "end": 5
+                        },
+                        "expression": {
+                            "preset": "title-variety",
+                            "intensity": 0.9
+                        },
+                        "behavior": {
+                            "enter": "bounce",
+                            "exit": "fade-out"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "text-subtitle",
+                "type": "text",
+                "layer": 4,
+                "clips": [
+                    {
+                        "id": "clip-sub-1",
+                        "asset": "subtitle-1",
+                        "time": {
+                            "start": 5,
+                            "end": 15
+                        },
+                        "expression": {
+                            "preset": "subtitle-bottom",
+                            "intensity": 0.7
+                        },
+                        "behavior": {
+                            "enter": "slide-up",
+                            "exit": "fade-out"
+                        }
+                    },
+                    {
+                        "id": "clip-sub-2",
+                        "asset": "subtitle-2",
+                        "time": {
+                            "start": 15,
+                            "end": 25
+                        },
+                        "expression": {
+                            "preset": "subtitle-bottom",
+                            "intensity": 0.7
+                        },
+                        "behavior": {
+                            "enter": "slide-up",
+                            "exit": "fade-out"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "annotations": {
+        "clips": {
+            "clip-title": {
+                "anchors": [
+                    {
+                        "id": "anchor-title-text",
+                        "label": "标题文字",
+                        "frame": 0,
+                        "editable": [
+                            "text",
+                            "style"
+                        ]
+                    }
+                ]
+            },
+            "clip-sub-1": {
+                "anchors": [
+                    {
+                        "id": "anchor-sub1-text",
+                        "label": "字幕1",
+                        "frame": 150,
+                        "editable": [
+                            "text"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "adjustments": {
+        "clipOverrides": {
+            "clip-main": {
+                "video": {
+                    "filter": {
+                        "id": "warm",
+                        "intensity": 0.3
+                    }
+                }
+            },
+            "clip-pip": {
+                "video": {
+                    "transform": {
+                        "scale": 1.0,
+                        "offset": [
+                            0,
+                            0
+                        ]
+                    },
+                    "motion": [
+                        {
+                            "when": {
+                                "start": 5,
+                                "end": 6
+                            },
+                            "from": {
+                                "opacity": 0,
+                                "scale": 0.8
+                            },
+                            "to": {
+                                "opacity": 1,
+                                "scale": 1
+                            },
+                            "easing": "ease-out"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

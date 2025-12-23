@@ -1,0 +1,65 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "assets.schema.json",
+    "$comment": "多模态素材池 - 声明可用素材，不定义使用方式",
+    "type": "object",
+    "required": [
+        "assets"
+    ],
+    "properties": {
+        "assets": {
+            "type": "object",
+            "$comment": "key 为 assetId，value 为素材描述",
+            "additionalProperties": {
+                "$ref": "#/definitions/asset"
+            }
+        }
+    },
+    "definitions": {
+        "asset": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "$comment": "单个素材定义",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "text",
+                        "image"
+                    ],
+                    "$comment": "素材类型"
+                },
+                "src": {
+                    "type": "string",
+                    "$comment": "媒体文件路径（video/audio/image）"
+                },
+                "content": {
+                    "type": "string",
+                    "$comment": "文本内容（仅 text 类型）"
+                },
+                "optional": {
+                    "type": "boolean",
+                    "$comment": "是否为可选素材（可被关闭）"
+                },
+                "editable": {
+                    "type": "boolean",
+                    "$comment": "用户是否可以修改内容"
+                },
+                "semanticRole": {
+                    "type": "string",
+                    "$comment": "语义角色（如 background / speaker / main）"
+                },
+                "autoReplace": {
+                    "type": "boolean",
+                    "$comment": "是否允许 AI 自动替换该素材"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

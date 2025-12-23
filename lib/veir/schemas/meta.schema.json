@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "meta.schema.json",
+    "$comment": "项目环境与运行假设",
+    "type": "object",
+    "required": [
+        "resolution",
+        "fps",
+        "duration",
+        "colorSpace"
+    ],
+    "properties": {
+        "resolution": {
+            "type": "array",
+            "items": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "$comment": "画布分辨率 [width, height]"
+        },
+        "fps": {
+            "type": "number",
+            "minimum": 1,
+            "$comment": "帧率（如 25 / 30 / 60）"
+        },
+        "duration": {
+            "type": "number",
+            "minimum": 0,
+            "$comment": "视频总时长（秒）"
+        },
+        "colorSpace": {
+            "type": "string",
+            "enum": [
+                "sRGB",
+                "Display-P3",
+                "Rec.709",
+                "Rec.2020"
+            ],
+            "$comment": "色彩空间"
+        }
+    },
+    "additionalProperties": false
+}

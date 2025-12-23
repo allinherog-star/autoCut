@@ -1,0 +1,145 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "timeline.schema.json",
+    "$comment": "剪辑中间表示（核心 IR）- 定义视频怎么被剪出来",
+    "type": "object",
+    "required": [
+        "tracks"
+    ],
+    "properties": {
+        "tracks": {
+            "type": "array",
+            "$comment": "轨道列表",
+            "items": {
+                "$ref": "#/definitions/track"
+            }
+        }
+    },
+    "definitions": {
+        "track": {
+            "type": "object",
+            "required": [
+                "id",
+                "type",
+                "layer",
+                "clips"
+            ],
+            "$comment": "时间轴轨道",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "轨道唯一 ID"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "text",
+                        "pip"
+                    ],
+                    "$comment": "轨道类型"
+                },
+                "layer": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "$comment": "渲染层级（越大越靠上）"
+                },
+                "clips": {
+                    "type": "array",
+                    "$comment": "该轨道上的剪辑片段",
+                    "items": {
+                        "$ref": "#/definitions/clip"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "clip": {
+            "type": "object",
+            "required": [
+                "id",
+                "asset",
+                "time"
+            ],
+            "$comment": "剪辑片段（表达实例）",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "片段唯一 ID"
+                },
+                "asset": {
+                    "type": "string",
+                    "$comment": "引用的 assetId"
+                },
+                "time": {
+                    "$ref": "#/definitions/timeRange",
+                    "$comment": "时间范围"
+                },
+                "expression": {
+                    "$ref": "#/definitions/expressionRef",
+                    "$comment": "视觉风格引用"
+                },
+                "behavior": {
+                    "$ref": "#/definitions/behavior",
+                    "$comment": "行为引用（入场/出场）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "timeRange": {
+            "type": "object",
+            "required": [
+                "start",
+                "end"
+            ],
+            "$comment": "时间范围（秒）",
+            "properties": {
+                "start": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "开始时间"
+                },
+                "end": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "结束时间"
+                }
+            },
+            "additionalProperties": false
+        },
+        "expressionRef": {
+            "type": "object",
+            "$comment": "视觉风格引用",
+            "properties": {
+                "preset": {
+                    "type": "string",
+                    "$comment": "引用 vocabulary.presets 中的预设"
+                },
+                "intensity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "$comment": "表现强度"
+                }
+            },
+            "additionalProperties": false
+        },
+        "behavior": {
+            "type": "object",
+            "$comment": "行为引用（入场/出场）",
+            "properties": {
+                "enter": {
+                    "type": "string",
+                    "$comment": "入场行为 ID"
+                },
+                "exit": {
+                    "type": "string",
+                    "$comment": "出场行为 ID"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,231 @@
+{
+  "meta": {
+    "resolution": [1080, 1920],
+    "fps": 30,
+    "duration": 15,
+    "colorSpace": "sRGB"
+  },
+  "assets": {
+    "assets": {
+      "bg-video": {
+        "type": "video",
+        "src": "/test-video.mp4",
+        "semanticRole": "background"
+      },
+      "main-title": {
+        "type": "text",
+        "content": "🎥 高级动画演示",
+        "editable": true
+      },
+      "motion-text-1": {
+        "type": "text",
+        "content": "关键帧运动",
+        "editable": true
+      },
+      "motion-text-2": {
+        "type": "text",
+        "content": "缓动函数效果",
+        "editable": true
+      },
+      "motion-text-3": {
+        "type": "text",
+        "content": "弹簧物理动画",
+        "editable": true
+      },
+      "overlay-glow": {
+        "type": "text",
+        "content": "✨ 霓虹发光",
+        "editable": true
+      },
+      "gradient-text": {
+        "type": "text",
+        "content": "渐变色彩文字",
+        "editable": true
+      },
+      "ending-text": {
+        "type": "text",
+        "content": "VEIR DSL 强大能力",
+        "editable": true
+      }
+    }
+  },
+  "vocabulary": {
+    "expressions": {
+      "fade-in": { "category": "entrance", "semantic": "渐入" },
+      "fade-out": { "category": "exit", "semantic": "渐出" },
+      "bounce": { "category": "entrance", "semantic": "弹跳" },
+      "zoom": { "category": "entrance", "semantic": "缩放" },
+      "slide-up": { "category": "entrance", "semantic": "上滑" },
+      "glow": { "category": "emphasis", "semantic": "发光" },
+      "pulse": { "category": "emphasis", "semantic": "脉冲" }
+    },
+    "presets": {
+      "title-variety": { "type": "textStyle", "category": "综艺", "anchor": "center" },
+      "neon-glow": { "type": "textStyle", "category": "科技", "anchor": "center" },
+      "gradient-pop": { "type": "textStyle", "category": "潮流", "anchor": "center" },
+      "emphasis-center": { "type": "textStyle", "category": "强调", "anchor": "center" },
+      "subtitle-bottom": { "type": "textStyle", "category": "信息", "anchor": "bottom" }
+    },
+    "filters": {
+      "warm": { "semantic": "暖色调", "supportsIntensity": true },
+      "cinematic": { "semantic": "电影感", "supportsIntensity": true },
+      "dreamy": { "semantic": "梦幻", "supportsIntensity": true }
+    }
+  },
+  "timeline": {
+    "tracks": [
+      {
+        "id": "track-video",
+        "type": "video",
+        "layer": 0,
+        "clips": [
+          {
+            "id": "clip-bg",
+            "asset": "bg-video",
+            "time": { "start": 0, "end": 15 }
+          }
+        ]
+      },
+      {
+        "id": "track-title",
+        "type": "text",
+        "layer": 1,
+        "clips": [
+          {
+            "id": "clip-title",
+            "asset": "main-title",
+            "time": { "start": 0, "end": 3.5 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-motion-demo",
+        "type": "text",
+        "layer": 2,
+        "clips": [
+          {
+            "id": "clip-motion-1",
+            "asset": "motion-text-1",
+            "time": { "start": 4, "end": 7 },
+            "expression": { "preset": "emphasis-center", "intensity": 0.9 },
+            "behavior": { "enter": "zoom", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-motion-2",
+            "asset": "motion-text-2",
+            "time": { "start": 7.5, "end": 10.5 },
+            "expression": { "preset": "neon-glow", "intensity": 0.85 },
+            "behavior": { "enter": "slide-up", "exit": "fade-out" }
+          },
+          {
+            "id": "clip-motion-3",
+            "asset": "motion-text-3",
+            "time": { "start": 11, "end": 14 },
+            "expression": { "preset": "gradient-pop", "intensity": 0.9 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-overlay",
+        "type": "text",
+        "layer": 3,
+        "clips": [
+          {
+            "id": "clip-glow",
+            "asset": "overlay-glow",
+            "time": { "start": 5, "end": 9 },
+            "expression": { "preset": "neon-glow", "intensity": 1.0 },
+            "behavior": { "enter": "glow", "exit": "fade-out" }
+          }
+        ]
+      },
+      {
+        "id": "track-ending",
+        "type": "text",
+        "layer": 4,
+        "clips": [
+          {
+            "id": "clip-ending",
+            "asset": "ending-text",
+            "time": { "start": 12, "end": 15 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "bounce", "exit": "fade-out" }
+          }
+        ]
+      }
+    ]
+  },
+  "adjustments": {
+    "clipOverrides": {
+      "clip-bg": {
+        "video": {
+          "filter": { "id": "cinematic", "intensity": 0.4 }
+        }
+      },
+      "clip-motion-1": {
+        "video": {
+          "motion": [
+            {
+              "when": { "start": 4, "end": 4.5 },
+              "from": { "opacity": 0, "scale": 0.5, "translateY": 50 },
+              "to": { "opacity": 1, "scale": 1.1, "translateY": 0 },
+              "easing": "ease-out"
+            },
+            {
+              "when": { "start": 4.5, "end": 5 },
+              "from": { "opacity": 1, "scale": 1.1 },
+              "to": { "opacity": 1, "scale": 1 },
+              "easing": "spring"
+            }
+          ]
+        }
+      },
+      "clip-motion-2": {
+        "video": {
+          "motion": [
+            {
+              "when": { "start": 7.5, "end": 8.5 },
+              "from": { "opacity": 0, "translateY": 100 },
+              "to": { "opacity": 1, "translateY": 0 },
+              "easing": "ease-out"
+            },
+            {
+              "when": { "start": 9.5, "end": 10.5 },
+              "from": { "opacity": 1 },
+              "to": { "opacity": 0 },
+              "easing": "ease-in"
+            }
+          ]
+        }
+      },
+      "clip-motion-3": {
+        "video": {
+          "motion": [
+            {
+              "when": { "start": 11, "end": 12 },
+              "from": { "opacity": 0, "scale": 0.3, "translateY": 80, "rotation": -10 },
+              "to": { "opacity": 1, "scale": 1, "translateY": 0, "rotation": 0 },
+              "easing": "spring"
+            }
+          ]
+        }
+      },
+      "clip-glow": {
+        "video": {
+          "motion": [
+            {
+              "when": { "start": 5, "end": 9 },
+              "from": { "scale": 1, "opacity": 0.8 },
+              "to": { "scale": 1.05, "opacity": 1 },
+              "easing": "ease-in-out"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+

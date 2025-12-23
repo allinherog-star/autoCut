@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "resolution": [1080, 1920],
+    "fps": 30,
+    "duration": 10,
+    "colorSpace": "sRGB"
+  },
+  "assets": {
+    "assets": {
+      "bg-video": {
+        "type": "video",
+        "src": "/test-video.mp4",
+        "semanticRole": "background"
+      },
+      "title": {
+        "type": "text",
+        "content": "⏱️ TimeWarp 变速演示",
+        "editable": true
+      }
+    }
+  },
+  "vocabulary": {
+    "expressions": {
+      "fade-in": { "category": "entrance", "semantic": "渐入" },
+      "fade-out": { "category": "exit", "semantic": "渐出" }
+    },
+    "presets": {
+      "title-variety": { "type": "textStyle", "category": "综艺", "anchor": "center" }
+    },
+    "filters": {
+      "cinematic": { "semantic": "电影感", "supportsIntensity": true }
+    }
+  },
+  "timeline": {
+    "tracks": [
+      {
+        "id": "track-video",
+        "type": "video",
+        "layer": 0,
+        "clips": [
+          {
+            "id": "clip-bg",
+            "asset": "bg-video",
+            "time": { "start": 0, "end": 10 }
+          }
+        ]
+      },
+      {
+        "id": "track-title",
+        "type": "text",
+        "layer": 1,
+        "clips": [
+          {
+            "id": "clip-title",
+            "asset": "title",
+            "time": { "start": 0, "end": 3.5 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "fade-in", "exit": "fade-out" }
+          }
+        ]
+      }
+    ]
+  },
+  "adjustments": {
+    "clipOverrides": {
+      "clip-bg": {
+        "video": {
+          "filter": { "id": "cinematic", "intensity": 0.35 },
+          "timeWarp": {
+            "mode": "constant",
+            "segments": [{ "when": { "start": 0, "end": 10 }, "speed": 1.5, "easing": "linear" }]
+          }
+        }
+      }
+    }
+  }
+}
+
+

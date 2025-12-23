@@ -1,0 +1,224 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "adjustments.schema.json",
+    "$comment": "VEIR 表达微调层（差量补丁）- 对 VEIR 的受控差量修正",
+    "type": "object",
+    "properties": {
+        "clipOverrides": {
+            "type": "object",
+            "$comment": "key 为 clipId，value 为该 clip 的微调配置",
+            "additionalProperties": {
+                "$ref": "#/definitions/clipAdjustment"
+            }
+        }
+    },
+    "definitions": {
+        "clipAdjustment": {
+            "type": "object",
+            "$comment": "单个 clip 的微调配置",
+            "properties": {
+                "time": {
+                    "$ref": "#/definitions/timeAdjustment",
+                    "$comment": "时间微调"
+                },
+                "video": {
+                    "$ref": "#/definitions/videoAdjustment",
+                    "$comment": "视频画面调整"
+                }
+            },
+            "additionalProperties": false
+        },
+        "timeAdjustment": {
+            "type": "object",
+            "$comment": "时间微调",
+            "properties": {
+                "offset": {
+                    "type": "number",
+                    "$comment": "时间偏移量（秒）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "videoAdjustment": {
+            "type": "object",
+            "$comment": "视频画面调整",
+            "properties": {
+                "crop": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "$comment": "裁剪区域 [top, right, bottom, left]"
+                },
+                "transform": {
+                    "$ref": "#/definitions/transform",
+                    "$comment": "变换调整"
+                },
+                "filter": {
+                    "$ref": "#/definitions/filterRef",
+                    "$comment": "滤镜引用"
+                },
+                "motion": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/motionSegment"
+                    },
+                    "$comment": "关键帧运动"
+                },
+                "timeWarp": {
+                    "$ref": "#/definitions/videoTimeWarp",
+                    "$comment": "视频时间重映射（曲线变速 / 音乐卡点）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "transform": {
+            "type": "object",
+            "$comment": "变换调整",
+            "properties": {
+                "scale": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "缩放比例"
+                },
+                "offset": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "$comment": "位置偏移 [x, y]（相对值）"
+                },
+                "rotation": {
+                    "type": "number",
+                    "$comment": "旋转角度（度）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "filterRef": {
+            "type": "object",
+            "$comment": "滤镜引用",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "$comment": "滤镜 ID（引用 vocabulary.filters）"
+                },
+                "intensity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "$comment": "滤镜强度"
+                }
+            },
+            "additionalProperties": false
+        },
+        "motionSegment": {
+            "type": "object",
+            "required": [
+                "when",
+                "from",
+                "to"
+            ],
+            "$comment": "关键帧运动片段",
+            "properties": {
+                "when": {
+                    "$ref": "#/definitions/timeRange",
+                    "$comment": "运动时间区间"
+                },
+                "from": {
+                    "type": "object",
+                    "$comment": "起始状态"
+                },
+                "to": {
+                    "type": "object",
+                    "$comment": "结束状态"
+                },
+                "easing": {
+                    "type": "string",
+                    "enum": [
+                        "linear",
+                        "ease-in",
+                        "ease-out",
+                        "ease-in-out",
+                        "spring"
+                    ],
+                    "$comment": "缓动函数"
+                }
+            },
+            "additionalProperties": false
+        },
+        "timeRange": {
+            "type": "object",
+            "required": [
+                "start",
+                "end"
+            ],
+            "$comment": "时间范围",
+            "properties": {
+                "start": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "end": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "additionalProperties": false
+        },
+        "videoTimeWarp": {
+            "type": "object",
+            "$comment": "视频时间重映射，用于音乐卡点与速度曲线",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "constant",
+                        "ramp"
+                    ],
+                    "$comment": "constant=恒定变速，ramp=分段曲线变速"
+                },
+                "segments": {
+                    "type": "array",
+                    "$comment": "按时间区间定义的变速段（when 相对于 clip 起点，单位秒）",
+                    "items": {
+                        "$ref": "#/definitions/videoTimeWarpSegment"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "videoTimeWarpSegment": {
+            "type": "object",
+            "$comment": "某一时间区间内的速度变化定义",
+            "required": [
+                "when",
+                "speed"
+            ],
+            "properties": {
+                "when": {
+                    "$ref": "#/definitions/timeRange"
+                },
+                "speed": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 4.0,
+                    "$comment": "播放速度倍率（1=正常，0.5=慢放，2=快放）"
+                },
+                "easing": {
+                    "type": "string",
+                    "minLength": 1,
+                    "$comment": "速度变化曲线（语义级，如 linear / easeOut）"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

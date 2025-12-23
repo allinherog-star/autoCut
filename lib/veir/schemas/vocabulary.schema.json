@@ -1,0 +1,127 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "vocabulary.schema.json",
+    "$comment": "表达词汇表（行为 / 样式 / 滤镜）",
+    "type": "object",
+    "required": [
+        "expressions",
+        "presets",
+        "filters"
+    ],
+    "properties": {
+        "expressions": {
+            "type": "object",
+            "$comment": "行为词汇：定义可以怎么动",
+            "additionalProperties": {
+                "$ref": "#/definitions/expression"
+            }
+        },
+        "presets": {
+            "type": "object",
+            "$comment": "样式词汇：定义可以长什么样 / 放在哪",
+            "additionalProperties": {
+                "$ref": "#/definitions/preset"
+            }
+        },
+        "filters": {
+            "type": "object",
+            "$comment": "滤镜词汇：定义画面整体风格",
+            "additionalProperties": {
+                "$ref": "#/definitions/filter"
+            }
+        }
+    },
+    "definitions": {
+        "expression": {
+            "type": "object",
+            "$comment": "行为表达定义",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "entrance",
+                        "exit",
+                        "emphasis"
+                    ],
+                    "$comment": "行为类别"
+                },
+                "semantic": {
+                    "type": "string",
+                    "$comment": "语义描述（供 AI 理解）"
+                },
+                "intensityRange": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "$comment": "允许的强度范围 [min, max]"
+                }
+            },
+            "additionalProperties": false
+        },
+        "preset": {
+            "type": "object",
+            "$comment": "样式预设定义",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "textStyle",
+                        "pipLayout",
+                        "transition"
+                    ],
+                    "$comment": "预设类型"
+                },
+                "category": {
+                    "type": "string",
+                    "$comment": "风格分类（如 综艺 / 信息 / 情绪）"
+                },
+                "anchor": {
+                    "type": "string",
+                    "enum": [
+                        "top-left",
+                        "top-right",
+                        "bottom-left",
+                        "bottom-right",
+                        "center",
+                        "top",
+                        "bottom"
+                    ],
+                    "$comment": "锚点位置"
+                },
+                "size": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "$comment": "相对尺寸 [width, height]"
+                }
+            },
+            "additionalProperties": true
+        },
+        "filter": {
+            "type": "object",
+            "$comment": "滤镜定义",
+            "properties": {
+                "semantic": {
+                    "type": "string",
+                    "$comment": "滤镜语义描述"
+                },
+                "supportsIntensity": {
+                    "type": "boolean",
+                    "$comment": "是否支持强度调节"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}
