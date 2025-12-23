@@ -40,6 +40,21 @@ export function formatTimeCode(seconds: number): string {
 }
 
 /**
+ * 格式化刻度尺时间显示（简洁版）
+ * 只显示分:秒格式，适用于时间轴刻度尺
+ */
+export function formatRulerTime(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+
+    if (h > 0) {
+        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
  * 对齐到帧
  */
 export function snapToFrame(time: number, fps: number): number {
@@ -252,7 +267,7 @@ export function calculateRulerTicks(
         const major = t % majorInterval === 0;
         ticks.push({
             time: t,
-            label: major ? formatTimeCode(t) : '',
+            label: major ? formatRulerTime(t) : '',
             major,
         });
     }

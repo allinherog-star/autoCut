@@ -35,7 +35,7 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const sidebarScrollRef = useRef<HTMLDivElement>(null);
     const rulerRef = useRef<HTMLDivElement>(null);
-    
+
     // 轨道高度状态（支持动态调整）
     const [trackHeight, setTrackHeight] = useState(TRACK_HEIGHT);
 
@@ -161,10 +161,10 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
                     </button>
 
                     {/* 时间显示 */}
-                    <div className="ml-2 px-2 py-0.5 bg-[#111] rounded border border-[#333] text-[10px] font-mono text-white tabular-nums">
+                    <div className="ml-2 px-3 py-1 bg-[#111] rounded border border-[#333] text-[11px] font-mono text-white tabular-nums min-w-[120px] flex items-center justify-center">
                         <span className="text-white">{formatTimeCode(playback.currentTime)}</span>
-                        <span className="text-[#444] mx-0.5">/</span>
-                        <span className="text-[#666]">{formatTimeCode(data.duration)}</span>
+                        <span className="text-[#444] mx-1">/</span>
+                        <span className="text-[#888]">{formatTimeCode(data.duration)}</span>
                     </div>
 
                     {/* 轨道统计 */}
@@ -270,9 +270,9 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
                                 key={track.id}
                                 className={`flex items-center justify-center border-b border-[#252528] ${TRACK_CONFIG[track.type].color}`}
                                 style={{ height: trackHeight }}
-                                title={`${TRACK_CONFIG[track.type].label === 'V' ? '视频' : 
-                                    TRACK_CONFIG[track.type].label === 'A' ? '音频' : 
-                                    TRACK_CONFIG[track.type].label === 'T' ? '文字' : '贴纸'} ${index + 1} - ${track.clips.length} 片段`}
+                                title={`${TRACK_CONFIG[track.type].label === 'V' ? '视频' :
+                                    TRACK_CONFIG[track.type].label === 'A' ? '音频' :
+                                        TRACK_CONFIG[track.type].label === 'T' ? '文字' : '贴纸'} ${index + 1} - ${track.clips.length} 片段`}
                             >
                                 {/* 极简轨道标识 */}
                                 <div className="flex items-center gap-1">
@@ -304,39 +304,36 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
 
                 {/* 右侧滚动区域：刻度尺 + 轨道内容 */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* 时间标尺 - 紧凑版 */}
+                    {/* 时间标尺 - 竖线在上，时间在下 */}
                     <div
                         ref={rulerRef}
                         className="overflow-x-auto overflow-y-hidden scrollbar-hide flex-shrink-0"
-                        style={{ height: RULER_HEIGHT }}
+                        style={{ height: 24 }}
                         onClick={handleRulerClick}
                     >
                         <div
                             className="relative h-full bg-[#18181b] border-b border-[#252528] cursor-pointer"
                             style={{ width: contentMinWidth }}
                         >
-                            {/* 刻度线和标签 - 紧凑版 */}
+                            {/* 刻度线和标签 */}
                             {ticks.map((tick, index) => {
                                 const x = timeToPixels(tick.time, view.pixelsPerSecond);
                                 return (
                                     <div
                                         key={index}
-                                        className="absolute flex flex-col items-start"
-                                        style={{ left: x, bottom: 0 }}
+                                        className="absolute top-0 flex flex-col items-center"
+                                        style={{ left: x }}
                                     >
-                                        {/* 刻度线 */}
+                                        {/* 刻度线 - 从顶部向下 */}
                                         <div
-                                            className={`w-px ${tick.major ? 'bg-[#444]' : 'bg-[#2a2a2e]'}`}
-                                            style={{ height: tick.major ? 10 : 4 }}
+                                            className={`w-px ${tick.major ? 'bg-[#555]' : 'bg-[#333]'}`}
+                                            style={{ height: tick.major ? 8 : 4 }}
                                         />
-                                        {/* 时间标签 - 仅主刻度 */}
+                                        {/* 时间标签 - 在刻度线下方 */}
                                         {tick.label && (
                                             <span
-                                                className="absolute text-[8px] text-[#666] whitespace-nowrap font-mono"
-                                                style={{
-                                                    bottom: 10,
-                                                    left: 2,
-                                                }}
+                                                className="text-[9px] text-[#888] whitespace-nowrap font-mono mt-0.5"
+                                                style={{ marginLeft: 1 }}
                                             >
                                                 {tick.label}
                                             </span>
@@ -345,12 +342,12 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
                                 );
                             })}
 
-                            {/* 播放头顶部指示器 - 紧凑 */}
+                            {/* 播放头顶部指示器 */}
                             <div
-                                className="absolute bottom-0 z-20"
+                                className="absolute top-0 z-20"
                                 style={{ left: playheadPosition }}
                             >
-                                <div className="w-2 h-2 bg-red-500 rotate-45 rounded-[1px] -translate-x-1/2 shadow-sm shadow-red-500/50" />
+                                <div className="w-0 h-0 border-l-[4px] border-r-[4px] border-t-[6px] border-l-transparent border-r-transparent border-t-red-500 -translate-x-1/2" />
                             </div>
                         </div>
                     </div>
