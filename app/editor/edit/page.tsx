@@ -266,8 +266,8 @@ export default function EditPage() {
         </div>
       </div>
 
-      {/* 只读时间轴查看器 - 固定在底部 */}
-      <TimelineViewer className="h-[280px] flex-shrink-0" />
+      {/* 只读时间轴查看器 - 紧凑布局 */}
+      <TimelineViewer className="h-[200px] flex-shrink-0" />
 
       {/* 底部操作栏 */}
       <div className="h-16 px-6 flex items-center justify-between bg-[#1a1a1e] border-t border-[#2a2a2e] flex-shrink-0">
