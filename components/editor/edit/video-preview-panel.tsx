@@ -37,6 +37,8 @@ interface VideoPreviewPanelProps {
   veirProject?: VEIRProject | null
   /** 素材位置变化回调 */
   onClipPositionChange?: (clipId: string, x: number, y: number) => void
+  /** 选中素材回调 */
+  onSelectClip?: (clipId: string, trackId: string) => void
   /** 自定义类名 */
   className?: string
 }
@@ -62,6 +64,7 @@ export function VideoPreviewPanel({
   selectedTrackId,
   veirProject,
   onClipPositionChange,
+  onSelectClip,
   className = '',
 }: VideoPreviewPanelProps) {
   const { data, playback, togglePlay, seek } = useTimelineStore()
@@ -436,6 +439,7 @@ export function VideoPreviewPanel({
               isSelected={clip.id === selectedClipId}
               isLocked={isLocked}
               onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
+              onSelect={() => onSelectClip?.(clip.id, track.id)}
               veirProject={veirProject}
             />
           ))}
@@ -518,6 +522,7 @@ function DraggableElement({
   isSelected,
   isLocked,
   onDragStart,
+  onSelect,
   veirProject,
 }: {
   clip: Clip
@@ -526,6 +531,7 @@ function DraggableElement({
   isSelected: boolean
   isLocked: boolean
   onDragStart: (e: React.MouseEvent) => void
+  onSelect?: () => void
   veirProject?: VEIRProject | null
 }) {
   const isPip = track.type === 'pip'
@@ -554,7 +560,10 @@ function DraggableElement({
         scale: position.scale / 100,
         rotate: position.rotation,
       }}
-      onMouseDown={!isLocked ? onDragStart : undefined}
+      onMouseDown={(e) => {
+        onSelect?.()
+        if (!isLocked) onDragStart(e)
+      }}
       whileHover={!isLocked ? { scale: (position.scale / 100) * 1.02 } : {}}
     >
       {isPip ? (

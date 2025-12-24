@@ -43,7 +43,7 @@ export default function EditPage() {
   const { data, playback, loadData, _tick } = useTimelineStore()
 
   const [veirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
-  
+
   // 播放动画引用
   const animationRef = useRef<number>()
   const lastTimeRef = useRef<number>(0)
@@ -163,6 +163,7 @@ export default function EditPage() {
             selectedTrackId={selectedTrackId}
             veirProject={veirProject}
             onClipPositionChange={handleClipPositionChange}
+            onSelectClip={handleSelectClip}
             className="h-full"
           />
         </div>
