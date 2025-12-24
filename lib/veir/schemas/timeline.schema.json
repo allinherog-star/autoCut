@@ -121,6 +121,10 @@
                     "$ref": "#/definitions/timeRange",
                     "$comment": "时间范围"
                 },
+                "sourceRange": {
+                    "$ref": "#/definitions/timeRange",
+                    "$comment": "源素材裁剪区间（秒）"
+                },
                 "expression": {
                     "$ref": "#/definitions/expressionRef",
                     "$comment": "视觉风格引用"
@@ -154,6 +158,16 @@
                 "easing": {
                     "type": "string",
                     "$comment": "缓动函数（语义级）"
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": ["left", "right", "up", "down"],
+                    "$comment": "wipe/slide 方向"
+                },
+                "feather": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "wipe 羽化（像素，预留）"
                 }
             },
             "additionalProperties": false

@@ -24,6 +24,10 @@
                 "video": {
                     "$ref": "#/definitions/videoAdjustment",
                     "$comment": "视频画面调整"
+                },
+                "audio": {
+                    "$ref": "#/definitions/audioAdjustment",
+                    "$comment": "音频调整"
                 }
             },
             "additionalProperties": false
@@ -72,6 +76,21 @@
                 "timeWarp": {
                     "$ref": "#/definitions/videoTimeWarp",
                     "$comment": "视频时间重映射（曲线变速 / 音乐卡点）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "audioAdjustment": {
+            "type": "object",
+            "$comment": "音频调整（变速与保音高）",
+            "properties": {
+                "timeWarp": {
+                    "$ref": "#/definitions/videoTimeWarp",
+                    "$comment": "音频时间重映射（曲线变速 / 卡点）"
+                },
+                "maintainPitch": {
+                    "type": "boolean",
+                    "$comment": "是否保持音高（默认 true）"
                 }
             },
             "additionalProperties": false

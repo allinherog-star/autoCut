@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "resolution": [1080, 1920],
+    "fps": 30,
+    "duration": 8,
+    "colorSpace": "sRGB"
+  },
+  "assets": {
+    "assets": {
+      "v1": {
+        "type": "video",
+        "src": "/test-video.mp4",
+        "semanticRole": "main"
+      },
+      "t1": {
+        "type": "text",
+        "content": "🎵 视频原声跟随变速（无需音频轨）",
+        "editable": true
+      }
+    }
+  },
+  "vocabulary": {
+    "expressions": {
+      "fade-in": { "category": "entrance", "semantic": "渐入" },
+      "fade-out": { "category": "exit", "semantic": "渐出" }
+    },
+    "presets": {
+      "title-variety": { "type": "textStyle", "category": "综艺", "anchor": "center" }
+    },
+    "filters": {}
+  },
+  "timeline": {
+    "tracks": [
+      {
+        "id": "track-video",
+        "type": "video",
+        "layer": 0,
+        "clips": [
+          {
+            "id": "clip-v1",
+            "asset": "v1",
+            "time": { "start": 0, "end": 8 }
+          }
+        ]
+      },
+      {
+        "id": "track-title",
+        "type": "text",
+        "layer": 1,
+        "clips": [
+          {
+            "id": "clip-t1",
+            "asset": "t1",
+            "time": { "start": 0, "end": 3.5 },
+            "expression": { "preset": "title-variety", "intensity": 1.0 },
+            "behavior": { "enter": "fade-in", "exit": "fade-out" }
+          }
+        ]
+      }
+    ]
+  },
+  "adjustments": {
+    "clipOverrides": {
+      "clip-v1": {
+        "video": {
+          "timeWarp": {
+            "mode": "ramp",
+            "segments": [
+              { "when": { "start": 0, "end": 4 }, "speed": 0.6, "easing": "ease-in-out" },
+              { "when": { "start": 4, "end": 8 }, "speed": 1.8, "easing": "ease-in-out" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+

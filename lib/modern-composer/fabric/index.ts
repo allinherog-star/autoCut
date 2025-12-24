@@ -309,6 +309,17 @@ export class FabricEngine {
   }
 
   /**
+   * 设置 clipPath（用于 wipe/mask 转场）
+   * - 传入 null 将清除 clipPath
+   */
+  setClipPath(id: string, clipPath: fabric.FabricObject | null): void {
+    const element = this.elements.get(id);
+    if (!element) return;
+    (element as unknown as { clipPath?: fabric.FabricObject | null }).clipPath = clipPath;
+    element.setCoords();
+  }
+
+  /**
    * 清空所有元素
    */
   clear(): void {

@@ -220,6 +220,10 @@ export interface ClipTransition {
     duration: number;
     /** 缓动函数（可选，语义级） */
     easing?: string;
+    /** wipe/slide 的方向（可选） */
+    direction?: 'left' | 'right' | 'up' | 'down';
+    /** wipe 的羽化（像素，预留） */
+    feather?: number;
 }
 
 /**
@@ -232,6 +236,12 @@ export interface Clip {
     asset: string;
     /** 时间范围 */
     time: TimeRange;
+    /**
+     * 源素材裁剪区间（秒）
+     * - 专业剪辑常见的 in/out 点：同一素材可被多次引用，并截取不同片段
+     * - 若不提供，默认使用源素材从 0 开始
+     */
+    sourceRange?: TimeRange;
     /** 视觉风格引用 */
     expression?: ExpressionRef;
     /** 行为引用 */
@@ -411,6 +421,16 @@ export interface VideoAdjustment {
 }
 
 /**
+ * 音频时间调整（对标 PR 的 Maintain Pitch / 速度曲线）
+ */
+export interface AudioAdjustment {
+    /** 音频时间重映射（曲线变速 / 卡点） */
+    timeWarp?: VideoTimeWarp;
+    /** 是否保持音高（默认 true，若实现不支持可降级） */
+    maintainPitch?: boolean;
+}
+
+/**
  * 单个 clip 的微调配置
  */
 export interface ClipAdjustment {
@@ -418,6 +438,8 @@ export interface ClipAdjustment {
     time?: TimeAdjustment;
     /** 视频画面调整 */
     video?: VideoAdjustment;
+    /** 音频调整 */
+    audio?: AudioAdjustment;
 }
 
 /**
