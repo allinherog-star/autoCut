@@ -280,6 +280,16 @@ export class ModernComposer {
   private async renderFrameFromVEIR(project: VEIRProject, time: number): Promise<void> {
     if (!this.fabricEngine) return;
 
+    // 预计算：同轨道前后 clip 关系（用于转场）
+    const clipNeighbors = new Map<string, { prev?: Clip; next?: Clip; track?: Track }>();
+    for (const track of project.timeline.tracks) {
+      const sorted = [...track.clips].sort((a, b) => a.time.start - b.time.start);
+      for (let i = 0; i < sorted.length; i++) {
+        const clip = sorted[i];
+        clipNeighbors.set(clip.id, { prev: sorted[i - 1], next: sorted[i + 1], track });
+      }
+    }
+
     // 获取当前时间活跃的 Clips
     const activeClips = this.getActiveClips(project, time);
 
@@ -295,8 +305,11 @@ export class ModernComposer {
       // 计算动画状态
       const animState = this.calculateClipAnimation(clip, progress, clipDuration);
 
-      // 计算位置
-      const position = this.calculateClipPosition(clip, track, project);
+      // 计算位置（字幕轨道走专用布局，不走通用定位）
+      const position =
+        track.type === 'subtitle'
+          ? { x: this.config.width / 2, y: this.config.height / 2, width: this.config.width, height: this.config.height }
+          : this.calculateClipPosition(clip, track, project);
 
       // 应用渲染状态
       // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
@@ -313,16 +326,52 @@ export class ModernComposer {
         blur: getNum(animState.blur, 0),
       };
 
-      this.fabricEngine.applyRenderState(clip.asset, renderState);
+      // 转场（仅视频轨道/视频素材）：在各自片段内部做“无重叠的最小可靠转场”
+      // - outgoing：在 [end - duration, end) 内渐出/滑出/缩放/模糊
+      // - incoming：若 prev.transitionOut 存在，则在 [start, start + duration) 内渐入/滑入/缩放/模糊
+      if (track.type === 'video' && asset.type === 'video') {
+        const neighbor = clipNeighbors.get(clip.id);
 
-      // 更新视频时间
-      if (asset.type === 'video') {
-        await this.fabricEngine.seekVideo(clip.asset, localTime);
+        // incoming from prev
+        const prev = neighbor?.prev;
+        const prevTrans = prev?.transitionOut as unknown as { type?: string; duration?: number } | undefined;
+        if (prevTrans?.type && typeof prevTrans.duration === 'number' && prevTrans.duration > 0) {
+          const dur = prevTrans.duration;
+          if (time >= clip.time.start && time < clip.time.start + dur) {
+            const t = Math.min(1, Math.max(0, (time - clip.time.start) / dur));
+            applyTransitionToRenderState(renderState, prevTrans.type, 'in', t, this.config.width, this.config.height);
+          }
+        }
+
+        // outgoing to next
+        const outTrans = clip.transitionOut as unknown as { type?: string; duration?: number } | undefined;
+        if (outTrans?.type && typeof outTrans.duration === 'number' && outTrans.duration > 0) {
+          const dur = outTrans.duration;
+          const startOut = Math.max(clip.time.start, clip.time.end - dur);
+          if (time >= startOut && time < clip.time.end) {
+            const t = Math.min(1, Math.max(0, (time - startOut) / dur));
+            applyTransitionToRenderState(renderState, outTrans.type, 'out', t, this.config.width, this.config.height);
+          }
+        }
       }
 
-      // 处理文本
+      // 视频/图片：直接对 assetId 应用渲染状态
+      if (asset.type === 'video' || asset.type === 'image') {
+        this.fabricEngine.applyRenderState(clip.asset, renderState);
+
+        // 更新视频时间
+        if (asset.type === 'video') {
+          await this.fabricEngine.seekVideo(clip.asset, localTime);
+        }
+      }
+
+      // 文本：根据轨道类型分流
       if (asset.type === 'text' && asset.content) {
-        this.renderTextClip(clip, asset, renderState, project);
+        if (track.type === 'subtitle') {
+          this.renderSubtitleClip(track, clip, asset, renderState, project);
+        } else {
+          this.renderTextClip(clip, asset, renderState, project);
+        }
       }
     }
 
@@ -332,6 +381,63 @@ export class ModernComposer {
     // 渲染
     this.fabricEngine.render();
   }
+
+/**
+ * 将转场效果应用到 RenderState（无重叠版本：分别作用于 outgoing/incoming 片段内部）
+ */
+function applyTransitionToRenderState(
+  state: RenderState,
+  type: string,
+  phase: 'in' | 'out',
+  t: number,
+  canvasW: number,
+  canvasH: number
+): void {
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const tt = clamp01(t);
+  const p = phase === 'in' ? tt : (1 - tt); // 1->0 for out, 0->1 for in（便于统一）
+
+  const baseOpacity = state.opacity ?? 1;
+
+  // 对齐类型：dissolve 在当前实现中与 fade 等价（不做双片段叠加）
+  const normalized = type === 'dissolve' ? 'fade' : type;
+
+  switch (normalized) {
+    case 'fade':
+      state.opacity = baseOpacity * p;
+      break;
+
+    case 'slide': {
+      const dx = canvasW * 0.08;
+      state.opacity = baseOpacity * p;
+      // incoming 从右进；outgoing 向左出
+      state.x = (state.x ?? canvasW / 2) + (phase === 'in' ? (1 - tt) * dx : -tt * dx);
+      break;
+    }
+
+    case 'zoom': {
+      const s = phase === 'in' ? (0.94 + 0.06 * tt) : (1 - 0.06 * tt);
+      state.opacity = baseOpacity * p;
+      state.scaleX = (state.scaleX ?? 1) * s;
+      state.scaleY = (state.scaleY ?? 1) * s;
+      break;
+    }
+
+    case 'blur': {
+      state.opacity = baseOpacity * p;
+      // 0~20 的轻模糊（Fabric 内部 /100）
+      const blurAmount = phase === 'in' ? (1 - tt) * 20 : tt * 20;
+      state.blur = Math.max(state.blur ?? 0, blurAmount);
+      break;
+    }
+
+    case 'wipe':
+    default:
+      // 当前 Fabric 渲染器不做 clip-mask，先降级为 fade
+      state.opacity = baseOpacity * p;
+      break;
+  }
+}
 
   /**
    * 获取活跃的 Clips
@@ -605,6 +711,98 @@ export class ModernComposer {
       });
     } else {
       this.fabricEngine.applyRenderState(elementId, renderState);
+    }
+  }
+
+  /**
+   * 渲染字幕 Clip（强制统一安全区 + 底部/顶部对齐 + 自动换行）
+   * - 新方案：字幕与花字/强调文本彻底分流，避免定位与对齐互相影响
+   */
+  private renderSubtitleClip(
+    track: Track,
+    clip: Clip,
+    asset: Asset,
+    renderState: RenderState,
+    project: VEIRProject
+  ): void {
+    if (!this.fabricEngine || !asset.content) return;
+
+    const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+    const elementId = `subtitle-${clip.id}`;
+    const existing = this.fabricEngine.getElement(elementId);
+
+    // 样式来源：复用 vocabulary preset（可扩展字段，schema 允许 additionalProperties）
+    const preset = clip.expression?.preset ? project.vocabulary.presets[clip.expression.preset] : null;
+    const intensity = clip.expression?.intensity ?? 0.8;
+
+    const fontFamily = (preset?.fontFamily as string) || 'Noto Sans SC';
+    const fontWeight = (preset?.fontWeight as number) || 500;
+    const fontSize =
+      typeof preset?.fontSize === 'number' ? (preset.fontSize as number) : Math.round(36 * (0.9 + intensity * 0.2));
+    const fill = (preset?.color as string) || '#FFFFFF';
+    const stroke = (preset?.strokeColor as string) || undefined;
+    const strokeWidth = typeof preset?.strokeWidth === 'number' ? (preset.strokeWidth as number) : 0;
+
+    // 轨道布局（统一位置/对齐/安全区/最大宽度/行高）
+    const layout = (track.layout || {}) as unknown as {
+      position?: 'top' | 'bottom';
+      alignment?: 'left' | 'center' | 'right';
+      safeArea?: { left?: number; right?: number; top?: number; bottom?: number };
+      maxWidth?: number;
+      lineHeight?: number;
+    };
+
+    const safe = layout.safeArea || {};
+    const safeLeft = clamp01(safe.left ?? 0.06);
+    const safeRight = clamp01(safe.right ?? 0.06);
+    const safeTop = clamp01(safe.top ?? 0.06);
+    const safeBottom = clamp01(safe.bottom ?? 0.08);
+
+    const safeWidth = Math.max(1, this.config.width * (1 - safeLeft - safeRight));
+    const maxWidthRatio = clamp01(layout.maxWidth ?? 1);
+    const textBoxWidth = Math.max(120, safeWidth * maxWidthRatio);
+
+    const position = layout.position ?? 'bottom';
+    const alignment = layout.alignment ?? 'center';
+
+    const xCenter = this.config.width * safeLeft + safeWidth / 2;
+    const y = position === 'top' ? this.config.height * safeTop : this.config.height * (1 - safeBottom);
+    const originY: 'top' | 'bottom' = position === 'top' ? 'top' : 'bottom';
+
+    if (!existing) {
+      this.fabricEngine.addText({
+        id: elementId,
+        type: 'text',
+        content: asset.content,
+        x: xCenter,
+        y,
+        // 关键：传入 width 触发 Fabric Textbox（自动换行）
+        width: textBoxWidth,
+        fontSize,
+        fontFamily,
+        fontWeight,
+        fill,
+        textAlign: alignment,
+        originX: 'center',
+        originY,
+        opacity: renderState.opacity,
+        angle: renderState.angle,
+        lineHeight: layout.lineHeight ?? 1.25,
+        stroke,
+        strokeWidth,
+      });
+    } else {
+      // 更新动画/透明度（定位由字幕布局控制，动画 translateY 仍可叠加）
+      this.fabricEngine.applyRenderState(elementId, {
+        x: (renderState.x ?? xCenter),
+        y: (renderState.y ?? y),
+        scaleX: renderState.scaleX,
+        scaleY: renderState.scaleY,
+        angle: renderState.angle,
+        opacity: renderState.opacity,
+        blur: renderState.blur,
+      });
     }
   }
 

@@ -132,8 +132,15 @@
       },
       {
         "id": "track-subtitles",
-        "type": "text",
+        "type": "subtitle",
         "layer": 3,
+        "layout": {
+          "position": "bottom",
+          "alignment": "center",
+          "safeArea": { "left": 0.06, "right": 0.06, "bottom": 0.08, "top": 0.06 },
+          "maxWidth": 1,
+          "lineHeight": 1.25
+        },
         "clips": [
           {
             "id": "clip-sub-1",

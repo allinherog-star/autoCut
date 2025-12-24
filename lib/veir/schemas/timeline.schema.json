@@ -36,6 +36,7 @@
                         "video",
                         "audio",
                         "text",
+                        "subtitle",
                         "pip"
                     ],
                     "$comment": "轨道类型"
@@ -45,12 +46,56 @@
                     "minimum": 0,
                     "$comment": "渲染层级（越大越靠上）"
                 },
+                "layout": {
+                    "$ref": "#/definitions/subtitleLayout",
+                    "$comment": "轨道布局（主要用于字幕轨道的安全区/对齐/换行约束）"
+                },
                 "clips": {
                     "type": "array",
                     "$comment": "该轨道上的剪辑片段",
                     "items": {
                         "$ref": "#/definitions/clip"
                     }
+                }
+            },
+            "additionalProperties": false
+        },
+        "subtitleLayout": {
+            "type": "object",
+            "$comment": "字幕专用布局约束（用于保证字幕位置/对齐一致）",
+            "properties": {
+                "position": {
+                    "type": "string",
+                    "enum": ["top", "bottom"],
+                    "$comment": "字幕区域位置"
+                },
+                "alignment": {
+                    "type": "string",
+                    "enum": ["left", "center", "right"],
+                    "$comment": "水平对齐"
+                },
+                "safeArea": {
+                    "type": "object",
+                    "$comment": "安全区（0-1 比率）",
+                    "properties": {
+                        "left": { "type": "number", "minimum": 0, "maximum": 0.5 },
+                        "right": { "type": "number", "minimum": 0, "maximum": 0.5 },
+                        "top": { "type": "number", "minimum": 0, "maximum": 0.5 },
+                        "bottom": { "type": "number", "minimum": 0, "maximum": 0.5 }
+                    },
+                    "additionalProperties": false
+                },
+                "maxWidth": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 1,
+                    "$comment": "字幕最大宽度（占安全区宽度比率）"
+                },
+                "lineHeight": {
+                    "type": "number",
+                    "minimum": 0.8,
+                    "maximum": 3,
+                    "$comment": "行高倍数（相对 fontSize）"
                 }
             },
             "additionalProperties": false
@@ -83,6 +128,32 @@
                 "behavior": {
                     "$ref": "#/definitions/behavior",
                     "$comment": "行为引用（入场/出场）"
+                },
+                "transitionOut": {
+                    "$ref": "#/definitions/transition",
+                    "$comment": "转场（从当前 clip 过渡到同轨道下一个 clip）"
+                }
+            },
+            "additionalProperties": false
+        },
+        "transition": {
+            "type": "object",
+            "$comment": "剪辑转场配置（outgoing）",
+            "required": ["type", "duration"],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["fade", "dissolve", "wipe", "slide", "zoom", "blur"],
+                    "$comment": "转场类型"
+                },
+                "duration": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "转场时长（秒）"
+                },
+                "easing": {
+                    "type": "string",
+                    "$comment": "缓动函数（语义级）"
                 }
             },
             "additionalProperties": false

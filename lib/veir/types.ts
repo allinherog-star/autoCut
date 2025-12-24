@@ -147,7 +147,33 @@ export interface VEIRVocabulary {
 /**
  * 轨道类型
  */
-export type TrackType = 'video' | 'audio' | 'text' | 'pip';
+export type TrackType = 'video' | 'audio' | 'text' | 'subtitle' | 'pip';
+
+/**
+ * 字幕专用布局约束（用于保证字幕位置/对齐一致）
+ * - 所有比率均以画布宽/高为基准（0-1）
+ */
+export interface SubtitleLayout {
+    /** 字幕区域位置 */
+    position?: 'top' | 'bottom';
+    /** 水平对齐 */
+    alignment?: 'left' | 'center' | 'right';
+    /**
+     * 安全区（避免贴边/刘海/遮挡）
+     * - left/right: 以宽度为基准
+     * - top/bottom: 以高度为基准
+     */
+    safeArea?: {
+        left?: number;
+        right?: number;
+        top?: number;
+        bottom?: number;
+    };
+    /** 字幕最大宽度（占安全区宽度比率，0-1） */
+    maxWidth?: number;
+    /** 行高倍数（相对 fontSize，例如 1.2） */
+    lineHeight?: number;
+}
 
 /**
  * 时间范围
@@ -180,6 +206,23 @@ export interface Behavior {
 }
 
 /**
+ * 转场类型（与产品侧 `lib/types.ts` 对齐）
+ */
+export type TransitionType = 'fade' | 'dissolve' | 'wipe' | 'slide' | 'zoom' | 'blur';
+
+/**
+ * 剪辑转场配置（outgoing）
+ * - 表示从当前 clip 过渡到同轨道的下一个 clip
+ */
+export interface ClipTransition {
+    type: TransitionType;
+    /** 转场时长（秒） */
+    duration: number;
+    /** 缓动函数（可选，语义级） */
+    easing?: string;
+}
+
+/**
  * 剪辑片段
  */
 export interface Clip {
@@ -193,6 +236,11 @@ export interface Clip {
     expression?: ExpressionRef;
     /** 行为引用 */
     behavior?: Behavior;
+    /**
+     * 转场（从当前 clip 过渡到下一个 clip）
+     * - 作用对象是“镜头间的缝”，但为简化序列化将其放在 outgoing clip 上
+     */
+    transitionOut?: ClipTransition;
 }
 
 /**
@@ -205,6 +253,11 @@ export interface Track {
     type: TrackType;
     /** 渲染层级 */
     layer: number;
+    /**
+     * 轨道布局（仅字幕轨道使用）
+     * - 当 type === 'subtitle' 时，用于统一字幕对齐与换行宽度
+     */
+    layout?: SubtitleLayout;
     /** 剪辑片段列表 */
     clips: Clip[];
 }

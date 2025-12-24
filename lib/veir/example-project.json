@@ -15,6 +15,11 @@
                 "src": "/assets/videos/main.mp4",
                 "semanticRole": "main"
             },
+            "broll-video": {
+                "type": "video",
+                "src": "/assets/videos/main.mp4",
+                "semanticRole": "scene.broll"
+            },
             "bgm": {
                 "type": "audio",
                 "src": "/assets/audio/bgm.mp3",
@@ -125,10 +130,23 @@
                 "layer": 0,
                 "clips": [
                     {
-                        "id": "clip-main",
+                        "id": "clip-main-1",
                         "asset": "main-video",
                         "time": {
                             "start": 0,
+                            "end": 30
+                        },
+                        "transitionOut": {
+                            "type": "dissolve",
+                            "duration": 0.8,
+                            "easing": "ease-in-out"
+                        }
+                    },
+                    {
+                        "id": "clip-main-2",
+                        "asset": "broll-video",
+                        "time": {
+                            "start": 30,
                             "end": 60
                         }
                     }
@@ -197,8 +215,15 @@
             },
             {
                 "id": "text-subtitle",
-                "type": "text",
+                "type": "subtitle",
                 "layer": 4,
+                "layout": {
+                    "position": "bottom",
+                    "alignment": "center",
+                    "safeArea": { "left": 0.06, "right": 0.06, "bottom": 0.08, "top": 0.06 },
+                    "maxWidth": 1,
+                    "lineHeight": 1.25
+                },
                 "clips": [
                     {
                         "id": "clip-sub-1",

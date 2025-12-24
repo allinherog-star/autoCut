@@ -42,6 +42,8 @@ export interface ElementConfig {
   stroke?: string;
   strokeWidth?: number;
   textAlign?: 'left' | 'center' | 'right';
+  /** 文本行高倍数（仅对 Textbox 生效） */
+  lineHeight?: number;
   shadow?: fabric.Shadow | string;
   // 视频特有属性
   videoTime?: number;
@@ -193,8 +195,11 @@ export class FabricEngine {
   /**
    * 添加文本元素
    */
-  addText(config: ElementConfig): fabric.FabricText {
-    const text = new fabric.FabricText(config.content || '', {
+  addText(config: ElementConfig): fabric.FabricObject {
+    const content = config.content || '';
+    const useTextbox = typeof config.width === 'number' && Number.isFinite(config.width) && config.width > 0;
+
+    const baseOptions = {
       left: config.x,
       top: config.y,
       fontSize: config.fontSize || 40,
@@ -208,10 +213,21 @@ export class FabricEngine {
       originY: config.originY || 'center',
       opacity: config.opacity ?? 1,
       angle: config.angle || 0,
-    });
+    };
+
+    const text: fabric.FabricObject = useTextbox
+      ? new (fabric as unknown as { Textbox: new (t: string, o: Record<string, unknown>) => fabric.FabricObject }).Textbox(
+          content,
+          {
+            ...baseOptions,
+            width: config.width,
+            lineHeight: config.lineHeight ?? 1.2,
+          }
+        )
+      : new fabric.FabricText(content, baseOptions);
 
     if (config.shadow) {
-      text.shadow = new fabric.Shadow(
+      (text as unknown as { shadow?: unknown }).shadow = new fabric.Shadow(
         typeof config.shadow === 'string'
           ? { color: 'rgba(0,0,0,0.5)', blur: 10, offsetX: 0, offsetY: 0 }
           : config.shadow
@@ -403,7 +419,13 @@ export class FabricEngine {
       angle: config.angle || 0,
     });
 
-    if (config.width) {
+    const elementType = (element as unknown as { type?: string }).type;
+    const isTextbox = elementType === 'textbox';
+
+    // Textbox 的 width 是“排版宽度”（用于自动换行），不应走 scaleX 缩放
+    if (typeof config.width === 'number' && Number.isFinite(config.width) && config.width > 0 && isTextbox) {
+      element.set('width', config.width);
+    } else if (config.width) {
       const currentWidth = element.width || 1;
       element.set('scaleX', (config.scaleX || 1) * (config.width / currentWidth));
     }
