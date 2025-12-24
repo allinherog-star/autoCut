@@ -38,6 +38,7 @@ export function TimelineTrack({
         video: '视频',
         audio: '音频',
         text: '文字',
+        subtitle: '字幕',
         pip: '画中画',
     };
 
@@ -45,6 +46,7 @@ export function TimelineTrack({
         video: '🎬',
         audio: '🎵',
         text: '📝',
+        subtitle: '💬',
         pip: '🖼️',
     };
 

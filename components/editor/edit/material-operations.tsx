@@ -101,6 +101,8 @@ const getOperationsByType = (type: TrackType): OperationButton[] => {
       return AUDIO_OPERATIONS
     case 'text':
       return TEXT_OPERATIONS
+    case 'subtitle':
+      return TEXT_OPERATIONS
     case 'pip':
       return PIP_OPERATIONS
     default:
@@ -113,6 +115,7 @@ const TYPE_TITLES: Record<TrackType, { label: string; description: string }> = {
   video: { label: '视频操作', description: '裁剪、变速、滤镜等' },
   audio: { label: '音频操作', description: '音量、淡入淡出等' },
   text: { label: '文字操作', description: '样式、动画、对齐等' },
+  subtitle: { label: '字幕操作', description: '编辑、样式、动画等' },
   pip: { label: '贴纸/图片操作', description: '位置、缩放、图层等' },
 }
 

@@ -259,6 +259,59 @@ export class ModernComposer {
   }
 
   /**
+   * 解析转场配置：支持 transitionOut.preset 引用 vocabulary.presets（type=transition）
+   * - 目标：让 VEIR 生成侧只需写 preset，渲染侧能得到可执行的 type/duration/direction/easing
+   * - 合并规则：显式字段优先，其次取 preset 参数
+   */
+  private resolveTransition(
+    project: VEIRProject,
+    transition: unknown
+  ): { type?: string; duration?: number; direction?: string; easing?: string; feather?: number } | undefined {
+    if (!transition || typeof transition !== 'object') return undefined;
+
+    const t = transition as {
+      preset?: string;
+      type?: string;
+      duration?: number;
+      direction?: string;
+      easing?: string;
+      feather?: number;
+    };
+
+    let presetParams: Record<string, unknown> | null = null;
+    if (t.preset) {
+      const preset = project.vocabulary?.presets?.[t.preset] as Record<string, unknown> | undefined;
+      if (preset && (preset as any).type === 'transition') {
+        presetParams = preset;
+      }
+    }
+
+    const pick = <K extends string>(key: K, fallbackKeys: K[] = []) => {
+      if (t[key as keyof typeof t] !== undefined) return t[key as keyof typeof t];
+      if (!presetParams) return undefined;
+      if (presetParams[key] !== undefined) return presetParams[key];
+      for (const k of fallbackKeys) {
+        if (presetParams[k] !== undefined) return presetParams[k];
+      }
+      return undefined;
+    };
+
+    // preset 中建议使用 transitionType 以避免与 preset 自己的 type 字段冲突
+    const type = (pick('type' as any, ['transitionType' as any, 'transition' as any]) as unknown) as string | undefined;
+    const duration = pick('duration' as any, ['transitionDuration' as any]) as number | undefined;
+    const direction = pick('direction' as any) as string | undefined;
+    const easing = pick('easing' as any) as string | undefined;
+    const feather = pick('feather' as any) as number | undefined;
+
+    if (!type || typeof duration !== 'number') {
+      // 保持与旧行为一致：没有可执行字段则视为无转场
+      return undefined;
+    }
+
+    return { type, duration, direction, easing, feather };
+  }
+
+  /**
    * 预加载素材
    */
   private async preloadAssets(project: VEIRProject, onProgress?: ProgressCallback): Promise<void> {
@@ -354,7 +407,7 @@ export class ModernComposer {
 
         // incoming from prev
         const prev = neighbor?.prev;
-        const prevTrans = prev?.transitionOut as unknown as { type?: string; duration?: number; direction?: string } | undefined;
+        const prevTrans = this.resolveTransition(project, prev?.transitionOut);
         if (prevTrans?.type && typeof prevTrans.duration === 'number' && prevTrans.duration > 0) {
           const dur = prevTrans.duration;
           if (time >= clip.time.start && time < clip.time.start + dur) {
@@ -370,7 +423,7 @@ export class ModernComposer {
         }
 
         // outgoing to next
-        const outTrans = clip.transitionOut as unknown as { type?: string; duration?: number; direction?: string } | undefined;
+        const outTrans = this.resolveTransition(project, clip.transitionOut);
         if (outTrans?.type && typeof outTrans.duration === 'number' && outTrans.duration > 0) {
           const dur = outTrans.duration;
           const startOut = Math.max(clip.time.start, clip.time.end - dur);
@@ -1418,12 +1471,10 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
       // 音频 crossfade：转场窗口淡入淡出（对标 PR）
       const neighbor = neighborsByTrackAndClipId.get(`${track.id}:${clip.id}`);
       const prev = neighbor?.prev;
-      const fadeInDur = (prev?.transitionOut && typeof (prev.transitionOut as any).duration === 'number')
-        ? Math.max(0, (prev.transitionOut as any).duration)
-        : 0;
-      const fadeOutDur = (clip.transitionOut && typeof (clip.transitionOut as any).duration === 'number')
-        ? Math.max(0, (clip.transitionOut as any).duration)
-        : 0;
+      const prevT = this.resolveTransition(project, prev?.transitionOut);
+      const outT = this.resolveTransition(project, clip.transitionOut);
+      const fadeInDur = typeof prevT?.duration === 'number' ? Math.max(0, prevT.duration) : 0;
+      const fadeOutDur = typeof outT?.duration === 'number' ? Math.max(0, outT.duration) : 0;
       const fadeInFrames = Math.min(outLen, Math.floor(fadeInDur * targetSampleRate));
       const fadeOutFrames = Math.min(outLen, Math.floor(fadeOutDur * targetSampleRate));
       const envelope = (i: number) => {

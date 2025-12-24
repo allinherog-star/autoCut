@@ -142,9 +142,16 @@
         },
         "transition": {
             "type": "object",
-            "$comment": "剪辑转场配置（outgoing）",
-            "required": ["type", "duration"],
+            "$comment": "剪辑转场配置（outgoing）。支持两种形态：1) preset 引用（参数化复用）；2) 直接字段（type+duration）。",
+            "anyOf": [
+                { "required": ["preset"] },
+                { "required": ["type", "duration"] }
+            ],
             "properties": {
+                "preset": {
+                    "type": "string",
+                    "$comment": "可选：引用 vocabulary.presets 中 type=transition 的转场预设（用于参数化复用）。若与 type/duration 等字段同时存在，字段值优先生效。"
+                },
                 "type": {
                     "type": "string",
                     "enum": ["fade", "dissolve", "wipe", "slide", "zoom", "blur"],

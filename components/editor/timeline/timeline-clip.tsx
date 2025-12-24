@@ -92,7 +92,7 @@ export function TimelineClip({
                 )}
 
                 {/* 文字内容（文字轨道） */}
-                {trackType === 'text' && (
+                {(trackType === 'text' || trackType === 'subtitle') && (
                     <div className="flex-1 flex items-center px-1">
                         <span className="text-white text-xs truncate">
                             {clip.asset}

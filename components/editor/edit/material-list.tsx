@@ -52,6 +52,12 @@ const TRACK_TYPE_CONFIG: Record<TrackType, {
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/20'
   },
+  subtitle: {
+    label: '字幕',
+    icon: Type,
+    color: 'text-yellow-300',
+    bgColor: 'bg-yellow-500/15',
+  },
   pip: { 
     label: '贴纸/图片', 
     icon: Image, 
@@ -79,7 +85,7 @@ export function MaterialList({
   
   // 展开/折叠状态
   const [expandedTypes, setExpandedTypes] = React.useState<Set<TrackType>>(
-    new Set(['video', 'audio', 'text', 'pip'])
+    new Set(['video', 'audio', 'text', 'subtitle', 'pip'])
   )
 
   // 按类型分组素材
@@ -88,6 +94,7 @@ export function MaterialList({
       video: [],
       audio: [],
       text: [],
+      subtitle: [],
       pip: [],
     }
     

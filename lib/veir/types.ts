@@ -215,9 +215,12 @@ export type TransitionType = 'fade' | 'dissolve' | 'wipe' | 'slide' | 'zoom' | '
  * - 表示从当前 clip 过渡到同轨道的下一个 clip
  */
 export interface ClipTransition {
-    type: TransitionType;
+    /** 可选：引用 vocabulary.presets 中 type=transition 的转场预设 */
+    preset?: string;
+    /** 转场类型（若使用 preset，可省略） */
+    type?: TransitionType;
     /** 转场时长（秒） */
-    duration: number;
+    duration?: number;
     /** 缓动函数（可选，语义级） */
     easing?: string;
     /** wipe/slide 的方向（可选） */

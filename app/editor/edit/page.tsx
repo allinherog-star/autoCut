@@ -18,7 +18,8 @@ import { useEditor } from '../layout'
 // 时间轴组件导入
 import { TimelineViewer } from '@/components/editor/timeline'
 import { useTimelineStore } from '@/lib/timeline/store'
-import type { TimelineData } from '@/lib/timeline/types'
+import { convertVEIRToTimeline } from '@/lib/timeline/veir-converter'
+import type { VEIRProject } from '@/lib/veir/types'
 
 // 编辑页面组件
 import {
@@ -28,157 +29,8 @@ import {
   VideoPreviewPanel,
 } from '@/components/editor/edit'
 
-// ============================================
-// 测试数据 - 模拟真实的视频编辑场景
-// ============================================
-const TEST_TIMELINE_DATA: TimelineData = {
-  duration: 60,
-  tracks: [
-    // 视频轨道 1 - 主视频
-    {
-      id: 'track_video_1',
-      type: 'video',
-      layer: 0,
-      clips: [
-        {
-          id: 'clip_video_1',
-          asset: '开场片头.mp4',
-          time: { start: 0, end: 5 },
-        },
-        {
-          id: 'clip_video_2',
-          asset: '主视频内容.mp4',
-          time: { start: 5, end: 35 },
-        },
-        {
-          id: 'clip_video_3',
-          asset: '精彩片段.mp4',
-          time: { start: 35, end: 50 },
-        },
-        {
-          id: 'clip_video_4',
-          asset: '结尾画面.mp4',
-          time: { start: 50, end: 58 },
-        },
-      ],
-    },
-    // 视频轨道 2 - 画中画/叠加素材
-    {
-      id: 'track_video_2',
-      type: 'video',
-      layer: 1,
-      clips: [
-        {
-          id: 'clip_video_pip_1',
-          asset: '反应镜头.mp4',
-          time: { start: 12, end: 18 },
-        },
-        {
-          id: 'clip_video_pip_2',
-          asset: 'B-Roll素材.mp4',
-          time: { start: 28, end: 34 },
-        },
-      ],
-    },
-    // 文字轨道 - 字幕和标题
-    {
-      id: 'track_text_1',
-      type: 'text',
-      layer: 2,
-      clips: [
-        {
-          id: 'clip_text_1',
-          asset: '片头标题',
-          time: { start: 1, end: 4 },
-        },
-        {
-          id: 'clip_text_2',
-          asset: '第一部分字幕',
-          time: { start: 8, end: 15 },
-        },
-        {
-          id: 'clip_text_3',
-          asset: '重点提示文字',
-          time: { start: 20, end: 25 },
-        },
-        {
-          id: 'clip_text_4',
-          asset: '精彩时刻',
-          time: { start: 36, end: 42 },
-        },
-        {
-          id: 'clip_text_5',
-          asset: '订阅关注',
-          time: { start: 52, end: 57 },
-        },
-      ],
-    },
-    // 贴纸/图片轨道
-    {
-      id: 'track_pip_1',
-      type: 'pip',
-      layer: 3,
-      clips: [
-        {
-          id: 'clip_sticker_1',
-          asset: '表情包.gif',
-          time: { start: 10, end: 14 },
-        },
-        {
-          id: 'clip_sticker_2',
-          asset: 'Logo水印.png',
-          time: { start: 0, end: 58 },
-        },
-        {
-          id: 'clip_sticker_3',
-          asset: '动态贴纸.webm',
-          time: { start: 38, end: 45 },
-        },
-      ],
-    },
-    // 音频轨道 1 - 背景音乐
-    {
-      id: 'track_audio_1',
-      type: 'audio',
-      layer: 4,
-      clips: [
-        {
-          id: 'clip_audio_bgm',
-          asset: '背景音乐.mp3',
-          time: { start: 0, end: 58 },
-        },
-      ],
-    },
-    // 音频轨道 2 - 音效
-    {
-      id: 'track_audio_2',
-      type: 'audio',
-      layer: 5,
-      clips: [
-        {
-          id: 'clip_audio_sfx_1',
-          asset: '转场音效.wav',
-          time: { start: 4.5, end: 5.5 },
-        },
-        {
-          id: 'clip_audio_sfx_2',
-          asset: '强调音效.wav',
-          time: { start: 19, end: 20 },
-        },
-        {
-          id: 'clip_audio_sfx_3',
-          asset: '笑声音效.wav',
-          time: { start: 36, end: 38 },
-        },
-        {
-          id: 'clip_audio_sfx_4',
-          asset: '订阅提示音.wav',
-          time: { start: 52, end: 53 },
-        },
-      ],
-    },
-  ],
-}
+// VEIR 全功能示例（作为“智能混剪规范”的基准测试项目）
+import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.json'
 
 // ============================================
 // 剪辑微调页面
@@ -189,6 +41,8 @@ export default function EditPage() {
 
   // 时间轴 store
   const { data, playback, loadData, _tick } = useTimelineStore()
+
+  const [veirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
   
   // 播放动画引用
   const animationRef = useRef<number>()
@@ -200,8 +54,8 @@ export default function EditPage() {
 
   // 加载测试数据
   useEffect(() => {
-    loadData(TEST_TIMELINE_DATA)
-  }, [loadData])
+    loadData(convertVEIRToTimeline(veirProject))
+  }, [loadData, veirProject])
 
   // 播放动画循环
   useEffect(() => {
@@ -307,6 +161,7 @@ export default function EditPage() {
           <VideoPreviewPanel
             selectedClipId={selectedClipId}
             selectedTrackId={selectedTrackId}
+            veirProject={veirProject}
             onClipPositionChange={handleClipPositionChange}
             className="h-full"
           />

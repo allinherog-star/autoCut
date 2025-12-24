@@ -20,6 +20,7 @@ const TRACK_CONFIG: Record<Track['type'], { label: string; icon: string; color: 
     video: { label: 'V', icon: '🎬', color: 'bg-indigo-950/40' },
     audio: { label: 'A', icon: '🎵', color: 'bg-emerald-950/40' },
     text: { label: 'T', icon: '📝', color: 'bg-amber-950/40' },
+    subtitle: { label: 'S', icon: '💬', color: 'bg-yellow-950/30' },
     pip: { label: 'P', icon: '🖼️', color: 'bg-pink-950/40' },
 };
 
@@ -270,9 +271,10 @@ export function TimelineViewer({ className = '' }: TimelineViewerProps) {
                                 key={track.id}
                                 className={`flex items-center justify-center border-b border-[#252528] ${TRACK_CONFIG[track.type].color}`}
                                 style={{ height: trackHeight }}
-                                title={`${TRACK_CONFIG[track.type].label === 'V' ? '视频' :
-                                    TRACK_CONFIG[track.type].label === 'A' ? '音频' :
-                                        TRACK_CONFIG[track.type].label === 'T' ? '文字' : '贴纸'} ${index + 1} - ${track.clips.length} 片段`}
+                                title={`${track.type === 'video' ? '视频' :
+                                    track.type === 'audio' ? '音频' :
+                                        track.type === 'subtitle' ? '字幕' :
+                                            track.type === 'text' ? '文字' : '贴纸'} ${index + 1} - ${track.clips.length} 片段`}
                             >
                                 {/* 极简轨道标识 */}
                                 <div className="flex items-center gap-1">

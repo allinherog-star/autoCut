@@ -262,5 +262,6 @@ export const TRACK_TYPE_COLORS: Record<TrackType, string> = {
     video: '#6366f1',   // 靛蓝
     audio: '#22c55e',   // 绿色
     text: '#f59e0b',    // 橙色
+    subtitle: '#eab308', // 黄
     pip: '#ec4899',     // 粉色
 };

@@ -5,7 +5,7 @@
  * Video Preview Panel Component - Supports dragging materials to adjust position
  */
 
-import React, { useState, useRef, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play,
@@ -25,13 +25,16 @@ import {
   ZoomOut,
 } from 'lucide-react'
 import { useTimelineStore } from '@/lib/timeline/store'
-import type { Clip, Track } from '@/lib/veir/types'
+import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
+import { getFilterCSS } from '@/lib/veir/composer/filters'
 
 interface VideoPreviewPanelProps {
   /** 选中的素材 ID */
   selectedClipId: string | null
   /** 选中的轨道 ID */
   selectedTrackId: string | null
+  /** 可选：完整 VEIR 项目（用于加载真实素材并按 vocabulary/adjustments 渲染） */
+  veirProject?: VEIRProject | null
   /** 素材位置变化回调 */
   onClipPositionChange?: (clipId: string, x: number, y: number) => void
   /** 自定义类名 */
@@ -57,6 +60,7 @@ const DEFAULT_POSITION: ClipPosition = {
 export function VideoPreviewPanel({
   selectedClipId,
   selectedTrackId,
+  veirProject,
   onClipPositionChange,
   className = '',
 }: VideoPreviewPanelProps) {
@@ -72,6 +76,7 @@ export function VideoPreviewPanel({
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const previewRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // 获取选中素材信息
   const selectedClipInfo = useMemo(() => {
@@ -86,6 +91,71 @@ export function VideoPreviewPanel({
     return { clip, track }
   }, [selectedClipId, selectedTrackId, data.tracks])
 
+  // 从 VEIR project 获取素材（若提供）
+  const getAsset = useCallback((assetId: string) => {
+    return veirProject?.assets.assets?.[assetId]
+  }, [veirProject])
+
+  // 当前时间点活跃的主视频 clip（用于渲染真实视频 + 滤镜）
+  const activeVideoClip = useMemo(() => {
+    if (!veirProject) return null
+    const t = playback.currentTime
+    const videoTracks = veirProject.timeline.tracks
+      .filter(tr => tr.type === 'video')
+      .sort((a, b) => a.layer - b.layer)
+    for (const tr of videoTracks) {
+      const clip = tr.clips.find(c => t >= c.time.start && t < c.time.end)
+      if (clip) return clip
+    }
+    return null
+  }, [veirProject, playback.currentTime])
+
+  const activeVideoSrc = useMemo(() => {
+    if (!activeVideoClip) return null
+    const asset = getAsset(activeVideoClip.asset)
+    return asset?.src || null
+  }, [activeVideoClip, getAsset])
+
+  const activeVideoFilter = useMemo(() => {
+    if (!veirProject || !activeVideoClip) return 'none'
+    const clipId = activeVideoClip.id
+    const filterRef = veirProject.adjustments?.clipOverrides?.[clipId]?.video?.filter
+    return getFilterCSS(filterRef)
+  }, [veirProject, activeVideoClip])
+
+  // 同步 video 播放状态（基础版：把 store 的播放/暂停与 currentTime 驱动到 <video>）
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    if (!activeVideoSrc) return
+    if (playback.isPlaying) {
+      void el.play().catch(() => {
+        // 浏览器可能阻止自动播放：静默降级
+      })
+    } else {
+      el.pause()
+    }
+  }, [playback.isPlaying, activeVideoSrc])
+
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    if (!activeVideoClip) return
+
+    // 将时间轴时间映射到 clip 的局部时间（考虑 sourceRange）
+    const t = playback.currentTime
+    const clipLocal = Math.max(0, t - activeVideoClip.time.start)
+    const sourceStart = activeVideoClip.sourceRange?.start ?? 0
+    const desired = sourceStart + clipLocal
+    if (Number.isFinite(desired) && Math.abs((el.currentTime || 0) - desired) > 0.25) {
+      try {
+        el.currentTime = desired
+      } catch {
+        // Safari/某些状态下设置 currentTime 可能抛错：忽略
+      }
+    }
+  }, [playback.currentTime, activeVideoClip])
+
   // 获取当前素材位置
   const currentPosition = selectedClipId 
     ? (clipPositions[selectedClipId] || DEFAULT_POSITION)
@@ -96,7 +166,7 @@ export function VideoPreviewPanel({
     const clips: Array<{ clip: Clip; track: Track; position: ClipPosition }> = []
     
     data.tracks.forEach(track => {
-      if (track.type === 'pip' || track.type === 'text') {
+      if (track.type === 'pip' || track.type === 'text' || track.type === 'subtitle') {
         track.clips.forEach(clip => {
           if (playback.currentTime >= clip.time.start && playback.currentTime < clip.time.end) {
             clips.push({
@@ -105,7 +175,7 @@ export function VideoPreviewPanel({
               position: clipPositions[clip.id] || {
                 ...DEFAULT_POSITION,
                 x: track.type === 'pip' ? 75 : 50,
-                y: track.type === 'pip' ? 25 : 85,
+                y: track.type === 'pip' ? 25 : track.type === 'subtitle' ? 88 : 85,
               },
             })
           }
@@ -249,8 +319,8 @@ export function VideoPreviewPanel({
         onMouseUp={handleDragEnd}
         onMouseLeave={handleDragEnd}
       >
-        {/* 视频背景 - 模拟 */}
-        <div className="absolute inset-4 bg-gradient-to-br from-[#1e1e22] to-[#141418] rounded-lg overflow-hidden">
+        {/* 视频背景 */}
+        <div className="absolute inset-4 bg-black rounded-lg overflow-hidden">
           {/* 网格参考线 */}
           {showGrid && (
             <div className="absolute inset-0 pointer-events-none">
@@ -265,17 +335,29 @@ export function VideoPreviewPanel({
             </div>
           )}
 
-          {/* 主视频区域 - 模拟 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
-                <Play className="w-8 h-8 text-[#444]" />
+          {/* 主视频区域（真实素材优先） */}
+          {activeVideoSrc ? (
+            <video
+              ref={videoRef}
+              src={activeVideoSrc}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: activeVideoFilter }}
+              muted={isMuted}
+              playsInline
+              preload="auto"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
+                  <Play className="w-8 h-8 text-[#444]" />
+                </div>
+                <p className="text-xs text-[#555]">
+                  {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
+                </p>
               </div>
-              <p className="text-xs text-[#555]">
-                {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
-              </p>
             </div>
-          </div>
+          )}
 
           {/* 可见的贴纸/画中画素材 */}
           {visibleClips.map(({ clip, track, position }) => (
@@ -287,6 +369,7 @@ export function VideoPreviewPanel({
               isSelected={clip.id === selectedClipId}
               isLocked={isLocked}
               onDragStart={handleDragStart}
+              veirProject={veirProject}
             />
           ))}
 
@@ -377,6 +460,7 @@ function DraggableElement({
   isSelected,
   isLocked,
   onDragStart,
+  veirProject,
 }: {
   clip: Clip
   track: Track
@@ -384,8 +468,16 @@ function DraggableElement({
   isSelected: boolean
   isLocked: boolean
   onDragStart: (e: React.MouseEvent) => void
+  veirProject?: VEIRProject | null
 }) {
   const isPip = track.type === 'pip'
+  const isSubtitle = track.type === 'subtitle'
+
+  const asset = veirProject?.assets.assets?.[clip.asset]
+  const displayText =
+    asset?.type === 'text' && typeof asset.content === 'string' && asset.content.length > 0
+      ? asset.content
+      : clip.asset
   
   return (
     <motion.div
@@ -403,12 +495,30 @@ function DraggableElement({
       whileHover={!isLocked ? { scale: (position.scale / 100) * 1.02 } : {}}
     >
       {isPip ? (
-        <div className="w-24 h-24 bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-lg flex items-center justify-center">
-          <span className="text-2xl">{clip.asset.includes('.gif') ? '🎭' : '🖼️'}</span>
+        <div className="w-28 h-28 bg-black/30 border border-white/15 rounded-lg overflow-hidden flex items-center justify-center">
+          {asset?.type === 'image' && asset.src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={asset.src} alt={clip.asset} className="w-full h-full object-contain" />
+          ) : (
+            <span className="text-2xl">{clip.asset.includes('.gif') ? '🎭' : '🖼️'}</span>
+          )}
         </div>
       ) : (
-        <div className="px-3 py-1.5 bg-amber-400/20 border border-amber-400/30 rounded-lg">
-          <span className="text-xs text-amber-400">{clip.asset}</span>
+        <div
+          className={`
+            px-3 py-2 rounded-lg border backdrop-blur
+            ${isSubtitle
+              ? 'bg-black/45 border-white/20'
+              : 'bg-amber-400/15 border-amber-400/25'}
+          `}
+          style={{
+            maxWidth: isSubtitle ? 320 : 240,
+            textAlign: isSubtitle ? 'center' : 'left',
+          }}
+        >
+          <span className={`text-xs ${isSubtitle ? 'text-white/95' : 'text-amber-200'}`}>
+            {displayText}
+          </span>
         </div>
       )}
     </motion.div>

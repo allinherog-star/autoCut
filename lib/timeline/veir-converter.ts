@@ -44,6 +44,7 @@ function getDefaultTrackName(type: Track['type'], index: number): string {
         video: '视频',
         audio: '音频',
         text: '文字',
+        subtitle: '字幕',
         pip: '画中画',
     };
     return `${typeNames[type]} ${index + 1}`;
@@ -57,6 +58,7 @@ function getTrackColor(type: Track['type']): string {
         video: '#6366f1',
         audio: '#22c55e',
         text: '#f59e0b',
+        subtitle: '#eab308',
         pip: '#ec4899',
     };
     return colors[type];
