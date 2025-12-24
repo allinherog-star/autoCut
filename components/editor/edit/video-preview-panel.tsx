@@ -89,6 +89,7 @@ export function VideoPreviewPanel({
     startPosY: 0,
   })
   const previewRef = useRef<HTMLDivElement>(null)
+  const videoContainerRef = useRef<HTMLDivElement>(null)  // 内层视频容器
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // 获取选中素材信息
@@ -169,10 +170,31 @@ export function VideoPreviewPanel({
     }
   }, [playback.currentTime, activeVideoClip])
 
-  // 获取当前素材位置
-  const currentPosition = selectedClipId
-    ? (clipPositions[selectedClipId] || DEFAULT_POSITION)
-    : DEFAULT_POSITION
+  // 统一的素材位置获取函数（考虑轨道类型的默认位置）
+  const getClipPosition = useCallback((clipId: string, trackType: string): ClipPosition => {
+    if (clipPositions[clipId]) {
+      return clipPositions[clipId]
+    }
+    // 根据轨道类型返回不同的默认位置
+    return {
+      ...DEFAULT_POSITION,
+      x: trackType === 'pip' ? 75 : 50,
+      y: trackType === 'pip' ? 25 : trackType === 'subtitle' ? 88 : 85,
+    }
+  }, [clipPositions])
+
+  // 获取当前选中素材的位置（使用统一的位置获取函数）
+  const currentPosition = useMemo(() => {
+    if (!selectedClipId) return DEFAULT_POSITION
+
+    // 使用 selectedTrackId 获取轨道类型，确保与 selectedClipInfo 一致
+    const track = selectedTrackId
+      ? data.tracks.find(t => t.id === selectedTrackId)
+      : data.tracks.find(t => t.clips.some(c => c.id === selectedClipId))
+    const trackType = track?.type || 'text'
+
+    return getClipPosition(selectedClipId, trackType)
+  }, [selectedClipId, selectedTrackId, data.tracks, getClipPosition])
 
   // 获取当前时间点可见的所有素材（用于画中画/贴纸显示）
   const visibleClips = useMemo(() => {
@@ -185,11 +207,7 @@ export function VideoPreviewPanel({
             clips.push({
               clip,
               track,
-              position: clipPositions[clip.id] || {
-                ...DEFAULT_POSITION,
-                x: track.type === 'pip' ? 75 : 50,
-                y: track.type === 'pip' ? 25 : track.type === 'subtitle' ? 88 : 85,
-              },
+              position: getClipPosition(clip.id, track.type),
             })
           }
         })
@@ -197,7 +215,7 @@ export function VideoPreviewPanel({
     })
 
     return clips
-  }, [data.tracks, playback.currentTime, clipPositions])
+  }, [data.tracks, playback.currentTime, getClipPosition])
 
   // 格式化时间
   const formatTime = (seconds: number) => {
@@ -206,13 +224,13 @@ export function VideoPreviewPanel({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
 
-  // 开始拖拽（接收要拖拽的 clipId）
-  const handleDragStart = useCallback((e: React.MouseEvent, clipId: string) => {
+  // 开始拖拽（接收要拖拽的 clipId 和 trackType）
+  const handleDragStart = useCallback((e: React.MouseEvent, clipId: string, trackType: string) => {
     if (isLocked) return
     e.preventDefault()
     e.stopPropagation()
 
-    const pos = clipPositions[clipId] || DEFAULT_POSITION
+    const pos = getClipPosition(clipId, trackType)
     setDragState({
       isDragging: true,
       clipId,
@@ -221,14 +239,15 @@ export function VideoPreviewPanel({
       startPosX: pos.x,
       startPosY: pos.y,
     })
-  }, [isLocked, clipPositions])
+  }, [isLocked, getClipPosition])
 
   // 全局鼠标移动和释放事件
   useEffect(() => {
     if (!dragState.isDragging || !dragState.clipId) return
 
     const handleMouseMove = (e: MouseEvent) => {
-      const rect = previewRef.current?.getBoundingClientRect()
+      // 使用内层视频容器的尺寸进行计算
+      const rect = videoContainerRef.current?.getBoundingClientRect()
       if (!rect) return
 
       // 计算鼠标移动的像素差值
@@ -365,7 +384,10 @@ export function VideoPreviewPanel({
         className={`flex-1 relative overflow-hidden ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
       >
         {/* 视频背景 */}
-        <div className="absolute inset-4 bg-black rounded-lg overflow-hidden">
+        <div
+          ref={videoContainerRef}
+          className="absolute inset-4 bg-black rounded-lg overflow-hidden"
+        >
           {/* 网格参考线 */}
           {showGrid && (
             <div className="absolute inset-0 pointer-events-none">
@@ -413,7 +435,7 @@ export function VideoPreviewPanel({
               position={position}
               isSelected={clip.id === selectedClipId}
               isLocked={isLocked}
-              onDragStart={(e) => handleDragStart(e, clip.id)}
+              onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
               veirProject={veirProject}
             />
           ))}
@@ -423,7 +445,7 @@ export function VideoPreviewPanel({
             <SelectedElementOverlay
               position={currentPosition}
               isLocked={isLocked}
-              onDragStart={(e) => handleDragStart(e, selectedClipId)}
+              onDragStart={(e) => handleDragStart(e, selectedClipId, selectedClipInfo.track.type)}
             />
           )}
         </div>
@@ -534,7 +556,12 @@ function DraggableElement({
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
-        transform: `translate(-50%, -50%) scale(${position.scale / 100}) rotate(${position.rotation}deg)`,
+        // 重要：不要手写 transform 字符串并同时使用 framer-motion 的 scale/rotate/whileHover。
+        // 否则 hover 时 framer-motion 会重算 transform，导致 translate(-50%,-50%) 被覆盖而出现“位置偏移”。
+        x: '-50%',
+        y: '-50%',
+        scale: position.scale / 100,
+        rotate: position.rotation,
       }}
       onMouseDown={!isLocked ? onDragStart : undefined}
       whileHover={!isLocked ? { scale: (position.scale / 100) * 1.02 } : {}}
