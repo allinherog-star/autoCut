@@ -376,6 +376,10 @@ export const createTimelineStore = () => create<TimelineStore>()(
 
         play: () => {
             set((state) => {
+                // 如果已经在结尾，从头开始播放
+                if (state.playback.currentTime >= state.playback.duration) {
+                    state.playback.currentTime = 0;
+                }
                 state.playback.isPlaying = true;
             });
             get().emit({ type: 'playback:started' });
