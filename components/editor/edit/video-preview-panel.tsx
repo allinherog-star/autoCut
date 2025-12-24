@@ -65,29 +65,42 @@ export function VideoPreviewPanel({
   className = '',
 }: VideoPreviewPanelProps) {
   const { data, playback, togglePlay, seek } = useTimelineStore()
-  
+
   // 状态
   const [isMuted, setIsMuted] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [clipPositions, setClipPositions] = useState<Record<string, ClipPosition>>({})
-  
+
   // 拖拽状态
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean
+    clipId: string | null
+    startMouseX: number
+    startMouseY: number
+    startPosX: number
+    startPosY: number
+  }>({
+    isDragging: false,
+    clipId: null,
+    startMouseX: 0,
+    startMouseY: 0,
+    startPosX: 0,
+    startPosY: 0,
+  })
   const previewRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // 获取选中素材信息
   const selectedClipInfo = useMemo(() => {
     if (!selectedClipId || !selectedTrackId) return null
-    
+
     const track = data.tracks.find(t => t.id === selectedTrackId)
     if (!track) return null
-    
+
     const clip = track.clips.find(c => c.id === selectedClipId)
     if (!clip) return null
-    
+
     return { clip, track }
   }, [selectedClipId, selectedTrackId, data.tracks])
 
@@ -157,14 +170,14 @@ export function VideoPreviewPanel({
   }, [playback.currentTime, activeVideoClip])
 
   // 获取当前素材位置
-  const currentPosition = selectedClipId 
+  const currentPosition = selectedClipId
     ? (clipPositions[selectedClipId] || DEFAULT_POSITION)
     : DEFAULT_POSITION
 
   // 获取当前时间点可见的所有素材（用于画中画/贴纸显示）
   const visibleClips = useMemo(() => {
     const clips: Array<{ clip: Clip; track: Track; position: ClipPosition }> = []
-    
+
     data.tracks.forEach(track => {
       if (track.type === 'pip' || track.type === 'text' || track.type === 'subtitle') {
         track.clips.forEach(clip => {
@@ -182,7 +195,7 @@ export function VideoPreviewPanel({
         })
       }
     })
-    
+
     return clips
   }, [data.tracks, playback.currentTime, clipPositions])
 
@@ -193,41 +206,76 @@ export function VideoPreviewPanel({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
 
-  // 开始拖拽
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if (!selectedClipId || isLocked) return
-    
-    setIsDragging(true)
-    const rect = previewRef.current?.getBoundingClientRect()
-    if (rect) {
-      setDragOffset({
-        x: e.clientX - (rect.left + (currentPosition.x / 100) * rect.width),
-        y: e.clientY - (rect.top + (currentPosition.y / 100) * rect.height),
+  // 开始拖拽（接收要拖拽的 clipId）
+  const handleDragStart = useCallback((e: React.MouseEvent, clipId: string) => {
+    if (isLocked) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const pos = clipPositions[clipId] || DEFAULT_POSITION
+    setDragState({
+      isDragging: true,
+      clipId,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startPosX: pos.x,
+      startPosY: pos.y,
+    })
+  }, [isLocked, clipPositions])
+
+  // 全局鼠标移动和释放事件
+  useEffect(() => {
+    if (!dragState.isDragging || !dragState.clipId) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = previewRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      // 计算鼠标移动的像素差值
+      const deltaX = e.clientX - dragState.startMouseX
+      const deltaY = e.clientY - dragState.startMouseY
+
+      // 将像素差值转换为百分比
+      const deltaXPercent = (deltaX / rect.width) * 100
+      const deltaYPercent = (deltaY / rect.height) * 100
+
+      // 新位置 = 起始位置 + 差值
+      const newX = Math.max(0, Math.min(100, dragState.startPosX + deltaXPercent))
+      const newY = Math.max(0, Math.min(100, dragState.startPosY + deltaYPercent))
+
+      setClipPositions(prev => ({
+        ...prev,
+        [dragState.clipId!]: {
+          ...(prev[dragState.clipId!] || DEFAULT_POSITION),
+          x: newX,
+          y: newY,
+        },
+      }))
+    }
+
+    const handleMouseUp = () => {
+      if (dragState.clipId) {
+        const finalPos = clipPositions[dragState.clipId] || DEFAULT_POSITION
+        onClipPositionChange?.(dragState.clipId, finalPos.x, finalPos.y)
+      }
+      setDragState({
+        isDragging: false,
+        clipId: null,
+        startMouseX: 0,
+        startMouseY: 0,
+        startPosX: 0,
+        startPosY: 0,
       })
     }
-  }, [selectedClipId, isLocked, currentPosition])
 
-  // 拖拽中
-  const handleDrag = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !selectedClipId || !previewRef.current) return
-    
-    const rect = previewRef.current.getBoundingClientRect()
-    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100))
-    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100))
-    
-    setClipPositions(prev => ({
-      ...prev,
-      [selectedClipId]: { ...currentPosition, x, y },
-    }))
-  }, [isDragging, selectedClipId, dragOffset, currentPosition])
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
 
-  // 结束拖拽
-  const handleDragEnd = useCallback(() => {
-    if (isDragging && selectedClipId) {
-      setIsDragging(false)
-      onClipPositionChange?.(selectedClipId, currentPosition.x, currentPosition.y)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging, selectedClipId, currentPosition, onClipPositionChange])
+  }, [dragState, clipPositions, onClipPositionChange])
 
   // 调整缩放
   const handleScaleChange = (delta: number) => {
@@ -312,12 +360,9 @@ export function VideoPreviewPanel({
       </div>
 
       {/* 预览区域 */}
-      <div 
+      <div
         ref={previewRef}
-        className="flex-1 relative overflow-hidden cursor-crosshair"
-        onMouseMove={handleDrag}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
+        className={`flex-1 relative overflow-hidden ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
       >
         {/* 视频背景 */}
         <div className="absolute inset-4 bg-black rounded-lg overflow-hidden">
@@ -368,17 +413,17 @@ export function VideoPreviewPanel({
               position={position}
               isSelected={clip.id === selectedClipId}
               isLocked={isLocked}
-              onDragStart={handleDragStart}
+              onDragStart={(e) => handleDragStart(e, clip.id)}
               veirProject={veirProject}
             />
           ))}
 
           {/* 选中素材的控制框 */}
-          {selectedClipInfo && (selectedClipInfo.track.type === 'pip' || selectedClipInfo.track.type === 'text') && (
+          {selectedClipInfo && selectedClipId && (selectedClipInfo.track.type === 'pip' || selectedClipInfo.track.type === 'text') && (
             <SelectedElementOverlay
               position={currentPosition}
               isLocked={isLocked}
-              onDragStart={handleDragStart}
+              onDragStart={(e) => handleDragStart(e, selectedClipId)}
             />
           )}
         </div>
@@ -422,7 +467,7 @@ export function VideoPreviewPanel({
               {formatTime(playback.currentTime)}
             </span>
             <div className="flex-1 h-1 bg-[#333] rounded-full overflow-hidden cursor-pointer">
-              <div 
+              <div
                 className="h-full bg-violet-500 transition-all"
                 style={{ width: `${(playback.currentTime / playback.duration) * 100}%` }}
               />
@@ -478,7 +523,7 @@ function DraggableElement({
     asset?.type === 'text' && typeof asset.content === 'string' && asset.content.length > 0
       ? asset.content
       : clip.asset
-  
+
   return (
     <motion.div
       className={`
@@ -563,7 +608,7 @@ function SelectedElementOverlay({
               }}
             />
           ))}
-          
+
           {/* 移动手柄 */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
