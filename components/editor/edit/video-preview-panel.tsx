@@ -541,7 +541,7 @@ function DraggableElement({
     <motion.div
       className={`
         absolute cursor-move transition-shadow
-        ${isSelected ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-black' : ''}
+        ${isSelected ? 'ring-2 ring-amber-400' : ''}
         ${isPip ? 'rounded-lg overflow-hidden' : ''}
       `}
       style={{
