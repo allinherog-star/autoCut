@@ -439,15 +439,6 @@ export function VideoPreviewPanel({
               veirProject={veirProject}
             />
           ))}
-
-          {/* 选中素材的控制框 */}
-          {selectedClipInfo && selectedClipId && (selectedClipInfo.track.type === 'pip' || selectedClipInfo.track.type === 'text') && (
-            <SelectedElementOverlay
-              position={currentPosition}
-              isLocked={isLocked}
-              onDragStart={(e) => handleDragStart(e, selectedClipId, selectedClipInfo.track.type)}
-            />
-          )}
         </div>
 
         {/* 安全区域提示 */}
