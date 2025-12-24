@@ -1,20 +1,32 @@
 'use client'
 
 /**
- * 剪辑微调页面 - VEIR 只读时间轴查看
- * Edit Page with Read-Only Timeline Viewer
+ * 剪辑微调页面 - 完整布局
+ * Edit Page with Full Layout
  * 
- * 注意：此页面不使用 layout 的底部操作栏，而是将时间轴直接置于底部
+ * 布局结构：
+ * - 左侧：素材列表（按类型分类）
+ * - 中上：素材功能操作区（根据素材类型显示不同操作）
+ * - 中间：AI聊天对话框（通过对话微调）
+ * - 右侧：预览区（素材可拖拽位置）
+ * - 底部：时间轴
  */
 
-import { useEffect, useCallback, useRef } from 'react'
-import { Video } from 'lucide-react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useEditor } from '../layout'
 
 // 时间轴组件导入
 import { TimelineViewer } from '@/components/editor/timeline'
 import { useTimelineStore } from '@/lib/timeline/store'
 import type { TimelineData } from '@/lib/timeline/types'
+
+// 编辑页面组件
+import {
+  MaterialList,
+  MaterialOperations,
+  AIChatPanel,
+  VideoPreviewPanel,
+} from '@/components/editor/edit'
 
 // ============================================
 // 测试数据 - 模拟真实的视频编辑场景
@@ -182,6 +194,10 @@ export default function EditPage() {
   const animationRef = useRef<number>()
   const lastTimeRef = useRef<number>(0)
 
+  // 选中状态
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
+
   // 加载测试数据
   useEffect(() => {
     loadData(TEST_TIMELINE_DATA)
@@ -240,51 +256,82 @@ export default function EditPage() {
     return () => hideBottomBar()
   }, [hideBottomBar])
 
+  // 选中素材回调
+  const handleSelectClip = useCallback((clipId: string, trackId: string) => {
+    setSelectedClipId(clipId)
+    setSelectedTrackId(trackId)
+  }, [])
+
+  // 素材位置变化回调
+  const handleClipPositionChange = useCallback((clipId: string, x: number, y: number) => {
+    console.log('素材位置变化:', clipId, x, y)
+    // TODO: 更新素材位置到 store
+  }, [])
+
   return (
     <div className="absolute inset-0 flex flex-col bg-[#0f0f12]">
-      {/* 预览区域 - 填满上方空间 */}
-      <div className="flex-1 bg-black flex items-center justify-center min-h-0">
-        <div className="relative w-[640px] h-[360px] bg-[#1a1a1e] rounded-lg overflow-hidden shadow-2xl">
-          {/* 模拟视频预览 */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1e1e22] to-[#141418] flex items-center justify-center">
-            <div className="text-center">
-              <Video className="w-20 h-20 text-[#333] mx-auto mb-3" />
-              <p className="text-[#666] text-sm">视频预览</p>
-              <p className="text-[#444] text-xs mt-2 font-mono">
-                {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
-              </p>
-            </div>
-          </div>
-          
-          {/* 播放进度条 */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#222]">
-            <div 
-              className="h-full bg-indigo-500 transition-all duration-100"
-              style={{ width: `${(playback.currentTime / playback.duration) * 100}%` }}
+      {/* 主内容区域 - 上半部分 */}
+      <div className="flex-1 flex min-h-0">
+        {/* 左侧：素材列表 */}
+        <div className="w-64 flex-shrink-0 border-r border-[#2a2a2e] bg-[#141417]">
+          <MaterialList
+            selectedClipId={selectedClipId}
+            onSelectClip={handleSelectClip}
+            className="h-full"
+          />
+        </div>
+
+        {/* 中间区域 */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* 上方：素材功能操作区 */}
+          <div className="h-[260px] flex-shrink-0 border-b border-[#2a2a2e] bg-[#141417]">
+            <MaterialOperations
+              selectedClipId={selectedClipId}
+              selectedTrackId={selectedTrackId}
+              className="h-full"
             />
           </div>
+
+          {/* 下方：AI聊天对话框 */}
+          <div className="flex-1 min-h-0">
+            <AIChatPanel
+              selectedClipId={selectedClipId}
+              selectedTrackId={selectedTrackId}
+              className="h-full"
+            />
+          </div>
+        </div>
+
+        {/* 右侧：预览区 */}
+        <div className="w-[480px] flex-shrink-0 border-l border-[#2a2a2e]">
+          <VideoPreviewPanel
+            selectedClipId={selectedClipId}
+            selectedTrackId={selectedTrackId}
+            onClipPositionChange={handleClipPositionChange}
+            className="h-full"
+          />
         </div>
       </div>
 
       {/* 只读时间轴查看器 - 紧凑布局 */}
-      <TimelineViewer className="h-[200px] flex-shrink-0" />
+      <TimelineViewer className="h-[180px] flex-shrink-0" />
 
       {/* 底部操作栏 */}
-      <div className="h-16 px-6 flex items-center justify-between bg-[#1a1a1e] border-t border-[#2a2a2e] flex-shrink-0">
+      <div className="h-14 px-6 flex items-center justify-between bg-[#1a1a1e] border-t border-[#2a2a2e] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-amber-400/10 flex items-center justify-center">
             <span className="text-amber-400">✨</span>
           </div>
           <div>
-            <p className="font-medium text-[#eee]">剪辑就绪</p>
-            <p className="text-sm text-[#888]">
+            <p className="font-medium text-sm text-[#eee]">剪辑就绪</p>
+            <p className="text-xs text-[#888]">
               总时长 {formatTime(playback.duration)} · {trackCount} 轨道 · {clipCount} 片段
             </p>
           </div>
         </div>
         <button
           onClick={handleFinishEdit}
-          className="px-6 py-2.5 bg-amber-400 hover:bg-amber-500 text-[#111] font-medium rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-amber-400/20"
+          className="px-5 py-2 bg-amber-400 hover:bg-amber-500 text-[#111] font-medium rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-amber-400/20"
         >
           完成编辑，导出视频
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
