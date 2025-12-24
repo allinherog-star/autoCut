@@ -27,12 +27,28 @@ import {
 import { useTimelineStore } from '@/lib/timeline/store'
 import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
 import { getFilterCSS } from '@/lib/veir/composer/filters'
+import { VideoPreviewContent, type ClipPosition, DEFAULT_POSITION } from './video-preview-content-helper'
+
+type TargetDevice = 'phone' | 'pc'
+
+type DeviceConfig = {
+  id: TargetDevice
+  name: string
+  description?: string
+  aspectRatio: string
+  width: number
+  height: number
+}
 
 interface VideoPreviewPanelProps {
   /** 选中的素材 ID */
   selectedClipId: string | null
   /** 选中的轨道 ID */
   selectedTrackId: string | null
+  /** 目标设备（决定预览比例） */
+  targetDevice: TargetDevice
+  /** 目标设备配置（决定预览分辨率与比例） */
+  deviceConfig: DeviceConfig
   /** 可选：完整 VEIR 项目（用于加载真实素材并按 vocabulary/adjustments 渲染） */
   veirProject?: VEIRProject | null
   /** 素材位置变化回调 */
@@ -43,25 +59,13 @@ interface VideoPreviewPanelProps {
   className?: string
 }
 
-// 模拟的素材位置数据
-interface ClipPosition {
-  x: number  // 0-100 百分比
-  y: number  // 0-100 百分比
-  scale: number
-  rotation: number
-}
 
-// 默认位置
-const DEFAULT_POSITION: ClipPosition = {
-  x: 50,
-  y: 50,
-  scale: 100,
-  rotation: 0,
-}
 
 export function VideoPreviewPanel({
   selectedClipId,
   selectedTrackId,
+  targetDevice,
+  deviceConfig,
   veirProject,
   onClipPositionChange,
   onSelectClip,
@@ -74,6 +78,10 @@ export function VideoPreviewPanel({
   const [showGrid, setShowGrid] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [clipPositions, setClipPositions] = useState<Record<string, ClipPosition>>({})
+
+  // 严格比例预览内框（用于保证 phone=9:16 / pc=16:9）
+  const viewportRef = useRef<HTMLDivElement>(null) // 可用空间（去掉 padding 后）
+  const [frameSize, setFrameSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   // 拖拽状态
   const [dragState, setDragState] = useState<{
@@ -92,8 +100,50 @@ export function VideoPreviewPanel({
     startPosY: 0,
   })
   const previewRef = useRef<HTMLDivElement>(null)
-  const videoContainerRef = useRef<HTMLDivElement>(null)  // 内层视频容器
+  const videoContainerRef = useRef<HTMLDivElement>(null) // 严格比例内框（拖拽坐标基于该容器）
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // 监听可用空间变化，计算严格比例内框尺寸
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+
+    const ratio = deviceConfig.width > 0 && deviceConfig.height > 0 ? deviceConfig.width / deviceConfig.height : 16 / 9
+
+    const compute = () => {
+      const rect = el.getBoundingClientRect()
+      const availableW = Math.max(0, rect.width)
+      const availableH = Math.max(0, rect.height)
+      if (availableW === 0 || availableH === 0) return
+
+      let width = availableW
+      let height = width / ratio
+      if (height > availableH) {
+        height = availableH
+        width = height * ratio
+      }
+
+      // 避免小数导致的抖动
+      const next = { width: Math.floor(width), height: Math.floor(height) }
+      setFrameSize(prev => (prev.width === next.width && prev.height === next.height ? prev : next))
+    }
+
+    const rafCompute = () => requestAnimationFrame(compute)
+    const timer = window.setTimeout(rafCompute, 0)
+
+    let ro: ResizeObserver | null = null
+    try {
+      ro = new ResizeObserver(rafCompute)
+      ro.observe(el)
+    } catch {
+      // 降级：无 ResizeObserver 时不做自动监听
+    }
+
+    return () => {
+      window.clearTimeout(timer)
+      ro?.disconnect()
+    }
+  }, [deviceConfig.width, deviceConfig.height])
 
   // 获取选中素材信息
   const selectedClipInfo = useMemo(() => {
@@ -354,6 +404,13 @@ export function VideoPreviewPanel({
 
         {/* 右侧：缩放控制 */}
         <div className="flex items-center gap-1">
+          {/* 目标设备提示（严格比例渲染） */}
+          <div className="hidden sm:flex items-center gap-2 mr-2 px-2 py-1 rounded bg-black/30 border border-white/10">
+            <span className="text-[10px] text-[#9aa]">{deviceConfig.name}</span>
+            <span className="text-[10px] text-[#666] font-mono">
+              {deviceConfig.width}×{deviceConfig.height}
+            </span>
+          </div>
           <button
             onClick={() => handleScaleChange(-10)}
             className="p-1.5 rounded text-[#666] hover:text-[#999] transition-colors"
@@ -384,69 +441,87 @@ export function VideoPreviewPanel({
       {/* 预览区域 */}
       <div
         ref={previewRef}
-        className={`flex-1 relative overflow-hidden ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+        className={`flex-1 relative overflow-hidden flex items-center justify-center ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'} py-8`}
       >
-        {/* 视频背景 */}
-        <div
-          ref={videoContainerRef}
-          className="absolute inset-4 bg-black rounded-lg overflow-hidden"
-        >
-          {/* 网格参考线 */}
-          {showGrid && (
-            <div className="absolute inset-0 pointer-events-none">
-              {/* 三分线 */}
-              <div className="absolute top-1/3 left-0 right-0 h-px bg-white/10" />
-              <div className="absolute top-2/3 left-0 right-0 h-px bg-white/10" />
-              <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/10" />
-              <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/10" />
-              {/* 中心线 */}
-              <div className="absolute top-1/2 left-0 right-0 h-px bg-violet-500/30" />
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-violet-500/30" />
+        {/*
+          严格比例预览容器
+          根据 targetDevice 决定外层包裹样式
+         */}
+        {targetDevice === 'phone' ? (
+          /* 手机外观壳 */
+          <div
+            className="relative bg-[#000] rounded-[2.5rem] shadow-2xl border-[4px] border-[#333] box-content"
+            style={{
+              width: frameSize.width ? `${frameSize.width}px` : undefined,
+              height: frameSize.height ? `${frameSize.height}px` : undefined,
+              padding: '12px', // 手机边框厚度
+            }}
+          >
+            {/* 顶部刘海模拟 */}
+            <div className="absolute top-[8px] left-1/2 -translate-x-1/2 w-24 h-6 bg-[#000] rounded-b-xl z-20 pointer-events-none" />
+
+            {/* 屏幕显示区域 (Strict Ratio Area) */}
+            <div
+              ref={videoContainerRef}
+              className="relative w-full h-full bg-black overflow-hidden rounded-[2rem]"
+              style={{
+                // 确保屏幕区域也是严格比例
+                aspectRatio: deviceConfig.aspectRatio,
+              }}
+            >
+              <VideoPreviewContent
+                activeVideoSrc={activeVideoSrc}
+                activeVideoFilter={activeVideoFilter}
+                isMuted={isMuted}
+                playback={playback}
+                showGrid={showGrid}
+                visibleClips={visibleClips}
+                selectedClipId={selectedClipId}
+                isLocked={isLocked}
+                veirProject={veirProject ?? null}
+                onSelectClip={onSelectClip}
+                onDragStart={handleDragStart}
+                videoRef={videoRef}
+              />
             </div>
-          )}
-
-          {/* 主视频区域（真实素材优先） */}
-          {activeVideoSrc ? (
-            <video
-              ref={videoRef}
-              src={activeVideoSrc}
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: activeVideoFilter }}
-              muted={isMuted}
-              playsInline
-              preload="auto"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
-                  <Play className="w-8 h-8 text-[#444]" />
-                </div>
-                <p className="text-xs text-[#555]">
-                  {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
-                </p>
-              </div>
+          </div>
+        ) : (
+          /* 电脑/通用外观壳 */
+          <div
+            className="relative bg-[#1a1a1e] rounded-lg shadow-2xl border border-[#333] p-1"
+            style={{
+              width: frameSize.width ? `${frameSize.width}px` : undefined,
+              height: frameSize.height ? `${frameSize.height}px` : undefined,
+            }}
+          >
+            {/* 屏幕显示区域 */}
+            <div
+              ref={videoContainerRef}
+              className="relative w-full h-full bg-black overflow-hidden rounded-md"
+              style={{
+                aspectRatio: deviceConfig.aspectRatio,
+              }}
+            >
+              <VideoPreviewContent
+                activeVideoSrc={activeVideoSrc}
+                activeVideoFilter={activeVideoFilter}
+                isMuted={isMuted}
+                playback={playback}
+                showGrid={showGrid}
+                visibleClips={visibleClips}
+                selectedClipId={selectedClipId}
+                isLocked={isLocked}
+                veirProject={veirProject ?? null}
+                onSelectClip={onSelectClip}
+                onDragStart={handleDragStart}
+                videoRef={videoRef}
+              />
             </div>
-          )}
+          </div>
+        )}
 
-          {/* 可见的贴纸/画中画素材 */}
-          {visibleClips.map(({ clip, track, position }) => (
-            <DraggableElement
-              key={clip.id}
-              clip={clip}
-              track={track}
-              position={position}
-              isSelected={clip.id === selectedClipId}
-              isLocked={isLocked}
-              onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
-              onSelect={() => onSelectClip?.(clip.id, track.id)}
-              veirProject={veirProject}
-            />
-          ))}
-        </div>
-
-        {/* 安全区域提示 */}
-        <div className="absolute inset-4 border border-dashed border-[#333] rounded-lg pointer-events-none opacity-30" />
+        {/* 隐藏的视口测量引用 (用于计算最大可用尺寸) */}
+        <div ref={viewportRef} className="absolute inset-8 pointer-events-none -z-10 opacity-0" />
       </div>
 
       {/* 播放控制栏 */}
@@ -514,140 +589,4 @@ export function VideoPreviewPanel({
   )
 }
 
-// 可拖拽元素组件
-function DraggableElement({
-  clip,
-  track,
-  position,
-  isSelected,
-  isLocked,
-  onDragStart,
-  onSelect,
-  veirProject,
-}: {
-  clip: Clip
-  track: Track
-  position: ClipPosition
-  isSelected: boolean
-  isLocked: boolean
-  onDragStart: (e: React.MouseEvent) => void
-  onSelect?: () => void
-  veirProject?: VEIRProject | null
-}) {
-  const isPip = track.type === 'pip'
-  const isSubtitle = track.type === 'subtitle'
-
-  const asset = veirProject?.assets.assets?.[clip.asset]
-  const displayText =
-    asset?.type === 'text' && typeof asset.content === 'string' && asset.content.length > 0
-      ? asset.content
-      : clip.asset
-
-  return (
-    <motion.div
-      className={`
-        absolute cursor-move transition-shadow
-        ${isSelected ? 'ring-2 ring-amber-400' : ''}
-        ${isPip ? 'rounded-lg overflow-hidden' : ''}
-      `}
-      style={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-        // 重要：不要手写 transform 字符串并同时使用 framer-motion 的 scale/rotate/whileHover。
-        // 否则 hover 时 framer-motion 会重算 transform，导致 translate(-50%,-50%) 被覆盖而出现“位置偏移”。
-        x: '-50%',
-        y: '-50%',
-        scale: position.scale / 100,
-        rotate: position.rotation,
-      }}
-      onMouseDown={(e) => {
-        onSelect?.()
-        if (!isLocked) onDragStart(e)
-      }}
-      whileHover={!isLocked ? { scale: (position.scale / 100) * 1.02 } : {}}
-    >
-      {isPip ? (
-        <div className="w-28 h-28 bg-black/30 border border-white/15 rounded-lg overflow-hidden flex items-center justify-center">
-          {asset?.type === 'image' && asset.src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={asset.src} alt={clip.asset} className="w-full h-full object-contain" />
-          ) : (
-            <span className="text-2xl">{clip.asset.includes('.gif') ? '🎭' : '🖼️'}</span>
-          )}
-        </div>
-      ) : (
-        <div
-          className={`
-            px-3 py-2 rounded-lg border backdrop-blur
-            ${isSubtitle
-              ? 'bg-black/45 border-white/20'
-              : 'bg-amber-400/15 border-amber-400/25'}
-          `}
-          style={{
-            maxWidth: isSubtitle ? 320 : 240,
-            textAlign: isSubtitle ? 'center' : 'left',
-          }}
-        >
-          <span className={`text-xs ${isSubtitle ? 'text-white/95' : 'text-amber-200'}`}>
-            {displayText}
-          </span>
-        </div>
-      )}
-    </motion.div>
-  )
-}
-
-// 选中元素控制框
-function SelectedElementOverlay({
-  position,
-  isLocked,
-  onDragStart,
-}: {
-  position: ClipPosition
-  isLocked: boolean
-  onDragStart: (e: React.MouseEvent) => void
-}) {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-        transform: 'translate(-50%, -50%)',
-      }}
-    >
-      {/* 控制点 */}
-      {!isLocked && (
-        <>
-          {/* 四角控制点 */}
-          {[
-            { x: -1, y: -1 },
-            { x: 1, y: -1 },
-            { x: -1, y: 1 },
-            { x: 1, y: 1 },
-          ].map((corner, i) => (
-            <div
-              key={i}
-              className="absolute w-2.5 h-2.5 bg-amber-400 rounded-sm pointer-events-auto cursor-nwse-resize"
-              style={{
-                left: `calc(50% + ${corner.x * 40}px - 5px)`,
-                top: `calc(50% + ${corner.y * 40}px - 5px)`,
-              }}
-            />
-          ))}
-
-          {/* 移动手柄 */}
-          <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
-              w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center
-              pointer-events-auto cursor-move shadow-lg"
-            onMouseDown={onDragStart}
-          >
-            <Move className="w-3 h-3 text-black" />
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 

@@ -37,7 +37,7 @@ import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.jso
 // ============================================
 
 export default function EditPage() {
-  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar, targetDevice, deviceConfig } = useEditor()
 
   // 时间轴 store
   const { data, playback, loadData, _tick } = useTimelineStore()
@@ -162,6 +162,8 @@ export default function EditPage() {
             selectedClipId={selectedClipId}
             selectedTrackId={selectedTrackId}
             veirProject={veirProject}
+            targetDevice={targetDevice}
+            deviceConfig={deviceConfig}
             onClipPositionChange={handleClipPositionChange}
             onSelectClip={handleSelectClip}
             className="h-full"
