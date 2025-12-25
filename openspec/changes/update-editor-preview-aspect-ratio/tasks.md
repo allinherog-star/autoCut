@@ -8,3 +8,5 @@
 - [ ] 2.1 `npx --yes openspec validate update-editor-preview-aspect-ratio --strict` 通过
 
 
+
+

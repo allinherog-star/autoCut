@@ -216,7 +216,8 @@ export class ModernComposer {
     // 音频：对标 PR
     // - 若存在 audio track，编码其音频
     // - 若不存在 audio track，则尝试自动抽取视频原声并随 timeWarp 变化
-    const wantAudio = project.timeline.tracks.some((t) => t.type === 'audio' || t.type === 'video');
+    // 注意：pip 轨道也可能包含视频素材（画中画/主画面），需要纳入音频判断
+    const wantAudio = project.timeline.tracks.some((t) => t.type === 'audio' || t.type === 'video' || t.type === 'pip');
 
     // 启动编码器（在这里确定是否包含音频轨道）
     await this.startComposer(wantAudio);
@@ -1044,7 +1045,8 @@ export class ModernComposer {
       }
 
       // 自动抽取视频原声：直接从视频文件 demux+decode 音频轨（对标 PR）
-      if (track.type === 'video') {
+      // 注意：pip 轨道也可能包含视频素材，需要抽取原声
+      if (track.type === 'video' || track.type === 'pip') {
         for (const clip of track.clips) {
           const asset = project.assets.assets[clip.asset] as any;
           if (!asset || asset.type !== 'video' || !asset.src) continue;
@@ -1054,7 +1056,8 @@ export class ModernComposer {
         }
       }
     }
-    if (sources.length === 0) return;
+    // 注意：即使 sources 为空，也要写入“静音轨”，否则容器可能会被 mux 成“无音频轨”
+    // 这会导致用户看到“导出视频没有音频”的表现（即使我们在 start 时添加了 audio track）。
 
     // 2) 解码缓存（按 URL/区间）
     const decodedAudioCache = new Map<string, Awaited<ReturnType<typeof decodeAudioFromUrl>>>();
@@ -1088,6 +1091,38 @@ export class ModernComposer {
     };
 
     // 3) 逐 clip 生成音频并混音（显式音频轨 + 视频原声）
+    let hasAnyDecodedAudio = false;
+
+    const tryDecodeVideoAudio = async (url: string, startTime: number, endTime: number) => {
+      // 优先：MediaBunny demux+decode（更“剪辑友好”，可按区间解码）
+      try {
+        const decoded = await getDecodedFromMedia(url, startTime, endTime);
+        if (decoded && decoded.pcm?.length) return decoded;
+      } catch (e) {
+        console.warn('[ModernComposer] decodePcmFromMediaUrl failed, fallback to WebAudio:', { url, e });
+      }
+
+      // 回退：WebAudio decodeAudioData（兼容性更好，但通常需要解码整段再 slice）
+      try {
+        const decoded = await getDecodedAudioAsset(url);
+        const inRate = decoded.sampleRate;
+        const channels = decoded.channels;
+        const startS = Math.max(0, Math.floor(startTime * inRate));
+        const endS = Number.isFinite(endTime) ? Math.max(startS + 1, Math.floor(endTime * inRate)) : decoded.pcm[0]?.length ?? 0;
+
+        const pcm = decoded.pcm.map((ch) => {
+          const a = ch.subarray(startS, Math.min(ch.length, endS));
+          const out = new Float32Array(Math.max(1, a.length));
+          out.set(a.length ? a : new Float32Array([0]));
+          return out;
+        });
+        return { sampleRate: inRate, channels, pcm };
+      } catch (e) {
+        console.warn('[ModernComposer] decodeAudioFromUrl fallback failed:', { url, e });
+        return null;
+      }
+    };
+
     let processed = 0;
     for (const item of sources) {
       processed++;
@@ -1121,21 +1156,29 @@ export class ModernComposer {
 
       // 解码并归一到目标采样率/声道
       let pcmResampled: Float32Array[] = [];
-      if (item.kind === 'audio-asset') {
-        const decoded = await getDecodedAudioAsset(src);
-        const inCh = decoded.channels;
-        const inRate = decoded.sampleRate;
-        for (let c = 0; c < Math.min(inCh, targetChannels); c++) {
-          pcmResampled.push(resampleLinear(decoded.pcm[c], inRate, targetSampleRate));
+      try {
+        if (item.kind === 'audio-asset') {
+          const decoded = await getDecodedAudioAsset(src);
+          const inCh = decoded.channels;
+          const inRate = decoded.sampleRate;
+          for (let c = 0; c < Math.min(inCh, targetChannels); c++) {
+            pcmResampled.push(resampleLinear(decoded.pcm[c], inRate, targetSampleRate));
+          }
+          hasAnyDecodedAudio = true;
+        } else {
+          const decoded = await tryDecodeVideoAudio(src, srcStart, srcEnd);
+          if (!decoded) continue;
+          const inCh = decoded.channels;
+          const inRate = decoded.sampleRate;
+          for (let c = 0; c < Math.min(inCh, targetChannels); c++) {
+            pcmResampled.push(resampleLinear(decoded.pcm[c], inRate, targetSampleRate));
+          }
+          hasAnyDecodedAudio = true;
         }
-      } else {
-        const decoded = await getDecodedFromMedia(src, srcStart, srcEnd);
-        if (!decoded) continue;
-        const inCh = decoded.channels;
-        const inRate = decoded.sampleRate;
-        for (let c = 0; c < Math.min(inCh, targetChannels); c++) {
-          pcmResampled.push(resampleLinear(decoded.pcm[c], inRate, targetSampleRate));
-        }
+      } catch (e) {
+        // 单个音频源失败不应影响整个导出（否则表现为“导出无音频”）
+        console.warn('[ModernComposer] audio source decode failed, skipping:', { kind: item.kind, src, e });
+        continue;
       }
       while (pcmResampled.length < targetChannels) {
         pcmResampled.push(pcmResampled[pcmResampled.length - 1] || new Float32Array(1));
@@ -1198,6 +1241,11 @@ export class ModernComposer {
         const maxWrite = Math.min(dst.length - outOffset, srcCh.length);
         for (let i = 0; i < maxWrite; i++) dst[outOffset + i] += srcCh[i] * envelope(i);
       }
+    }
+
+    // 说明：若没有任何音频成功解码，也要继续写入“静音”，确保输出包含音频轨
+    if (!hasAnyDecodedAudio) {
+      console.warn('[ModernComposer] no decodable audio sources; writing silent audio track to keep container audio track');
     }
 
     // 4) 输出到编码器：分块写入 AudioData
