@@ -147,10 +147,9 @@ function AssetCard({ asset, selected, onClick, onDoubleClick, onDelete }: AssetC
         image: '🖼️',
     }[asset.type];
 
-    const duration =
-        asset.type === 'video' || asset.type === 'audio'
-            ? formatDuration((asset as any).metadata?.duration || 0)
-            : null;
+    const duration = asset.type === 'video' || asset.type === 'audio'
+        ? formatDuration(asset.metadata.duration || 0)
+        : null;
 
     return (
         <div

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { TemplateType, AssetSource, FancyTextUsage } from '@prisma/client'
+import { TemplateType, AssetSource, FancyTextUsage, Prisma } from '@prisma/client'
 
 // GET /api/templates - 获取模版列表
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '24')
 
-    const where: any = {}
+    const where: Prisma.TemplateWhereInput = {}
 
     if (type) {
       where.type = type

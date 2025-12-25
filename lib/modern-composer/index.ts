@@ -107,6 +107,11 @@ export interface ModernComposerConfig {
   height: number;
   frameRate: number;
   duration: number;
+  /**
+   * 可选：注入一个“可见的” Canvas，用于预览渲染（编辑器 UI）
+   * - 若不提供，内部会创建离屏 canvas（用于导出/编码）
+   */
+  canvas?: HTMLCanvasElement;
   // 输出配置
   format?: OutputFormat;
   quality?: 'high' | 'medium' | 'low';
@@ -149,6 +154,9 @@ export class ModernComposer {
   // timeWarp 预计算缓存（按 clipId）
   private timeWarpCache: Map<string, PreparedTimeWarp | null> = new Map();
 
+  // 预览用：素材预加载只做一次
+  private previewAssetsLoaded: boolean = false;
+
   constructor(config: ModernComposerConfig, resolver?: AssetResolver) {
     this.config = config;
     this.resolver = resolver || {
@@ -167,6 +175,7 @@ export class ModernComposer {
       width: this.config.width,
       height: this.config.height,
       backgroundColor: this.config.backgroundColor || '#000000',
+      canvas: this.config.canvas,
     });
 
     // 初始化 Anime 动画引擎
@@ -183,6 +192,36 @@ export class ModernComposer {
       undefined,
       this.config.format || 'mp4'
     );
+  }
+
+  /**
+   * 预览：获取当前渲染使用的 Canvas 元素（可用于 UI 挂载/调试）
+   */
+  getCanvasElement(): HTMLCanvasElement | null {
+    return this.fabricEngine?.getCanvasElement() ?? null;
+  }
+
+  /**
+   * 预览：渲染指定时间点的一帧（不编码）
+   * - 与导出路径共享同一渲染逻辑（sourceRange/timeWarp/转场/字幕布局等）
+   */
+  async renderFrame(project: VEIRProject, time: number): Promise<void> {
+    if (!this.fabricEngine || !this.animeEngine || !this.videoComposer) {
+      await this.initialize();
+    }
+
+    // 预览场景：首次渲染前预加载一次素材路径到缓存，减少首帧抖动
+    if (!this.previewAssetsLoaded) {
+      this.previewAssetsLoaded = true;
+      try {
+        await this.preloadAssets(project);
+      } catch {
+        // 预览不应因为预加载失败而阻断（后续 ensureVideoElement 会按需兜底）
+      }
+    }
+
+    const clamped = Math.max(0, Math.min(time, this.config.duration));
+    await this.renderFrameFromVEIR(project, clamped);
   }
 
   /**

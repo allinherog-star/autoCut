@@ -215,7 +215,7 @@ export type TimelineEvent =
     | { type: 'clip:added'; trackId: string; clip: Clip }
     | { type: 'clip:removed'; trackId: string; clipId: string }
     | { type: 'clip:updated'; trackId: string; clipId: string; updates: Partial<Clip> }
-    | { type: 'clip:moved'; clipId: string; fromTrackId: string; toTrackId: string }
+    | { type: 'clip:moved'; clipId: string; fromTrackId: string; toTrackId: string; newTime: { start: number; end: number } }
     | { type: 'track:added'; track: Track }
     | { type: 'track:removed'; trackId: string }
     | { type: 'playback:started' }

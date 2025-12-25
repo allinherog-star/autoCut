@@ -976,7 +976,7 @@ export default function EmotionPage() {
                           </p>
                           {point.customText && (
                             <div className="text-xs text-surface-400 italic mb-2">
-                              "{point.customText}"
+                              &quot;{point.customText}&quot;
                             </div>
                           )}
                           <div className="flex flex-wrap gap-1.5">
@@ -1006,7 +1006,7 @@ export default function EmotionPage() {
                   花字特效库
                 </h2>
                 <p className="text-sm text-surface-400">
-                  灵感来源于"一见你就笑"等综艺节目的可爱花字效果
+                  灵感来源于&quot;一见你就笑&quot;等综艺节目的可爱花字效果
                 </p>
               </div>
 

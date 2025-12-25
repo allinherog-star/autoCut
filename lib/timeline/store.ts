@@ -293,6 +293,7 @@ export const createTimelineStore = () => create<TimelineStore>()(
 
             const { track: sourceTrack, clip } = result;
             const duration = clip.time.end - clip.time.start;
+            const nextTime = { start: newStart, end: newStart + duration };
 
             set((state) => {
                 // 从源轨道移除
@@ -306,7 +307,7 @@ export const createTimelineStore = () => create<TimelineStore>()(
                 if (dstTrack) {
                     const movedClip = {
                         ...clip,
-                        time: { start: newStart, end: newStart + duration },
+                        time: nextTime,
                     };
                     dstTrack.clips.push(movedClip);
                 }
@@ -319,6 +320,7 @@ export const createTimelineStore = () => create<TimelineStore>()(
                 clipId,
                 fromTrackId: sourceTrack.id,
                 toTrackId: targetTrackId,
+                newTime: nextTime,
             });
         },
 
@@ -333,23 +335,49 @@ export const createTimelineStore = () => create<TimelineStore>()(
                 const clip = track.clips[clipIndex];
                 if (splitTime <= clip.time.start || splitTime >= clip.time.end) return;
 
-                // 创建两个新片段
+                // 专业剪辑：split 需要同时调整 sourceRange（in/out）
+                const splitOffset = splitTime - clip.time.start; // 相对 clip 起点的秒数
+                const oldTime = { ...clip.time };
+                const oldSourceRange = clip.sourceRange
+                    ? { ...clip.sourceRange }
+                    : { start: 0, end: oldTime.end - oldTime.start };
+
+                // 保留原 clipId 给左段，避免丢失该 clip 的 adjustments（滤镜/变速等）
                 const leftClip: Clip = {
                     ...clip,
-                    id: generateClipId(),
-                    time: { start: clip.time.start, end: splitTime },
+                    id: clip.id,
+                    time: { start: oldTime.start, end: splitTime },
+                    sourceRange: {
+                        start: oldSourceRange.start,
+                        end: oldSourceRange.start + splitOffset,
+                    },
                 };
 
+                // 右段生成新 clipId
                 const rightClip: Clip = {
                     ...clip,
                     id: generateClipId(),
-                    time: { start: splitTime, end: clip.time.end },
+                    time: { start: splitTime, end: oldTime.end },
+                    sourceRange: {
+                        start: oldSourceRange.start + splitOffset,
+                        end: oldSourceRange.end,
+                    },
                 };
 
-                // 替换原片段
                 track.clips.splice(clipIndex, 1, leftClip, rightClip);
                 state.isDirty = true;
             });
+
+            // 事件：左段更新 + 右段新增
+            const track = get().data.tracks.find(t => t.id === trackId);
+            const left = track?.clips.find(c => c.id === clipId);
+            const right = track?.clips.find(c => c.id !== clipId && c.time.start === splitTime && c.time.end !== splitTime);
+            if (left) {
+                get().emit({ type: 'clip:updated', trackId, clipId: left.id, updates: { time: { ...left.time }, sourceRange: left.sourceRange ? { ...left.sourceRange } : undefined } });
+            }
+            if (right) {
+                get().emit({ type: 'clip:added', trackId, clip: right });
+            }
         },
 
         trimClip: (trackId, clipId, edge, newTime) => {
@@ -360,14 +388,39 @@ export const createTimelineStore = () => create<TimelineStore>()(
                 const clip = track.clips.find(c => c.id === clipId);
                 if (!clip) return;
 
+                const oldTime = { ...clip.time };
+                const oldDuration = oldTime.end - oldTime.start;
+                const sourceRange = clip.sourceRange
+                    ? { ...clip.sourceRange }
+                    : { start: 0, end: oldDuration };
+
                 if (edge === 'left') {
-                    clip.time.start = Math.max(0, Math.min(newTime, clip.time.end - 0.1));
+                    const nextStart = Math.max(0, Math.min(newTime, clip.time.end - 0.1));
+                    const delta = nextStart - oldTime.start;
+                    clip.time.start = nextStart;
+                    clip.sourceRange = {
+                        start: sourceRange.start + delta,
+                        end: sourceRange.end,
+                    };
                 } else {
-                    clip.time.end = Math.max(clip.time.start + 0.1, newTime);
+                    const nextEnd = Math.max(clip.time.start + 0.1, newTime);
+                    const delta = oldTime.end - nextEnd;
+                    clip.time.end = nextEnd;
+                    clip.sourceRange = {
+                        start: sourceRange.start,
+                        end: sourceRange.end - delta,
+                    };
                 }
 
                 state.isDirty = true;
             });
+
+            // 发出 clip:updated，便于 VEIR patch 同步
+            const track = get().data.tracks.find(t => t.id === trackId);
+            const clip = track?.clips.find(c => c.id === clipId);
+            if (clip) {
+                get().emit({ type: 'clip:updated', trackId, clipId, updates: { time: { ...clip.time }, sourceRange: clip.sourceRange ? { ...clip.sourceRange } : undefined } });
+            }
         },
 
         // ============================================

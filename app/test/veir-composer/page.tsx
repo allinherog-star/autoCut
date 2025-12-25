@@ -624,7 +624,7 @@ export default function VEIRComposerTestPage() {
                     ) : (
                       <>
                         <FileVideo className="w-16 h-16 mb-4 opacity-30" />
-                        <p>点击"开始合成"生成视频</p>
+                        <p>点击&quot;开始合成&quot;生成视频</p>
                       </>
                     )}
                   </div>

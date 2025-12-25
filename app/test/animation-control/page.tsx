@@ -260,7 +260,7 @@ export default function AnimationControlPage() {
               ].map((panel) => (
                 <button
                   key={panel.id}
-                  onClick={() => setActivePanel(panel.id as any)}
+                  onClick={() => setActivePanel(panel.id as typeof activePanel)}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                     activePanel === panel.id
                       ? 'bg-amber-500 text-black'

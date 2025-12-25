@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
 import { Select } from '@/components/ui/select';
 import { Play, Download, Eye, Zap } from 'lucide-react';
+import type { FabricEngine } from '@/lib/modern-composer/fabric';
 
 /**
  * Modern Composer 预览页面
@@ -21,8 +22,8 @@ export default function ModernComposerPreviewPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   // Fabric.js 演示
-  const [fabricEngine, setFabricEngine] = useState<any>(null);
-  const fabricEngineRef = useRef<any>(null); // 用于 cleanup
+  const [fabricEngine, setFabricEngine] = useState<FabricEngine | null>(null);
+  const fabricEngineRef = useRef<FabricEngine | null>(null); // 用于 cleanup
 
   // Anime.js 演示
   const [animeType, setAnimeType] = useState('fade-in');
@@ -196,9 +197,12 @@ export default function ModernComposerPreviewPage() {
       const titleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
       const subtitleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
 
+      type AnimTarget = { opacity: number; scale: number; y?: number; rotate?: number; x?: number };
+      type AnimState = { opacity: number; y: number; scale: number; rotate: number; x: number; [k: string]: number };
+
       // 根据动画类型设置目标值
-      let titleTarget: any = { opacity: 1, scale: 1, y: 0 };
-      let subtitleTarget: any = { opacity: 1, scale: 1, y: 0 };
+      let titleTarget: AnimTarget = { opacity: 1, scale: 1, y: 0 };
+      let subtitleTarget: AnimTarget = { opacity: 1, scale: 1, y: 0 };
 
       switch (animeType) {
         case 'fade-in':
@@ -518,10 +522,10 @@ export default function ModernComposerPreviewPage() {
             // 关键帧动画 - 使用线性进度插值（与 Anime.js 行为一致）
             // Anime.js 使用线性时间来分布关键帧，然后对每个段应用缓动
             for (const [prop, keyframes] of Object.entries(titleKeyframes)) {
-              (titleState as any)[prop] = interpolateKeyframes(keyframes, titleAnimProgress);
+              (titleState as AnimState)[prop] = interpolateKeyframes(keyframes, titleAnimProgress);
             }
             for (const [prop, keyframes] of Object.entries(subtitleKeyframes)) {
-              (subtitleState as any)[prop] = interpolateKeyframes(keyframes, subtitleAnimProgress);
+              (subtitleState as AnimState)[prop] = interpolateKeyframes(keyframes, subtitleAnimProgress);
             }
           } else {
             // 普通过渡动画 - 从初始状态插值到目标状态
@@ -743,7 +747,7 @@ export default function ModernComposerPreviewPage() {
                 <label className="block text-gray-300 text-sm mb-2">输出格式</label>
                 <select
                   value={videoFormat}
-                  onChange={(e) => setVideoFormat(e.target.value as any)}
+                  onChange={(e) => setVideoFormat(e.target.value as 'mp4' | 'webm')}
                   className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 border border-slate-600"
                 >
                   <option value="mp4">MP4 (H.264)</option>
@@ -755,7 +759,7 @@ export default function ModernComposerPreviewPage() {
                 <label className="block text-gray-300 text-sm mb-2">视频质量</label>
                 <select
                   value={videoQuality}
-                  onChange={(e) => setVideoQuality(e.target.value as any)}
+                  onChange={(e) => setVideoQuality(e.target.value as 'high' | 'medium' | 'low')}
                   className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 border border-slate-600"
                 >
                   <option value="high">高质量 (8 Mbps)</option>

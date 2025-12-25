@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useTimelineStore } from '@/lib/timeline/store'
 import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
-import { getFilterCSS } from '@/lib/veir/composer/filters'
+import { VEIRCanvasPreview } from './veir-canvas-preview'
 
 type TargetDevice = 'phone' | 'pc'
 
@@ -52,6 +52,11 @@ interface VideoPreviewPanelProps {
   veirProject?: VEIRProject | null
   /** 素材位置变化回调 */
   onClipPositionChange?: (clipId: string, x: number, y: number) => void
+  /** 素材变换变化回调（推荐：写回 VEIR adjustments.video.transform） */
+  onClipTransformChange?: (
+    clipId: string,
+    patch: { xPercent?: number; yPercent?: number; scale?: number; rotation?: number }
+  ) => void
   /** 选中素材回调 */
   onSelectClip?: (clipId: string, trackId: string) => void
   /** 自定义类名 */
@@ -81,6 +86,7 @@ export function VideoPreviewPanel({
   deviceConfig,
   veirProject,
   onClipPositionChange,
+  onClipTransformChange,
   onSelectClip,
   className = '',
 }: VideoPreviewPanelProps) {
@@ -90,6 +96,7 @@ export function VideoPreviewPanel({
   const [isMuted, setIsMuted] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
+  // 拖拽临时覆盖（最终以 VEIR adjustments 为准）
   const [clipPositions, setClipPositions] = useState<Record<string, ClipPosition>>({})
 
   // 严格比例预览内框（用于保证 phone=9:16 / pc=16:9）
@@ -114,7 +121,8 @@ export function VideoPreviewPanel({
   })
   const previewRef = useRef<HTMLDivElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null) // 严格比例内框（拖拽坐标基于该容器）
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const dragRafRef = useRef<number | null>(null)
+  const dragPendingRef = useRef<{ clipId: string; x: number; y: number } | null>(null)
 
   // 监听可用空间变化，计算严格比例内框尺寸
   useEffect(() => {
@@ -176,78 +184,43 @@ export function VideoPreviewPanel({
     return veirProject?.assets.assets?.[assetId]
   }, [veirProject])
 
-  // 当前时间点活跃的主视频 clip（用于渲染真实视频 + 滤镜）
-  const activeVideoClip = useMemo(() => {
+  const readTransformFromVEIR = useCallback((clipId: string): ClipPosition | null => {
     if (!veirProject) return null
-    const t = playback.currentTime
-    const videoTracks = veirProject.timeline.tracks
-      .filter(tr => tr.type === 'video')
-      .sort((a, b) => a.layer - b.layer)
-    for (const tr of videoTracks) {
-      const clip = tr.clips.find(c => t >= c.time.start && t < c.time.end)
-      if (clip) return clip
+    const t = veirProject.adjustments?.clipOverrides?.[clipId]?.video?.transform
+    if (!t) return null
+
+    const [w, h] = veirProject.meta.resolution
+    const offset = t.offset
+    const x = offset ? (offset[0] / w) * 100 : undefined
+    const y = offset ? (offset[1] / h) * 100 : undefined
+    const scale = typeof t.scale === 'number' ? t.scale * 100 : undefined
+    const rotation = typeof t.rotation === 'number' ? t.rotation : undefined
+
+    return {
+      x: typeof x === 'number' && Number.isFinite(x) ? x : DEFAULT_POSITION.x,
+      y: typeof y === 'number' && Number.isFinite(y) ? y : DEFAULT_POSITION.y,
+      scale: typeof scale === 'number' && Number.isFinite(scale) ? scale : DEFAULT_POSITION.scale,
+      rotation: typeof rotation === 'number' && Number.isFinite(rotation) ? rotation : DEFAULT_POSITION.rotation,
     }
-    return null
-  }, [veirProject, playback.currentTime])
-
-  const activeVideoSrc = useMemo(() => {
-    if (!activeVideoClip) return null
-    const asset = getAsset(activeVideoClip.asset)
-    return asset?.src || null
-  }, [activeVideoClip, getAsset])
-
-  const activeVideoFilter = useMemo(() => {
-    if (!veirProject || !activeVideoClip) return 'none'
-    const clipId = activeVideoClip.id
-    const filterRef = veirProject.adjustments?.clipOverrides?.[clipId]?.video?.filter
-    return getFilterCSS(filterRef)
-  }, [veirProject, activeVideoClip])
-
-  // 同步 video 播放状态（基础版：把 store 的播放/暂停与 currentTime 驱动到 <video>）
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    if (!activeVideoSrc) return
-    if (playback.isPlaying) {
-      void el.play().catch(() => {
-        // 浏览器可能阻止自动播放：静默降级
-      })
-    } else {
-      el.pause()
-    }
-  }, [playback.isPlaying, activeVideoSrc])
-
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    if (!activeVideoClip) return
-
-    // 将时间轴时间映射到 clip 的局部时间（考虑 sourceRange）
-    const t = playback.currentTime
-    const clipLocal = Math.max(0, t - activeVideoClip.time.start)
-    const sourceStart = activeVideoClip.sourceRange?.start ?? 0
-    const desired = sourceStart + clipLocal
-    if (Number.isFinite(desired) && Math.abs((el.currentTime || 0) - desired) > 0.25) {
-      try {
-        el.currentTime = desired
-      } catch {
-        // Safari/某些状态下设置 currentTime 可能抛错：忽略
-      }
-    }
-  }, [playback.currentTime, activeVideoClip])
+  }, [veirProject])
 
   // 统一的素材位置获取函数（考虑轨道类型的默认位置）
   const getClipPosition = useCallback((clipId: string, trackType: string): ClipPosition => {
     if (clipPositions[clipId]) {
       return clipPositions[clipId]
     }
+
+    // VEIR 中的 transform 优先（保证预览/导出一致）
+    const veirPos = readTransformFromVEIR(clipId)
+    if (veirPos) return veirPos
+
     // 根据轨道类型返回不同的默认位置
     return {
       ...DEFAULT_POSITION,
       x: trackType === 'pip' ? 75 : 50,
       y: trackType === 'pip' ? 25 : trackType === 'subtitle' ? 88 : 85,
     }
-  }, [clipPositions])
+  }, [clipPositions, readTransformFromVEIR])
 
   // 获取当前选中素材的位置（使用统一的位置获取函数）
   const currentPosition = useMemo(() => {
@@ -336,11 +309,24 @@ export function VideoPreviewPanel({
           y: newY,
         },
       }))
+
+      // rAF 节流：实时写回（让 Canvas 预览也跟着动）
+      dragPendingRef.current = { clipId: dragState.clipId!, x: newX, y: newY }
+      if (!dragRafRef.current) {
+        dragRafRef.current = requestAnimationFrame(() => {
+          dragRafRef.current = null
+          const pending = dragPendingRef.current
+          if (!pending) return
+          onClipTransformChange?.(pending.clipId, { xPercent: pending.x, yPercent: pending.y })
+          onClipPositionChange?.(pending.clipId, pending.x, pending.y)
+        })
+      }
     }
 
     const handleMouseUp = () => {
       if (dragState.clipId) {
         const finalPos = clipPositions[dragState.clipId] || DEFAULT_POSITION
+        onClipTransformChange?.(dragState.clipId, { xPercent: finalPos.x, yPercent: finalPos.y })
         onClipPositionChange?.(dragState.clipId, finalPos.x, finalPos.y)
       }
       setDragState({
@@ -359,19 +345,19 @@ export function VideoPreviewPanel({
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current)
+      dragRafRef.current = null
+      dragPendingRef.current = null
     }
-  }, [dragState, clipPositions, onClipPositionChange])
+  }, [dragState, clipPositions, onClipPositionChange, onClipTransformChange])
 
   // 调整缩放
   const handleScaleChange = (delta: number) => {
     if (!selectedClipId) return
-    setClipPositions(prev => ({
-      ...prev,
-      [selectedClipId]: {
-        ...currentPosition,
-        scale: Math.max(10, Math.min(300, currentPosition.scale + delta)),
-      },
-    }))
+    const nextScale = Math.max(10, Math.min(300, currentPosition.scale + delta))
+    setClipPositions(prev => ({ ...prev, [selectedClipId]: { ...currentPosition, scale: nextScale } }))
+    // scale 传 UI 百分比（100=100%），由上层写回 VEIR 时再换算为 ratio
+    onClipTransformChange?.(selectedClipId, { scale: nextScale })
   }
 
   // 重置位置
@@ -381,6 +367,13 @@ export function VideoPreviewPanel({
       ...prev,
       [selectedClipId]: DEFAULT_POSITION,
     }))
+    onClipTransformChange?.(selectedClipId, {
+      xPercent: DEFAULT_POSITION.x,
+      yPercent: DEFAULT_POSITION.y,
+      scale: DEFAULT_POSITION.scale,
+      rotation: DEFAULT_POSITION.rotation,
+    })
+    onClipPositionChange?.(selectedClipId, DEFAULT_POSITION.x, DEFAULT_POSITION.y)
   }
 
   return (
@@ -486,43 +479,36 @@ export function VideoPreviewPanel({
             )}
 
             {/* 主视频区域（真实素材优先） */}
-            {activeVideoSrc ? (
-              <video
-                ref={videoRef}
-                src={activeVideoSrc}
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: activeVideoFilter }}
-                muted={isMuted}
-                playsInline
-                preload="auto"
-              />
+            {veirProject ? (
+              <VEIRCanvasPreview project={veirProject} time={playback.currentTime} className="absolute inset-0 w-full h-full" />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
                     <Play className="w-8 h-8 text-[#444]" />
                   </div>
-                  <p className="text-xs text-[#555]">
-                    {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
-                  </p>
+                  <p className="text-xs text-[#555]">{formatTime(playback.currentTime)} / {formatTime(playback.duration)}</p>
                 </div>
               </div>
             )}
 
-            {/* 可见的贴纸/画中画素材 */}
-            {visibleClips.map(({ clip, track, position }) => (
-              <DraggableElement
-                key={clip.id}
-                clip={clip}
-                track={track}
-                position={position}
-                isSelected={clip.id === selectedClipId}
-                isLocked={isLocked}
-                onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
-                onSelect={() => onSelectClip?.(clip.id, track.id)}
-                veirProject={veirProject}
-              />
-            ))}
+            {/* 交互层：仅对“当前选中且可见”的元素提供拖拽把手（画面由 Canvas 渲染，避免重复显示） */}
+            {selectedClipId &&
+              visibleClips
+                .filter(({ clip }) => clip.id === selectedClipId)
+                .map(({ clip, track, position }) => (
+                  <DraggableElement
+                    key={clip.id}
+                    clip={clip}
+                    track={track}
+                    position={position}
+                    isSelected={true}
+                    isLocked={isLocked}
+                    onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
+                    onSelect={() => onSelectClip?.(clip.id, track.id)}
+                    veirProject={veirProject}
+                  />
+                ))}
 
             {/* 安全区域提示（基于严格比例内框） */}
             <div className="absolute inset-2 border border-dashed border-[#333] rounded-md pointer-events-none opacity-30" />

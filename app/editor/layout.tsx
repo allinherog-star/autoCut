@@ -240,6 +240,8 @@ interface EditorContextType {
   goToPrevStep: () => void
   canGoNext: boolean
   canGoPrev: boolean
+  // 当前 draftId（若存在）
+  draftId: string | null
   // 底部操作栏
   setBottomBar: (config: BottomBarConfig) => void
   hideBottomBar: () => void
@@ -279,11 +281,32 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
+  // 支持两类路由：
+  // 1) 旧：/editor/edit
+  // 2) 新：/editor/[draftId]/edit
+  const { draftId, stepKey } = (() => {
+    const parts = (pathname || '').split('/').filter(Boolean)
+    if (parts[0] !== 'editor') return { draftId: null as string | null, stepKey: null as string | null }
+    const second = parts[1]
+    const third = parts[2]
+    const stepIds = new Set(steps.map((s) => s.id))
+    if (second && stepIds.has(second as EditingStep)) {
+      return { draftId: null, stepKey: second }
+    }
+    if (second && third && stepIds.has(third as EditingStep)) {
+      return { draftId: second, stepKey: third }
+    }
+    return { draftId: null, stepKey: null }
+  })()
+
+  const basePath = draftId ? `/editor/${draftId}` : '/editor'
+  const stepPath = useCallback((id: EditingStep) => `${basePath}/${id}`, [basePath])
+
   // 测试模式：允许任意切换步骤
   const isTestMode = true // TODO: 正式发布时改为 false 或通过环境变量控制
 
-  // 根据路径确定当前步骤
-  const currentStepIndex = steps.findIndex((step) => pathname?.startsWith(step.path))
+  // 根据路径确定当前步骤（兼容 draftId 路由）
+  const currentStepIndex = stepKey ? steps.findIndex((s) => s.id === stepKey) : -1
   const [currentStep, setCurrentStep] = useState(currentStepIndex >= 0 ? currentStepIndex : 0)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
@@ -318,23 +341,23 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
       setCompletedSteps((prev) => (prev.includes(currentStep) ? prev : [...prev, currentStep]))
       const nextStep = currentStep + 1
       setCurrentStep(nextStep)
-      router.push(steps[nextStep].path)
+      router.push(stepPath(steps[nextStep].id))
     }
-  }, [currentStep, router])
+  }, [currentStep, router, stepPath])
 
   const goToPrevStep = useCallback(() => {
     if (currentStep > 0) {
       const prevStep = currentStep - 1
       setCurrentStep(prevStep)
-      router.push(steps[prevStep].path)
+      router.push(stepPath(steps[prevStep].id))
     }
-  }, [currentStep, router])
+  }, [currentStep, router, stepPath])
 
   const goToStep = useCallback((index: number) => {
     // 测试模式下允许任意切换
     if (isTestMode) {
       setCurrentStep(index)
-      router.push(steps[index].path)
+      router.push(stepPath(steps[index].id))
       return
     }
 
@@ -345,9 +368,9 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
 
     if (canAccess) {
       setCurrentStep(index)
-      router.push(steps[index].path)
+      router.push(stepPath(steps[index].id))
     }
-  }, [currentStep, completedSteps, router])
+  }, [currentStep, completedSteps, router, stepPath])
 
   // 底部操作栏方法
   const setBottomBar = useCallback((config: BottomBarConfig) => {
@@ -378,6 +401,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     goToPrevStep,
     canGoNext: currentStep < steps.length - 1 && completedSteps.includes(currentStep),
     canGoPrev: currentStep > 0,
+    draftId,
     setBottomBar,
     hideBottomBar,
     // 目标设备

@@ -128,6 +128,16 @@ export default function EditPage() {
     // TODO: 更新素材位置到 store
   }, [])
 
+  const handleClipTransformChange = useCallback(
+    (clipId: string, patch: { xPercent?: number; yPercent?: number; scale?: number; rotation?: number }) => {
+      if (typeof patch.xPercent === 'number' || typeof patch.yPercent === 'number') {
+        handleClipPositionChange(clipId, patch.xPercent ?? 0, patch.yPercent ?? 0)
+      }
+      console.log('素材变换变化:', clipId, patch)
+    },
+    [handleClipPositionChange]
+  )
+
   return (
     <div className="absolute inset-0 flex flex-col bg-[#0f0f12]">
       {/* 主内容区域 - 上半部分 */}
@@ -171,6 +181,7 @@ export default function EditPage() {
             targetDevice={targetDevice}
             deviceConfig={deviceConfig}
             onClipPositionChange={handleClipPositionChange}
+            onClipTransformChange={handleClipTransformChange}
             onSelectClip={handleSelectClip}
             className="h-full"
           />
