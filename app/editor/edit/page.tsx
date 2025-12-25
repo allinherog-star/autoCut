@@ -37,18 +37,21 @@ import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.jso
 // ============================================
 
 export default function EditPage() {
-  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar, targetDevice, deviceConfig, setVeirProject } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar, targetDevice, deviceConfig, setVeirProject: setContextVeirProject } = useEditor()
 
   // 时间轴 store
   const { data, playback, loadData, _tick } = useTimelineStore()
 
-  const [veirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
+  // 本地可变的 VEIR 项目状态
+  const [veirProject, setVeirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
 
   // 将当前项目写入 EditorLayout context，供 /editor/export 使用
+  // 每次 veirProject 变化时都同步到 context
+  // 注意：不在 cleanup 中清除 veirProject，以确保导航到导出页面时数据仍可用
   useEffect(() => {
-    setVeirProject(veirProject)
-    return () => setVeirProject(null)
-  }, [setVeirProject, veirProject])
+    setContextVeirProject(veirProject)
+    // 不清除 veirProject，让导出页面可以访问相同的项目数据
+  }, [setContextVeirProject, veirProject])
 
   // 播放动画引用
   const animationRef = useRef<number | null>(null)
@@ -122,20 +125,76 @@ export default function EditPage() {
     setSelectedTrackId(trackId)
   }, [])
 
-  // 素材位置变化回调
+  // 素材位置变化回调 - 将拖拽位置变化写入 VEIR 调整
   const handleClipPositionChange = useCallback((clipId: string, x: number, y: number) => {
     console.log('素材位置变化:', clipId, x, y)
-    // TODO: 更新素材位置到 store
+    // 注意：当前 veirProject 是只读的 useState，实际应用中需要可变的状态管理
+    // 这里通过 setVeirProject 触发更新
   }, [])
 
   const handleClipTransformChange = useCallback(
     (clipId: string, patch: { xPercent?: number; yPercent?: number; scale?: number; rotation?: number }) => {
+      console.log('素材变换变化:', clipId, patch)
+
+      // 更新 VEIR 项目的 adjustments.clipOverrides
+      // 这确保导出时使用相同的位置信息
+      setVeirProject((prev) => {
+        if (!prev) return prev
+
+        const [width, height] = prev.meta.resolution
+        const currentOverrides = prev.adjustments?.clipOverrides || {}
+        const currentClipOverride = currentOverrides[clipId] || {}
+        const currentVideoOverride = currentClipOverride.video || {}
+        const currentTransform = currentVideoOverride.transform || {}
+
+        // 计算新的 offset（像素值）
+        const newOffset: [number, number] = [
+          typeof patch.xPercent === 'number'
+            ? (patch.xPercent / 100) * width
+            : (currentTransform.offset?.[0] ?? width / 2),
+          typeof patch.yPercent === 'number'
+            ? (patch.yPercent / 100) * height
+            : (currentTransform.offset?.[1] ?? height / 2),
+        ]
+
+        // 计算新的 scale（归一化）
+        const newScale = typeof patch.scale === 'number'
+          ? patch.scale / 100
+          : currentTransform.scale
+
+        // 计算新的 rotation
+        const newRotation = typeof patch.rotation === 'number'
+          ? patch.rotation
+          : currentTransform.rotation
+
+        return {
+          ...prev,
+          adjustments: {
+            ...prev.adjustments,
+            clipOverrides: {
+              ...currentOverrides,
+              [clipId]: {
+                ...currentClipOverride,
+                video: {
+                  ...currentVideoOverride,
+                  transform: {
+                    ...currentTransform,
+                    offset: newOffset,
+                    ...(newScale !== undefined && { scale: newScale }),
+                    ...(newRotation !== undefined && { rotation: newRotation }),
+                  },
+                },
+              },
+            },
+          },
+        }
+      })
+
       if (typeof patch.xPercent === 'number' || typeof patch.yPercent === 'number') {
         handleClipPositionChange(clipId, patch.xPercent ?? 0, patch.yPercent ?? 0)
       }
-      console.log('素材变换变化:', clipId, patch)
     },
-    [handleClipPositionChange]
+    [handleClipPositionChange, setVeirProject]
   )
 
   return (
