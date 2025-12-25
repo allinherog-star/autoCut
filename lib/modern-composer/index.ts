@@ -491,9 +491,9 @@ export class ModernComposer {
         await this.ensureVideoElement(elementId, clip.id, clip.asset, asset.src);
 
         // 默认清理 clipPath（如无 wipe 转场则不应残留）
-        this.fabricEngine.setClipPath(elementId, null);
+        this.fabricEngine?.setClipPath(elementId, null);
 
-        this.fabricEngine.applyRenderState(elementId, renderState);
+        this.fabricEngine?.applyRenderState(elementId, renderState);
 
         // 专业剪辑：支持 sourceRange（in/out） + 曲线变速（timeWarp）
         const timeWarp = (project.adjustments?.clipOverrides?.[clip.id] as
@@ -510,12 +510,12 @@ export class ModernComposer {
         const sourceTime =
           typeof sourceEnd === 'number' && Number.isFinite(sourceEnd) ? Math.min(sourceEnd - eps, unclamped) : unclamped;
 
-        await this.fabricEngine.seekVideo(elementId, Math.max(0, sourceTime));
+        await this.fabricEngine?.seekVideo(elementId, Math.max(0, sourceTime));
       } else if (asset.type === 'image') {
         const elementId = `image-${clip.id}`;
         shouldBeActiveElementIds.add(elementId);
         await this.ensureImageElement(elementId, clip.id, clip.asset, asset.src);
-        this.fabricEngine.applyRenderState(elementId, renderState);
+        this.fabricEngine?.applyRenderState(elementId, renderState);
       }
 
       // 文本：根据轨道类型分流
@@ -533,8 +533,8 @@ export class ModernComposer {
     // 清理不活跃的元素（以 clip 为粒度）
     this.cleanupInactiveElements(shouldBeActiveElementIds);
 
-    // 渲染
-    this.fabricEngine.render();
+    // 渲染（检查 fabricEngine 是否仍然存在，可能在异步操作期间被销毁）
+    this.fabricEngine?.render();
   }
 
   private mapLocalTimeWithPreparedTimeWarp(

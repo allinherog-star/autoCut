@@ -18,6 +18,8 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const composerRef = useRef<null | { render: (t: number) => void; destroy: () => void }>(null)
   const projectRef = useRef<VEIRProject>(project)
+  // 跟踪当前正在初始化的 composer，避免 React Strict Mode 下重复初始化导致的 Fabric 错误
+  const initializingComposerRef = useRef<{ destroy: () => void } | null>(null)
 
   useEffect(() => {
     projectRef.current = project
@@ -39,6 +41,13 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
 
     const init = async () => {
       const { ModernComposer } = await import('@/lib/modern-composer')
+
+      // 如果之前有正在初始化的 composer，先销毁它（处理 React Strict Mode 双重调用）
+      if (initializingComposerRef.current) {
+        initializingComposerRef.current.destroy()
+        initializingComposerRef.current = null
+      }
+
       const composer = new ModernComposer({
         width: project.meta.resolution[0],
         height: project.meta.resolution[1],
@@ -48,7 +57,14 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
         backgroundColor: '#000000',
       })
 
+      // 在初始化之前保存引用，以便 cleanup 可以销毁它
+      initializingComposerRef.current = composer
+
       await composer.initialize()
+
+      // 清除初始化引用
+      initializingComposerRef.current = null
+
       if (cancelled) {
         composer.destroy()
         return
@@ -82,6 +98,11 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
 
     return () => {
       cancelled = true
+      // 如果正在初始化中，销毁它
+      if (initializingComposerRef.current) {
+        initializingComposerRef.current.destroy()
+        initializingComposerRef.current = null
+      }
       composerRef.current?.destroy()
       composerRef.current = null
     }
