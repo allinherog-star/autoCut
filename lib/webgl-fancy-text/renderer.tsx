@@ -42,11 +42,11 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
     }
 
     const keyframes = textAnimation.keyframes
-    
+
     // 找到当前进度对应的关键帧区间
     let startFrame = keyframes[0]
     let endFrame = keyframes[0]
-    
+
     // 如果进度为0，返回第一帧
     if (progress === 0) {
       return {
@@ -55,7 +55,7 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
         scale: startFrame.scale ?? 1,
       }
     }
-    
+
     // 如果进度为1，返回最后一帧
     if (progress >= 1) {
       const lastFrame = keyframes[keyframes.length - 1]
@@ -93,8 +93,8 @@ function Text3DObject({ config, currentTime }: Text3DObjectProps) {
         lerp(startFrame.rotation?.[2] ?? 0, endFrame.rotation?.[2] ?? 0, segmentProgress),
       ],
       scale: lerp(
-        typeof startFrame.scale === 'number' ? startFrame.scale : 1, 
-        typeof endFrame.scale === 'number' ? endFrame.scale : 1, 
+        typeof startFrame.scale === 'number' ? startFrame.scale : 1,
+        typeof endFrame.scale === 'number' ? endFrame.scale : 1,
         segmentProgress
       ),
     }
@@ -182,15 +182,11 @@ function ParticleSystem({ count = 1000, spread = 10 }: { count?: number; spread?
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={count}
-          array={particles.positions}
-          itemSize={3}
+          args={[particles.positions, 3]}
         />
         <bufferAttribute
           attach="attributes-color"
-          count={count}
-          array={particles.colors}
-          itemSize={3}
+          args={[particles.colors, 3]}
         />
       </bufferGeometry>
       <pointsMaterial size={0.05} vertexColors transparent opacity={0.6} />
@@ -300,7 +296,7 @@ function Scene({ config, currentTime }: { config: WebGLFancyTextScene; currentTi
               case 'vignette':
                 return <Vignette key={index} darkness={effect.strength || 0.5} />
               default:
-                return null
+                return <React.Fragment key={index} />
             }
           })}
         </EffectComposer>
@@ -345,7 +341,7 @@ export function WebGLFancyTextRenderer({
       const elapsed = (Date.now() - startTime) / 1000
       const time = scene.loop ? elapsed % scene.duration : Math.min(elapsed, scene.duration)
       setCurrentTime(time)
-      
+
       if (scene.loop || elapsed < scene.duration) {
         animationFrameId = requestAnimationFrame(animate)
       } else {

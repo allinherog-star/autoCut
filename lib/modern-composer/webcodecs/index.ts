@@ -11,6 +11,7 @@ import {
   BufferTarget,
   CanvasSource,
   AudioSampleSource,
+  AudioSample,
   getFirstEncodableVideoCodec,
   QUALITY_HIGH,
   QUALITY_MEDIUM,
@@ -95,22 +96,46 @@ export class MediaBunnyComposer {
     audioConfig?: AudioEncoderConfig,
     format: OutputFormat = 'mp4'
   ) {
+    this.format = format;
+
+    // 根据输出格式自动选择兼容的编码器
+    // WebM 只支持 vp8, vp9, av1
+    // MP4 支持 h264, h265
+    const defaultCodec: VideoCodecType = format === 'webm' ? 'vp9' : 'h264';
+    const requestedCodec = videoConfig.codec || defaultCodec;
+
+    // 验证编码器与格式兼容性
+    const webmCodecs: VideoCodecType[] = ['vp8', 'vp9', 'av1'];
+    const mp4Codecs: VideoCodecType[] = ['h264', 'h265'];
+
+    let finalCodec: VideoCodecType;
+    if (format === 'webm' && !webmCodecs.includes(requestedCodec)) {
+      console.warn(`[MediaBunnyComposer] Codec '${requestedCodec}' not compatible with WebM, using vp9`);
+      finalCodec = 'vp9';
+    } else if (format === 'mp4' && !mp4Codecs.includes(requestedCodec)) {
+      console.warn(`[MediaBunnyComposer] Codec '${requestedCodec}' not optimal for MP4, using h264`);
+      finalCodec = 'h264';
+    } else {
+      finalCodec = requestedCodec;
+    }
+
     this.config = {
       ...videoConfig,
       bitrate: videoConfig.bitrate || this.getDefaultBitrate(videoConfig.quality),
-      codec: videoConfig.codec || 'h264',
+      codec: finalCodec,
       keyFrameInterval: videoConfig.keyFrameInterval || 30,
     };
+
+    // WebM 通常使用 Opus 音频，MP4 使用 AAC
+    const defaultAudioCodec: AudioCodecType = format === 'webm' ? 'opus' : 'aac';
 
     this.audioConfig = {
       sampleRate: 48000,
       channels: 2,
       bitrate: 192000,
-      codec: 'aac',
+      codec: defaultAudioCodec,
       ...audioConfig,
     };
-
-    this.format = format;
   }
 
   /**
@@ -142,8 +167,10 @@ export class MediaBunnyComposer {
 
   /**
    * 开始合成
+   * @param canvas - 用于渲染的 Canvas 元素
+   * @param options - 启动选项
    */
-  async start(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<void> {
+  async start(canvas: HTMLCanvasElement | OffscreenCanvas, options?: { withAudio?: boolean }): Promise<void> {
     if (!this.output) {
       await this.initialize();
     }
@@ -153,15 +180,26 @@ export class MediaBunnyComposer {
     }
 
     // 创建 Canvas 视频源
+    // 注意：CanvasSource 从 canvas 元素读取分辨率
+    // 使用 prefer-software 以确保支持各种分辨率（硬件编码器可能不支持非标准分辨率）
     this.videoSource = new CanvasSource(canvas as HTMLCanvasElement, {
-      codec: this.mapCodec(this.config.codec || 'h264'),
+      codec: this.mapCodec(this.config.codec || 'vp9'),
       bitrate: this.config.bitrate || QUALITY_HIGH,
-      hardwareAcceleration: this.config.hardwareAcceleration || 'prefer-hardware',
+      hardwareAcceleration: 'prefer-software',  // 软件编码更可靠，支持更多分辨率
       keyFrameInterval: this.config.keyFrameInterval,
     });
 
     // 添加视频轨道
     this.output.addVideoTrack(this.videoSource);
+
+    // 如果需要音频，在 output.start() 之前添加音频轨道
+    if (options?.withAudio) {
+      this.audioSource = new AudioSampleSource({
+        codec: this.mapAudioCodec(this.audioConfig.codec || 'opus'),
+        bitrate: this.audioConfig.bitrate || 192000,
+      });
+      this.output.addAudioTrack(this.audioSource);
+    }
 
     // 启动输出
     await this.output.start();
@@ -170,20 +208,33 @@ export class MediaBunnyComposer {
   }
 
   /**
-   * 添加音频轨道
+   * 添加音频轨道（已废弃，请使用 start({ withAudio: true })）
+   * @deprecated 使用 start(canvas, { withAudio: true }) 替代
    */
   async addAudioTrack(): Promise<void> {
     if (!this.output) {
       throw new Error('Composer not initialized');
     }
 
-    // 创建音频采样源 (MediaBunny AudioSampleSource 只需要 codec 和 bitrate)
+    if (this.isStarted) {
+      console.warn('[MediaBunnyComposer] addAudioTrack called after start. Audio may not work correctly. Use start({ withAudio: true }) instead.');
+    }
+
+    // 如果已经有音频源，跳过
+    if (this.audioSource) {
+      return;
+    }
+
+    // 创建音频采样源
     this.audioSource = new AudioSampleSource({
-      codec: this.mapAudioCodec(this.audioConfig.codec || 'aac'),
+      codec: this.mapAudioCodec(this.audioConfig.codec || 'opus'),
       bitrate: this.audioConfig.bitrate || 192000,
     });
 
-    this.output.addAudioTrack(this.audioSource);
+    // 警告：在 output.start() 后添加轨道可能不工作
+    if (!this.isStarted) {
+      this.output.addAudioTrack(this.audioSource);
+    }
   }
 
   /**
@@ -206,14 +257,18 @@ export class MediaBunnyComposer {
   }
 
   /**
-   * 编码音频采样 (接受 AudioSample 对象)
+   * 编码音频采样
+   * @param audioData - 原生 WebCodecs AudioData 对象
    */
-  async encodeAudioSamples(audioSample: any): Promise<void> {
+  async encodeAudioSamples(audioData: AudioData): Promise<void> {
     if (!this.audioSource) {
       throw new Error('Audio track not added');
     }
 
+    // MediaBunny 需要 AudioSample 类型，将原生 AudioData 包装一下
+    const audioSample = new AudioSample(audioData);
     await this.audioSource.add(audioSample);
+    audioSample.close();
   }
 
   /**
@@ -480,6 +535,7 @@ export {
   QUALITY_MEDIUM,
   QUALITY_LOW,
 };
+
 
 
 

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Download,
   Play,
+  Pause,
   Settings,
-  Check,
   Copy,
   Share2,
   Sparkles,
@@ -15,14 +15,16 @@ import {
   Tablet,
   Youtube,
   Film,
-  Clock,
-  HardDrive,
   Zap,
   CheckCircle2,
   Loader2,
   ExternalLink,
+  AlertCircle,
 } from 'lucide-react'
-import { Button, Card, Badge, Progress, Switch, Tabs, TabsList, TabsTrigger, Slider } from '@/components/ui'
+import { Button, Card, Badge, Progress, Switch, Slider } from '@/components/ui'
+import { useEditor } from '../layout'
+import exampleProject from '@/lib/veir/example-project.json'
+import type { VEIRProject } from '@/lib/veir/types'
 
 // ============================================
 // 类型定义
@@ -37,6 +39,16 @@ interface ExportPreset {
   bitrate: string
   estimatedSize: string
   platform?: string
+}
+
+type CompositionStage = 'idle' | 'parsing' | 'loading' | 'rendering' | 'encoding' | 'complete' | 'error'
+
+interface CompositionResult {
+  blob: Blob
+  duration: number
+  format: string
+  size: number
+  downloadUrl: string
 }
 
 // ============================================
@@ -104,51 +116,136 @@ const exportPresets: ExportPreset[] = [
 ]
 
 // ============================================
+// 工具函数
+// ============================================
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function getStageLabel(stage: CompositionStage): string {
+  switch (stage) {
+    case 'parsing': return '解析项目'
+    case 'loading': return '加载资源'
+    case 'rendering': return '渲染帧'
+    case 'encoding': return '编码视频'
+    case 'complete': return '完成'
+    case 'error': return '出错'
+    default: return '就绪'
+  }
+}
+
+// ============================================
 // 导出页面
 // ============================================
 
 export default function ExportPage() {
+  const { veirProject, deviceConfig } = useEditor()
+
   const [selectedPreset, setSelectedPreset] = useState<string>('1080p')
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
+  const [exportStage, setExportStage] = useState<CompositionStage>('idle')
+  const [exportMessage, setExportMessage] = useState('')
   const [isExportComplete, setIsExportComplete] = useState(false)
   const [includeSubtitles, setIncludeSubtitles] = useState(true)
   const [includeWatermark, setIncludeWatermark] = useState(false)
   const [quality, setQuality] = useState(80)
+  const [compositionResult, setCompositionResult] = useState<CompositionResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
+  const videoRef = useRef<HTMLVideoElement>(null)
   const preset = exportPresets.find((p) => p.id === selectedPreset)!
 
-  // 模拟导出过程
-  useEffect(() => {
-    if (isExporting) {
-      const interval = setInterval(() => {
-        setExportProgress((prev) => {
-          const newProgress = prev + Math.random() * 3
-          if (newProgress >= 100) {
-            clearInterval(interval)
-            setIsExporting(false)
-            setIsExportComplete(true)
-            return 100
-          }
-          return Math.min(newProgress, 100)
-        })
-      }, 150)
-      return () => clearInterval(interval)
-    }
-  }, [isExporting])
+  // 开始导出 - 使用真实的 VEIRComposer
+  const startExport = useCallback(async () => {
+    let projectToExport = veirProject
 
-  // 开始导出
-  const startExport = () => {
+    if (!projectToExport) {
+      console.log('No project loaded, using example project for demo')
+      projectToExport = exampleProject as unknown as VEIRProject
+      setExportMessage('使用示例项目进行演示...')
+    }
+
     setIsExporting(true)
     setExportProgress(0)
+    setExportStage('idle')
     setIsExportComplete(false)
-  }
+    setCompositionResult(null)
+    setError(null)
+
+    try {
+      // 动态导入合成器（仅客户端）
+      const { VEIRComposer } = await import('@/lib/veir/composer')
+
+      const composer = new VEIRComposer(projectToExport)
+
+      const result = await composer.compose(
+        {
+          format: 'mp4',
+          quality: quality >= 80 ? 'high' : quality >= 50 ? 'medium' : 'low',
+        },
+        (stage, progress, message) => {
+          setExportStage(stage)
+          setExportProgress(progress)
+          setExportMessage(message)
+        }
+      )
+
+      setCompositionResult(result)
+      setExportStage('complete')
+      setIsExportComplete(true)
+      composer.destroy()
+    } catch (err) {
+      console.error('Composition error:', err)
+      setError((err as Error).message)
+      setExportStage('error')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [veirProject, quality])
+
+  // 下载视频
+  const handleDownload = useCallback(() => {
+    if (!compositionResult) return
+    const link = document.createElement('a')
+    link.href = compositionResult.downloadUrl
+    link.download = `video-${Date.now()}.${compositionResult.format}`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }, [compositionResult])
 
   // 重新导出
-  const resetExport = () => {
+  const resetExport = useCallback(() => {
     setIsExportComplete(false)
     setExportProgress(0)
-  }
+    setExportStage('idle')
+    setExportMessage('')
+    setCompositionResult(null)
+    setError(null)
+  }, [])
+
+  // 清理资源
+  useEffect(() => {
+    return () => {
+      if (compositionResult?.downloadUrl) {
+        URL.revokeObjectURL(compositionResult.downloadUrl)
+      }
+    }
+  }, [compositionResult])
+
+  // 获取项目时长和分辨率
+  const projectDuration = veirProject?.meta?.duration || 0
+  const projectResolution = veirProject?.meta?.resolution || [1920, 1080]
 
   return (
     <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -160,41 +257,74 @@ export default function ExportPage() {
             导出成片
           </h1>
           <p className="text-surface-400">
-            选择导出参数，生成高质量视频
+            {veirProject ? '选择导出参数，生成高质量视频' : '请先在剪辑页面完成编辑'}
           </p>
         </div>
 
         {/* 视频预览 */}
         <div className="flex-1 flex items-center justify-center mb-6">
-          <div className="relative w-full max-w-2xl aspect-video bg-surface-900 rounded-xl overflow-hidden">
-            {/* 模拟视频封面 */}
-            <div className="absolute inset-0 bg-gradient-to-br from-surface-800 to-surface-900 flex items-center justify-center">
-              <div className="text-center">
-                <Film className="w-20 h-20 text-surface-600 mx-auto mb-4" />
-                <p className="text-surface-400">视频预览</p>
-                <p className="text-sm text-surface-500 mt-1">
-                  时长: 00:55 | {preset.resolution}
-                </p>
+          <div
+            className="relative w-full max-w-2xl bg-surface-900 rounded-xl overflow-hidden"
+            style={{ aspectRatio: `${projectResolution[0]}/${projectResolution[1]}` }}
+          >
+            {compositionResult ? (
+              <video
+                ref={videoRef}
+                src={compositionResult.downloadUrl}
+                controls
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-surface-800 to-surface-900 flex items-center justify-center">
+                <div className="text-center">
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-16 h-16 text-amber-400 mx-auto mb-4 animate-spin" />
+                      <p className="text-surface-200 font-medium">{getStageLabel(exportStage)}</p>
+                      <p className="text-sm text-surface-500 mt-1">{exportMessage}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Film className="w-20 h-20 text-surface-600 mx-auto mb-4" />
+                      <p className="text-surface-400">视频预览</p>
+                      <p className="text-sm text-surface-500 mt-1">
+                        时长: {formatDuration(projectDuration)} | {projectResolution[0]}×{projectResolution[1]}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            {/* 播放按钮 */}
-            <button className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
-              <div className="w-16 h-16 rounded-full bg-amber-400 flex items-center justify-center">
-                <Play className="w-8 h-8 text-surface-950 ml-1" />
-              </div>
-            </button>
-            {/* 标题预览 */}
-            <div className="absolute top-4 left-4 right-4">
-              <p className="text-white font-semibold text-lg drop-shadow-lg">
-                99%的人都不知道的视频剪辑神器，效率提升10倍！
-              </p>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* 导出进度 / 完成状态 */}
+        {/* 导出进度 / 完成状态 / 错误状态 */}
         <AnimatePresence mode="wait">
-          {isExporting && (
+          {error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card variant="glass" className="p-6 border-red-500/30">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-red-400">导出失败</p>
+                    <p className="text-sm text-surface-400">{error}</p>
+                  </div>
+                </div>
+                <Button variant="outline" onClick={resetExport}>
+                  重试
+                </Button>
+              </Card>
+            </motion.div>
+          )}
+
+          {isExporting && !error && (
             <motion.div
               key="exporting"
               initial={{ opacity: 0, y: 20 }}
@@ -209,7 +339,7 @@ export default function ExportPage() {
                   <div className="flex-1">
                     <p className="font-medium text-surface-100">正在导出视频...</p>
                     <p className="text-sm text-surface-400">
-                      {preset.name} · {preset.resolution}
+                      {getStageLabel(exportStage)} · {exportMessage}
                     </p>
                   </div>
                   <span className="text-2xl font-mono font-bold text-amber-400">
@@ -217,15 +347,11 @@ export default function ExportPage() {
                   </span>
                 </div>
                 <Progress value={exportProgress} variant="primary" size="md" />
-                <div className="mt-4 flex items-center justify-between text-sm text-surface-500">
-                  <span>预计剩余时间: {Math.ceil((100 - exportProgress) / 10)} 秒</span>
-                  <span>预计文件大小: {preset.estimatedSize}</span>
-                </div>
               </Card>
             </motion.div>
           )}
 
-          {isExportComplete && (
+          {isExportComplete && compositionResult && !error && (
             <motion.div
               key="complete"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -242,22 +368,28 @@ export default function ExportPage() {
                       🎉 导出成功！
                     </h3>
                     <p className="text-surface-400">
-                      视频已保存，可以直接下载或分享到社交平台
+                      视频已生成，可以直接下载或分享
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-6">
                   <Card className="p-3">
-                    <p className="text-sm text-surface-500 mb-1">文件大小</p>
+                    <p className="text-sm text-surface-500 mb-1">时长</p>
                     <p className="text-lg font-semibold text-surface-100">
-                      {preset.estimatedSize.replace('~', '')}
+                      {formatDuration(compositionResult.duration)}
                     </p>
                   </Card>
                   <Card className="p-3">
-                    <p className="text-sm text-surface-500 mb-1">分辨率</p>
+                    <p className="text-sm text-surface-500 mb-1">文件大小</p>
                     <p className="text-lg font-semibold text-surface-100">
-                      {preset.resolution}
+                      {formatBytes(compositionResult.size)}
+                    </p>
+                  </Card>
+                  <Card className="p-3">
+                    <p className="text-sm text-surface-500 mb-1">格式</p>
+                    <p className="text-lg font-semibold text-surface-100 uppercase">
+                      {compositionResult.format}
                     </p>
                   </Card>
                 </div>
@@ -268,6 +400,7 @@ export default function ExportPage() {
                     size="lg"
                     leftIcon={<Download className="w-5 h-5" />}
                     className="flex-1"
+                    onClick={handleDownload}
                   >
                     下载视频
                   </Button>
@@ -303,7 +436,7 @@ export default function ExportPage() {
             </motion.div>
           )}
 
-          {!isExporting && !isExportComplete && (
+          {!isExporting && !isExportComplete && !error && (
             <motion.div
               key="ready"
               initial={{ opacity: 0 }}
@@ -448,14 +581,14 @@ export default function ExportPage() {
             <div>
               <p className="text-sm text-surface-200 mb-1">优化提示</p>
               <p className="text-xs text-surface-400">
-                建议选择 1080P 60fps 以获得最佳画质和文件大小平衡。
-                如需发布到短视频平台，推荐使用对应的预设。
+                视频将使用项目原始分辨率 ({projectResolution[0]}×{projectResolution[1]}) 导出。
+                首次合成可能需要较长时间加载资源。
               </p>
             </div>
           </div>
         </Card>
 
-        {/* 导出历史 */}
+        {/* 重新选择参数 */}
         {isExportComplete && (
           <div className="mt-6">
             <Button
@@ -471,4 +604,3 @@ export default function ExportPage() {
     </div>
   )
 }
-

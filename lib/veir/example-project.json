@@ -5,19 +5,19 @@
             1920
         ],
         "fps": 30,
-        "duration": 60,
+        "duration": 5,
         "colorSpace": "sRGB"
     },
     "assets": {
         "assets": {
             "main-video": {
                 "type": "video",
-                "src": "/assets/videos/main.mp4",
+                "src": "/test-video.mp4",
                 "semanticRole": "main"
             },
             "broll-video": {
                 "type": "video",
-                "src": "/assets/videos/main.mp4",
+                "src": "/test-video.mp4",
                 "semanticRole": "scene.broll"
             },
             "bgm": {
@@ -27,7 +27,7 @@
             },
             "speaker-pip": {
                 "type": "video",
-                "src": "/assets/videos/speaker.mp4",
+                "src": "/test-video.mp4",
                 "semanticRole": "speaker",
                 "autoReplace": true
             },
@@ -134,20 +134,7 @@
                         "asset": "main-video",
                         "time": {
                             "start": 0,
-                            "end": 30
-                        },
-                        "transitionOut": {
-                            "type": "dissolve",
-                            "duration": 0.8,
-                            "easing": "ease-in-out"
-                        }
-                    },
-                    {
-                        "id": "clip-main-2",
-                        "asset": "broll-video",
-                        "time": {
-                            "start": 29.2,
-                            "end": 60
+                            "end": 5
                         }
                     }
                 ]
@@ -162,7 +149,7 @@
                         "asset": "bgm",
                         "time": {
                             "start": 0,
-                            "end": 60
+                            "end": 5
                         }
                     }
                 ]
@@ -171,24 +158,7 @@
                 "id": "pip-speaker",
                 "type": "pip",
                 "layer": 2,
-                "clips": [
-                    {
-                        "id": "clip-pip",
-                        "asset": "speaker-pip",
-                        "time": {
-                            "start": 5,
-                            "end": 30
-                        },
-                        "expression": {
-                            "preset": "pip-corner",
-                            "intensity": 0.8
-                        },
-                        "behavior": {
-                            "enter": "fade-in",
-                            "exit": "fade-out"
-                        }
-                    }
-                ]
+                "clips": []
             },
             {
                 "id": "text-title",
@@ -220,7 +190,12 @@
                 "layout": {
                     "position": "bottom",
                     "alignment": "center",
-                    "safeArea": { "left": 0.06, "right": 0.06, "bottom": 0.08, "top": 0.06 },
+                    "safeArea": {
+                        "left": 0.06,
+                        "right": 0.06,
+                        "bottom": 0.08,
+                        "top": 0.06
+                    },
                     "maxWidth": 1,
                     "lineHeight": 1.25
                 },
@@ -229,24 +204,8 @@
                         "id": "clip-sub-1",
                         "asset": "subtitle-1",
                         "time": {
-                            "start": 5,
-                            "end": 15
-                        },
-                        "expression": {
-                            "preset": "subtitle-bottom",
-                            "intensity": 0.7
-                        },
-                        "behavior": {
-                            "enter": "slide-up",
-                            "exit": "fade-out"
-                        }
-                    },
-                    {
-                        "id": "clip-sub-2",
-                        "asset": "subtitle-2",
-                        "time": {
-                            "start": 15,
-                            "end": 25
+                            "start": 0,
+                            "end": 5
                         },
                         "expression": {
                             "preset": "subtitle-bottom",

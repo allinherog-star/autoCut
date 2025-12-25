@@ -37,15 +37,21 @@ import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.jso
 // ============================================
 
 export default function EditPage() {
-  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar, targetDevice, deviceConfig } = useEditor()
+  const { goToNextStep, markStepCompleted, currentStep, hideBottomBar, targetDevice, deviceConfig, setVeirProject } = useEditor()
 
   // 时间轴 store
   const { data, playback, loadData, _tick } = useTimelineStore()
 
   const [veirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
 
+  // 将当前项目写入 EditorLayout context，供 /editor/export 使用
+  useEffect(() => {
+    setVeirProject(veirProject)
+    return () => setVeirProject(null)
+  }, [setVeirProject, veirProject])
+
   // 播放动画引用
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number>(0)
 
   // 选中状态

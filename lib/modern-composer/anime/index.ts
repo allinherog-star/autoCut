@@ -4,7 +4,11 @@
  * 提供时间轴、关键帧、缓动函数等专业级动画能力
  */
 
-import anime, { type AnimeInstance, createTimeline, type Timeline, stagger, type EasingOptions } from 'animejs';
+import { animate, createTimeline, type Timeline, stagger } from 'animejs';
+
+// Adapt types for v4
+type AnimeInstance = ReturnType<typeof animate>;
+type EasingOptions = any;
 
 // ============================================
 // 类型定义
@@ -156,11 +160,11 @@ export function calculateAnimationState(
     const nextValue = getKeyframeValue(nextFrame, prop);
 
     if (prevValue !== undefined && nextValue !== undefined) {
-      (state as Record<string, number>)[prop] = lerp(prevValue, nextValue, easedProgress);
+      (state as any)[prop] = lerp(prevValue, nextValue, easedProgress);
     } else if (prevValue !== undefined) {
-      (state as Record<string, number>)[prop] = prevValue;
+      (state as any)[prop] = prevValue;
     } else if (nextValue !== undefined) {
-      (state as Record<string, number>)[prop] = nextValue;
+      (state as any)[prop] = nextValue;
     }
   }
 
@@ -254,8 +258,7 @@ export class AnimeEngine {
   createAnimation(targetId: string, config: AnimationConfig): AnimeInstance {
     const stateObj = this.getOrCreateState(targetId);
 
-    const animeConfig: Parameters<typeof anime>[0] = {
-      targets: stateObj,
+    const animeParams: any = {
       duration: config.duration,
       delay: config.delay,
       easing: config.easing || 'easeOutQuad',
@@ -282,17 +285,17 @@ export class AnimeEngine {
     // 使用最后一帧作为目标值
     const lastFrame = config.keyframes[config.keyframes.length - 1];
     if (lastFrame) {
-      if (lastFrame.opacity !== undefined) animeConfig.opacity = lastFrame.opacity;
-      if (lastFrame.translateX !== undefined) animeConfig.translateX = lastFrame.translateX;
-      if (lastFrame.translateY !== undefined) animeConfig.translateY = lastFrame.translateY;
-      if (lastFrame.scale !== undefined) animeConfig.scale = lastFrame.scale;
-      if (lastFrame.scaleX !== undefined) animeConfig.scaleX = lastFrame.scaleX;
-      if (lastFrame.scaleY !== undefined) animeConfig.scaleY = lastFrame.scaleY;
-      if (lastFrame.rotate !== undefined) animeConfig.rotate = lastFrame.rotate;
-      if (lastFrame.blur !== undefined) animeConfig.blur = lastFrame.blur;
+      if (lastFrame.opacity !== undefined) animeParams.opacity = lastFrame.opacity;
+      if (lastFrame.translateX !== undefined) animeParams.translateX = lastFrame.translateX;
+      if (lastFrame.translateY !== undefined) animeParams.translateY = lastFrame.translateY;
+      if (lastFrame.scale !== undefined) animeParams.scale = lastFrame.scale;
+      if (lastFrame.scaleX !== undefined) animeParams.scaleX = lastFrame.scaleX;
+      if (lastFrame.scaleY !== undefined) animeParams.scaleY = lastFrame.scaleY;
+      if (lastFrame.rotate !== undefined) animeParams.rotate = lastFrame.rotate;
+      if (lastFrame.blur !== undefined) animeParams.blur = lastFrame.blur;
     }
 
-    const anim = anime(animeConfig);
+    const anim = animate(stateObj, animeParams);
     this.animations.set(config.id, anim);
 
     return anim;
@@ -712,6 +715,6 @@ function calculateStaggerDelay(
 // 导出
 // ============================================
 
-export { anime, createTimeline };
+export { animate as anime, createTimeline };
 export type { AnimeInstance, Timeline };
 

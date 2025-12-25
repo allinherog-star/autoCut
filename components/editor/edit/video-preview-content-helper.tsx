@@ -4,10 +4,22 @@ import { Play, Move } from 'lucide-react'
 import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
 
 // 模拟的素材位置数据
+/**
+ * 素材位置（Content Space - 内容坐标系）
+ * 
+ * 坐标空间说明：
+ * - x, y: 使用百分比（0-100），表示归一化坐标 × 100
+ * - 原点在左上角
+ * - 所有值都是"内容坐标系"的，不受预览缩放影响
+ */
 export interface ClipPosition {
-    x: number  // 0-100 百分比
-    y: number  // 0-100 百分比
+    /** X 位置 (0-100 百分比，内容坐标系) */
+    x: number
+    /** Y 位置 (0-100 百分比，内容坐标系) */
+    y: number
+    /** 缩放比例 (100 = 原始大小) */
     scale: number
+    /** 旋转角度 (度) */
     rotation: number
 }
 
@@ -122,7 +134,7 @@ export function VideoPreviewContent({
             })}
 
             {/* 安全区域提示 */}
-            <div className="absolute inset-2 border border-dashed border-[#333] rounded-md pointer-events-none opacity-30 z-10" />
+            {/* 边界线已移除 */}
         </>
     )
 }

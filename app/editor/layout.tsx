@@ -23,6 +23,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Progress, Card } from '@/components/ui'
 import type { EditingStep } from '@/lib/types'
+import type { VEIRProject } from '@/lib/veir/types'
 
 // ============================================
 // 目标设备类型
@@ -75,26 +76,26 @@ export const VIDEO_TYPES: VideoTypeInfo[] = [
   { id: 'vlog', name: 'Vlog', icon: '📹', description: '记录日常生活', category: 'lifestyle' },
   { id: 'travel', name: '旅游旅拍', icon: '✈️', description: '旅行攻略记录', category: 'lifestyle' },
   { id: 'life-hack', name: '生活小妙招', icon: '💡', description: '实用生活技巧', category: 'lifestyle' },
-  
+
   // 探店体验类
   { id: 'food', name: '美食探店', icon: '🍜', description: '美食推荐分享', category: 'lifestyle' },
   { id: 'hotel', name: '睡寝探店', icon: '🏨', description: '酒店民宿体验', category: 'lifestyle' },
-  
+
   // 时尚生活类
   { id: 'fashion', name: '时尚穿搭', icon: '👗', description: '穿搭分享推荐', category: 'lifestyle' },
   { id: 'fitness', name: '健身减脂', icon: '💪', description: '健身教程分享', category: 'lifestyle' },
-  
+
   // 知识教程类
   { id: 'tutorial', name: '课程教程', icon: '📚', description: '技能教学课程', category: 'knowledge' },
   { id: 'knowledge', name: '知识科普', icon: '🧠', description: '科普知识讲解', category: 'knowledge' },
   { id: 'career', name: '职场攻略', icon: '💼', description: '职场经验分享', category: 'knowledge' },
   { id: 'tools', name: '效率工具', icon: '⚡', description: '工具软件推荐', category: 'knowledge' },
-  
+
   // 种草带货类
   { id: 'recommend', name: '安利种草', icon: '🌱', description: '好物推荐分享', category: 'commerce' },
   { id: 'review', name: '评测对比', icon: '⚖️', description: '产品评测对比', category: 'entertainment' },
   { id: 'deals', name: '优惠带货', icon: '🛒', description: '优惠信息带货', category: 'commerce' },
-  
+
   // 娱乐内容类
   { id: 'movie', name: '影视解说', icon: '🎬', description: '影视作品解读', category: 'entertainment' },
   { id: 'gaming', name: '游戏', icon: '🎮', description: '游戏实况攻略', category: 'entertainment' },
@@ -144,87 +145,87 @@ const steps: {
   icon: React.ElementType
   path: string
 }[] = [
-  {
-    id: 'upload',
-    label: '上传素材',
-    shortLabel: '上传',
-    description: '上传视频、图片等基础素材',
-    icon: Upload,
-    path: '/editor/upload',
-  },
-  {
-    id: 'understand',
-    label: '理解视频',
-    shortLabel: '理解',
-    description: 'AI 分析内容，智能分割',
-    icon: Wand2,
-    path: '/editor/understand',
-  },
-  {
-    id: 'subtitle',
-    label: '字幕推荐',
-    shortLabel: '字幕',
-    description: '智能识别语音生成字幕',
-    icon: Type,
-    path: '/editor/subtitle',
-  },
-  {
-    id: 'title',
-    label: '标题推荐',
-    shortLabel: '标题',
-    description: '生成吸引眼球的标题',
-    icon: TrendingUp,
-    path: '/editor/title',
-  },
-  {
-    id: 'music',
-    label: '音乐卡点',
-    shortLabel: '音乐',
-    description: '智能配乐和音乐卡点',
-    icon: Music,
-    path: '/editor/music',
-  },
-  {
-    id: 'effects',
-    label: '特效渲染',
-    shortLabel: '特效',
-    description: '添加动画和视觉效果',
-    icon: Zap,
-    path: '/editor/effects',
-  },
-  {
-    id: 'emotion',
-    label: '情绪增强',
-    shortLabel: '情绪',
-    description: '关键点情绪渲染',
-    icon: Heart,
-    path: '/editor/emotion',
-  },
-  {
-    id: 'sync',
-    label: '音画同步',
-    shortLabel: '同步',
-    description: '自动校准对齐',
-    icon: Volume2,
-    path: '/editor/sync',
-  },
-  {
-    id: 'edit',
-    label: '剪辑微调',
-    shortLabel: '微调',
-    description: '精细调整时间轴',
-    icon: Scissors,
-    path: '/editor/edit',
-  },
-  {
-    id: 'export',
-    label: '导出成片',
-    shortLabel: '导出',
-    description: '选择分辨率导出',
-    icon: Download,
-    path: '/editor/export',
-  },
-]
+    {
+      id: 'upload',
+      label: '上传素材',
+      shortLabel: '上传',
+      description: '上传视频、图片等基础素材',
+      icon: Upload,
+      path: '/editor/upload',
+    },
+    {
+      id: 'understand',
+      label: '理解视频',
+      shortLabel: '理解',
+      description: 'AI 分析内容，智能分割',
+      icon: Wand2,
+      path: '/editor/understand',
+    },
+    {
+      id: 'subtitle',
+      label: '字幕推荐',
+      shortLabel: '字幕',
+      description: '智能识别语音生成字幕',
+      icon: Type,
+      path: '/editor/subtitle',
+    },
+    {
+      id: 'title',
+      label: '标题推荐',
+      shortLabel: '标题',
+      description: '生成吸引眼球的标题',
+      icon: TrendingUp,
+      path: '/editor/title',
+    },
+    {
+      id: 'music',
+      label: '音乐卡点',
+      shortLabel: '音乐',
+      description: '智能配乐和音乐卡点',
+      icon: Music,
+      path: '/editor/music',
+    },
+    {
+      id: 'effects',
+      label: '特效渲染',
+      shortLabel: '特效',
+      description: '添加动画和视觉效果',
+      icon: Zap,
+      path: '/editor/effects',
+    },
+    {
+      id: 'emotion',
+      label: '情绪增强',
+      shortLabel: '情绪',
+      description: '关键点情绪渲染',
+      icon: Heart,
+      path: '/editor/emotion',
+    },
+    {
+      id: 'sync',
+      label: '音画同步',
+      shortLabel: '同步',
+      description: '自动校准对齐',
+      icon: Volume2,
+      path: '/editor/sync',
+    },
+    {
+      id: 'edit',
+      label: '剪辑微调',
+      shortLabel: '微调',
+      description: '精细调整时间轴',
+      icon: Scissors,
+      path: '/editor/edit',
+    },
+    {
+      id: 'export',
+      label: '导出成片',
+      shortLabel: '导出',
+      description: '选择分辨率导出',
+      icon: Download,
+      path: '/editor/export',
+    },
+  ]
 
 // ============================================
 // Context
@@ -250,6 +251,9 @@ interface EditorContextType {
   videoType: string | null
   setVideoType: (type: string | null) => void
   videoTypeInfo: VideoTypeInfo | null
+  // VEIR 项目（edit → export 数据传递）
+  veirProject: VEIRProject | null
+  setVeirProject: (project: VEIRProject | null) => void
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -274,7 +278,7 @@ const defaultBottomBarConfig: BottomBarConfig = {
 export default function EditorLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  
+
   // 测试模式：允许任意切换步骤
   const isTestMode = true // TODO: 正式发布时改为 false 或通过环境变量控制
 
@@ -282,17 +286,20 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
   const currentStepIndex = steps.findIndex((step) => pathname?.startsWith(step.path))
   const [currentStep, setCurrentStep] = useState(currentStepIndex >= 0 ? currentStepIndex : 0)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
-  
+
   // 底部操作栏状态
   const [bottomBarConfig, setBottomBarConfigState] = useState<BottomBarConfig>(defaultBottomBarConfig)
-  
+
   // 目标设备状态（默认手机竖屏）
   const [targetDevice, setTargetDevice] = useState<TargetDevice>('phone')
   const deviceConfig = DEVICE_CONFIGS[targetDevice]
-  
+
   // 视频类型状态
   const [videoType, setVideoType] = useState<string | null>(null)
   const videoTypeInfo = VIDEO_TYPES.find(t => t.id === videoType) || null
+
+  // VEIR 项目状态（用于 edit → export 数据传递）
+  const [veirProject, setVeirProject] = useState<VEIRProject | null>(null)
 
   const progress = ((currentStep + 1) / steps.length) * 100
 
@@ -330,12 +337,12 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
       router.push(steps[index].path)
       return
     }
-    
+
     // 正式模式：只能去已完成的步骤，或者当前步骤已完成时可以去下一步
     const canAccess = index < currentStep || // 可以返回之前的步骤
-                     (index === currentStep) || // 可以停留在当前步骤
-                     (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
-    
+      (index === currentStep) || // 可以停留在当前步骤
+      (index === currentStep + 1 && completedSteps.includes(currentStep)) // 当前步骤完成后可以去下一步
+
     if (canAccess) {
       setCurrentStep(index)
       router.push(steps[index].path)
@@ -353,7 +360,7 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
 
   // 追踪上一次的 pathname，只在真正变化时重置底部栏
   const prevPathnameRef = useRef(pathname)
-  
+
   useEffect(() => {
     // 只在 pathname 真正变化时重置底部栏（跳过初次挂载）
     if (prevPathnameRef.current !== pathname) {
@@ -381,6 +388,9 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
     videoType,
     setVideoType,
     videoTypeInfo,
+    // VEIR 项目
+    veirProject,
+    setVeirProject,
   }
 
   return (
@@ -471,9 +481,8 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
                     {/* 步骤信息 */}
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-sm font-medium truncate ${
-                          isActive ? 'text-amber-400' : 'text-surface-200'
-                        }`}
+                        className={`text-sm font-medium truncate ${isActive ? 'text-amber-400' : 'text-surface-200'
+                          }`}
                       >
                         {step.label}
                       </p>

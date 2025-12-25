@@ -73,3 +73,9 @@ export const FancyTextPresetSchema = z.object({
 })
 
 export type FancyTextPreset = z.infer<typeof FancyTextPresetSchema>
+
+// --- Motion Plan Schema ---
+
+export const MotionPlanSchema = z.any(); // Temporary loose schema to unblock build
+export type MotionPlan = z.infer<typeof MotionPlanSchema>;
+

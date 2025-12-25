@@ -27,7 +27,6 @@ import {
 import { useTimelineStore } from '@/lib/timeline/store'
 import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
 import { getFilterCSS } from '@/lib/veir/composer/filters'
-import { VideoPreviewContent, type ClipPosition, DEFAULT_POSITION } from './video-preview-content-helper'
 
 type TargetDevice = 'phone' | 'pc'
 
@@ -59,7 +58,21 @@ interface VideoPreviewPanelProps {
   className?: string
 }
 
+// 模拟的素材位置数据
+interface ClipPosition {
+  x: number  // 0-100 百分比
+  y: number  // 0-100 百分比
+  scale: number
+  rotation: number
+}
 
+// 默认位置
+const DEFAULT_POSITION: ClipPosition = {
+  x: 50,
+  y: 50,
+  scale: 100,
+  rotation: 0,
+}
 
 export function VideoPreviewPanel({
   selectedClipId,
@@ -441,87 +454,80 @@ export function VideoPreviewPanel({
       {/* 预览区域 */}
       <div
         ref={previewRef}
-        className={`flex-1 relative overflow-hidden flex items-center justify-center ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'} py-8`}
+        className={`flex-1 relative overflow-hidden ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
       >
-        {/*
-          严格比例预览容器
-          根据 targetDevice 决定外层包裹样式
-         */}
-        {targetDevice === 'phone' ? (
-          /* 手机外观壳 */
+        {/* 可用空间（留出内边距） */}
+        <div ref={viewportRef} className="absolute inset-4 flex items-center justify-center">
+          {/* 严格比例内框：所有渲染/拖拽都以此为基准 */}
           <div
-            className="relative bg-[#000] rounded-[2.5rem] shadow-2xl border-[4px] border-[#333] box-content"
+            ref={videoContainerRef}
+            className={`
+              relative bg-black overflow-hidden shadow-2xl
+              ${targetDevice === 'phone' ? 'rounded-2xl' : 'rounded-lg'}
+            `}
             style={{
               width: frameSize.width ? `${frameSize.width}px` : undefined,
               height: frameSize.height ? `${frameSize.height}px` : undefined,
-              padding: '12px', // 手机边框厚度
+              aspectRatio: deviceConfig.aspectRatio,
             }}
           >
-            {/* 顶部刘海模拟 */}
-            <div className="absolute top-[8px] left-1/2 -translate-x-1/2 w-24 h-6 bg-[#000] rounded-b-xl z-20 pointer-events-none" />
+            {/* 网格参考线 */}
+            {showGrid && (
+              <div className="absolute inset-0 pointer-events-none">
+                {/* 三分线 */}
+                <div className="absolute top-1/3 left-0 right-0 h-px bg-white/10" />
+                <div className="absolute top-2/3 left-0 right-0 h-px bg-white/10" />
+                <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/10" />
+                <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/10" />
+                {/* 中心线 */}
+                <div className="absolute top-1/2 left-0 right-0 h-px bg-violet-500/30" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-violet-500/30" />
+              </div>
+            )}
 
-            {/* 屏幕显示区域 (Strict Ratio Area) */}
-            <div
-              ref={videoContainerRef}
-              className="relative w-full h-full bg-black overflow-hidden rounded-[2rem]"
-              style={{
-                // 确保屏幕区域也是严格比例
-                aspectRatio: deviceConfig.aspectRatio,
-              }}
-            >
-              <VideoPreviewContent
-                activeVideoSrc={activeVideoSrc}
-                activeVideoFilter={activeVideoFilter}
-                isMuted={isMuted}
-                playback={playback}
-                showGrid={showGrid}
-                visibleClips={visibleClips}
-                selectedClipId={selectedClipId}
-                isLocked={isLocked}
-                veirProject={veirProject ?? null}
-                onSelectClip={onSelectClip}
-                onDragStart={handleDragStart}
-                videoRef={videoRef}
+            {/* 主视频区域（真实素材优先） */}
+            {activeVideoSrc ? (
+              <video
+                ref={videoRef}
+                src={activeVideoSrc}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ filter: activeVideoFilter }}
+                muted={isMuted}
+                playsInline
+                preload="auto"
               />
-            </div>
-          </div>
-        ) : (
-          /* 电脑/通用外观壳 */
-          <div
-            className="relative bg-[#1a1a1e] rounded-lg shadow-2xl border border-[#333] p-1"
-            style={{
-              width: frameSize.width ? `${frameSize.width}px` : undefined,
-              height: frameSize.height ? `${frameSize.height}px` : undefined,
-            }}
-          >
-            {/* 屏幕显示区域 */}
-            <div
-              ref={videoContainerRef}
-              className="relative w-full h-full bg-black overflow-hidden rounded-md"
-              style={{
-                aspectRatio: deviceConfig.aspectRatio,
-              }}
-            >
-              <VideoPreviewContent
-                activeVideoSrc={activeVideoSrc}
-                activeVideoFilter={activeVideoFilter}
-                isMuted={isMuted}
-                playback={playback}
-                showGrid={showGrid}
-                visibleClips={visibleClips}
-                selectedClipId={selectedClipId}
-                isLocked={isLocked}
-                veirProject={veirProject ?? null}
-                onSelectClip={onSelectClip}
-                onDragStart={handleDragStart}
-                videoRef={videoRef}
-              />
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
+                    <Play className="w-8 h-8 text-[#444]" />
+                  </div>
+                  <p className="text-xs text-[#555]">
+                    {formatTime(playback.currentTime)} / {formatTime(playback.duration)}
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* 隐藏的视口测量引用 (用于计算最大可用尺寸) */}
-        <div ref={viewportRef} className="absolute inset-8 pointer-events-none -z-10 opacity-0" />
+            {/* 可见的贴纸/画中画素材 */}
+            {visibleClips.map(({ clip, track, position }) => (
+              <DraggableElement
+                key={clip.id}
+                clip={clip}
+                track={track}
+                position={position}
+                isSelected={clip.id === selectedClipId}
+                isLocked={isLocked}
+                onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
+                onSelect={() => onSelectClip?.(clip.id, track.id)}
+                veirProject={veirProject}
+              />
+            ))}
+
+            {/* 安全区域提示（基于严格比例内框） */}
+            <div className="absolute inset-2 border border-dashed border-[#333] rounded-md pointer-events-none opacity-30" />
+          </div>
+        </div>
       </div>
 
       {/* 播放控制栏 */}
@@ -589,4 +595,140 @@ export function VideoPreviewPanel({
   )
 }
 
+// 可拖拽元素组件
+function DraggableElement({
+  clip,
+  track,
+  position,
+  isSelected,
+  isLocked,
+  onDragStart,
+  onSelect,
+  veirProject,
+}: {
+  clip: Clip
+  track: Track
+  position: ClipPosition
+  isSelected: boolean
+  isLocked: boolean
+  onDragStart: (e: React.MouseEvent) => void
+  onSelect?: () => void
+  veirProject?: VEIRProject | null
+}) {
+  const isPip = track.type === 'pip'
+  const isSubtitle = track.type === 'subtitle'
+
+  const asset = veirProject?.assets.assets?.[clip.asset]
+  const displayText =
+    asset?.type === 'text' && typeof asset.content === 'string' && asset.content.length > 0
+      ? asset.content
+      : clip.asset
+
+  return (
+    <motion.div
+      className={`
+        absolute cursor-move transition-shadow
+        ${isSelected ? 'ring-2 ring-amber-400' : ''}
+        ${isPip ? 'rounded-lg overflow-hidden' : ''}
+      `}
+      style={{
+        left: `${position.x}%`,
+        top: `${position.y}%`,
+        // 重要：不要手写 transform 字符串并同时使用 framer-motion 的 scale/rotate/whileHover。
+        // 否则 hover 时 framer-motion 会重算 transform，导致 translate(-50%,-50%) 被覆盖而出现“位置偏移”。
+        x: '-50%',
+        y: '-50%',
+        scale: position.scale / 100,
+        rotate: position.rotation,
+      }}
+      onMouseDown={(e) => {
+        onSelect?.()
+        if (!isLocked) onDragStart(e)
+      }}
+      whileHover={!isLocked ? { scale: (position.scale / 100) * 1.02 } : {}}
+    >
+      {isPip ? (
+        <div className="w-28 h-28 bg-black/30 border border-white/15 rounded-lg overflow-hidden flex items-center justify-center">
+          {asset?.type === 'image' && asset.src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={asset.src} alt={clip.asset} className="w-full h-full object-contain" />
+          ) : (
+            <span className="text-2xl">{clip.asset.includes('.gif') ? '🎭' : '🖼️'}</span>
+          )}
+        </div>
+      ) : (
+        <div
+          className={`
+            px-3 py-2 rounded-lg border backdrop-blur
+            ${isSubtitle
+              ? 'bg-black/45 border-white/20'
+              : 'bg-amber-400/15 border-amber-400/25'}
+          `}
+          style={{
+            maxWidth: isSubtitle ? 320 : 240,
+            textAlign: isSubtitle ? 'center' : 'left',
+          }}
+        >
+          <span className={`text-xs ${isSubtitle ? 'text-white/95' : 'text-amber-200'}`}>
+            {displayText}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+// 选中元素控制框
+function SelectedElementOverlay({
+  position,
+  isLocked,
+  onDragStart,
+}: {
+  position: ClipPosition
+  isLocked: boolean
+  onDragStart: (e: React.MouseEvent) => void
+}) {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${position.x}%`,
+        top: `${position.y}%`,
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      {/* 控制点 */}
+      {!isLocked && (
+        <>
+          {/* 四角控制点 */}
+          {[
+            { x: -1, y: -1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: 1, y: 1 },
+          ].map((corner, i) => (
+            <div
+              key={i}
+              className="absolute w-2.5 h-2.5 bg-amber-400 rounded-sm pointer-events-auto cursor-nwse-resize"
+              style={{
+                left: `calc(50% + ${corner.x * 40}px - 5px)`,
+                top: `calc(50% + ${corner.y * 40}px - 5px)`,
+              }}
+            />
+          ))}
+
+          {/* 移动手柄 */}
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
+              w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center
+              pointer-events-auto cursor-move shadow-lg"
+            onMouseDown={onDragStart}
+          >
+            <Move className="w-3 h-3 text-black" />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 

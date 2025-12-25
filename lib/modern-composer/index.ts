@@ -96,6 +96,7 @@ import {
 import { decodeAudioFromUrl } from './audio/decode';
 import { decodePcmFromMediaUrl } from './audio/extract';
 import { wsolaTimeStretch } from './audio/wsola';
+import { percentToCanvasPixel } from '../preview/coordinate-system';
 
 /**
  * 合成器配置
@@ -171,7 +172,7 @@ export class ModernComposer {
     // 初始化 Anime 动画引擎
     this.animeEngine = new AnimeEngine();
 
-    // 初始化视频编码器
+    // 初始化视频编码器（不调用 start，由 composeFromVEIR 根据需要决定是否包含音频）
     this.videoComposer = new MediaBunnyComposer(
       {
         width: this.config.width,
@@ -182,8 +183,16 @@ export class ModernComposer {
       undefined,
       this.config.format || 'mp4'
     );
+  }
 
-    await this.videoComposer.start(this.fabricEngine.getCanvasElement());
+  /**
+   * 启动编码器
+   */
+  private async startComposer(withAudio: boolean): Promise<void> {
+    if (!this.fabricEngine || !this.videoComposer) {
+      throw new Error('Composer not initialized');
+    }
+    await this.videoComposer.start(this.fabricEngine.getCanvasElement(), { withAudio });
   }
 
   /**
@@ -208,13 +217,9 @@ export class ModernComposer {
     // - 若存在 audio track，编码其音频
     // - 若不存在 audio track，则尝试自动抽取视频原声并随 timeWarp 变化
     const wantAudio = project.timeline.tracks.some((t) => t.type === 'audio' || t.type === 'video');
-    if (wantAudio) {
-      try {
-        await this.videoComposer!.addAudioTrack();
-      } catch (e) {
-        console.warn('[ModernComposer] addAudioTrack failed, continue without audio:', e);
-      }
-    }
+
+    // 启动编码器（在这里确定是否包含音频轨道）
+    await this.startComposer(wantAudio);
 
     onProgress?.(20, 'rendering', '开始渲染...');
 
@@ -386,9 +391,9 @@ export class ModernComposer {
 
       // 应用渲染状态
       // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
-      const getNum = (v: number | number[] | undefined, def: number) => 
+      const getNum = (v: number | number[] | undefined, def: number) =>
         typeof v === 'number' ? v : (Array.isArray(v) ? v[0] : def);
-      
+
       const renderState: RenderState = {
         x: position.x + getNum(animState.translateX, 0),
         y: position.y + getNum(animState.translateY, 0),
@@ -514,26 +519,42 @@ export class ModernComposer {
    * 确保视频元素已创建（按 clip 实例化）
    */
   private async ensureVideoElement(elementId: string, clipId: string, assetId: string, rawSrc?: string): Promise<void> {
-    if (!this.fabricEngine) return;
-    if (this.fabricEngine.getElement(elementId)) return;
+    if (!this.fabricEngine) {
+      console.warn('[ModernComposer] ensureVideoElement: no fabricEngine');
+      return;
+    }
+    if (this.fabricEngine.getElement(elementId)) {
+      return; // 已存在
+    }
 
     const resolvedSrc =
       this.resolvedAssetSrc.get(assetId) ||
       (rawSrc ? await this.resolver.resolveVideo(rawSrc) : undefined);
-    if (!resolvedSrc) return;
 
-    await this.fabricEngine.addVideo({
-      id: elementId,
-      type: 'video',
-      src: resolvedSrc,
-      x: this.config.width / 2,
-      y: this.config.height / 2,
-      width: this.config.width,
-      height: this.config.height,
-      opacity: 0,
-    });
+    console.log('[ModernComposer] ensureVideoElement:', { elementId, assetId, resolvedSrc });
 
-    this.activeElements.set(elementId, { clipId, elementType: 'video' });
+    if (!resolvedSrc) {
+      console.warn('[ModernComposer] ensureVideoElement: no resolvedSrc for', assetId);
+      return;
+    }
+
+    try {
+      await this.fabricEngine.addVideo({
+        id: elementId,
+        type: 'video',
+        src: resolvedSrc,
+        x: this.config.width / 2,
+        y: this.config.height / 2,
+        width: this.config.width,
+        height: this.config.height,
+        opacity: 0,
+      });
+
+      this.activeElements.set(elementId, { clipId, elementType: 'video' });
+    } catch (error) {
+      console.warn('[ModernComposer] Failed to load video element, skipping:', { elementId, assetId, error });
+      // 继续执行，不阻断导出流程
+    }
   }
 
   /**
@@ -560,346 +581,7 @@ export class ModernComposer {
     this.activeElements.set(elementId, { clipId, elementType: 'image' });
   }
 
-/**
- * 将转场效果应用到 RenderState（无重叠版本：分别作用于 outgoing/incoming 片段内部）
- */
-function applyTransitionToRenderState(
-  state: RenderState,
-  type: string,
-  phase: 'in' | 'out',
-  t: number,
-  canvasW: number,
-  canvasH: number
-): void {
-  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-  const tt = clamp01(t);
-  const p = phase === 'in' ? tt : (1 - tt); // 1->0 for out, 0->1 for in（便于统一）
 
-  const baseOpacity = state.opacity ?? 1;
-
-  // 对齐类型：dissolve 在当前实现中与 fade 等价（不做双片段叠加）
-  const normalized = type === 'dissolve' ? 'fade' : type;
-
-  switch (normalized) {
-    case 'fade':
-      state.opacity = baseOpacity * p;
-      break;
-
-    case 'slide': {
-      const dx = canvasW * 0.08;
-      state.opacity = baseOpacity * p;
-      // incoming 从右进；outgoing 向左出
-      state.x = (state.x ?? canvasW / 2) + (phase === 'in' ? (1 - tt) * dx : -tt * dx);
-      break;
-    }
-
-    case 'zoom': {
-      const s = phase === 'in' ? (0.94 + 0.06 * tt) : (1 - 0.06 * tt);
-      state.opacity = baseOpacity * p;
-      state.scaleX = (state.scaleX ?? 1) * s;
-      state.scaleY = (state.scaleY ?? 1) * s;
-      break;
-    }
-
-    case 'blur': {
-      state.opacity = baseOpacity * p;
-      // 0~20 的轻模糊（Fabric 内部 /100）
-      const blurAmount = phase === 'in' ? (1 - tt) * 20 : tt * 20;
-      state.blur = Math.max(state.blur ?? 0, blurAmount);
-      break;
-    }
-
-    case 'wipe':
-    default:
-      // 当前 Fabric 渲染器不做 clip-mask，先降级为 fade
-      state.opacity = baseOpacity * p;
-      break;
-  }
-}
-
-function buildWipeClipPath(
-  phase: 'in' | 'out',
-  t: number,
-  direction: string | undefined,
-  canvasW: number,
-  canvasH: number
-): fabric.FabricObject {
-  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-  const tt = clamp01(t);
-  const dir = direction === 'right' || direction === 'up' || direction === 'down' ? direction : 'left';
-
-  // absolutePositioned：使用画布坐标系
-  const rect = new fabric.Rect({
-    left: 0,
-    top: 0,
-    width: canvasW,
-    height: canvasH,
-    absolutePositioned: true,
-  } as any);
-
-  // incoming: reveal from 0 -> full
-  // outgoing: hide from full -> 0
-  const k = phase === 'in' ? tt : (1 - tt);
-
-  if (dir === 'left') {
-    rect.set({
-      left: 0,
-      top: 0,
-      width: canvasW * k,
-      height: canvasH,
-    });
-  } else if (dir === 'right') {
-    rect.set({
-      left: canvasW * (1 - k),
-      top: 0,
-      width: canvasW * k,
-      height: canvasH,
-    });
-  } else if (dir === 'up') {
-    rect.set({
-      left: 0,
-      top: canvasH * (1 - k),
-      width: canvasW,
-      height: canvasH * k,
-    });
-  } else if (dir === 'down') {
-    rect.set({
-      left: 0,
-      top: 0,
-      width: canvasW,
-      height: canvasH * k,
-    });
-  }
-
-  return rect;
-}
-
-/**
- * 将 clip 内的 localTime（timeline 时间）映射到 source 时间（素材播放时间）
- * - constant: 统一倍率
- * - ramp: 分段倍率曲线（按 segments 区间做积分；未覆盖区间默认 speed=1）
- */
-function mapLocalTimeWithTimeWarp(
-  localTime: number,
-  clipDuration: number,
-  timeWarp:
-    | { mode?: string; segments?: Array<{ when?: { start?: number; end?: number }; speed?: number; easing?: string }> }
-    | undefined
-): number {
-  if (!(typeof localTime === 'number') || !Number.isFinite(localTime)) return 0;
-  if (!(typeof clipDuration === 'number') || !Number.isFinite(clipDuration) || clipDuration <= 0) return Math.max(0, localTime);
-
-  const t = Math.min(clipDuration, Math.max(0, localTime));
-  if (!timeWarp || typeof timeWarp !== 'object') return t;
-
-  const mode = typeof timeWarp.mode === 'string' ? timeWarp.mode : 'constant';
-  const segments = Array.isArray(timeWarp.segments) ? timeWarp.segments : [];
-
-  const clampSpeed = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(4, Math.max(0.1, v)) : undefined);
-
-  if (mode === 'constant') {
-    const s0 = clampSpeed(segments[0]?.speed) ?? 1;
-    return t * s0;
-  }
-
-  // ramp：按区间积分（piecewise-constant）
-  type Seg = { start: number; end: number; speed: number };
-  const segs: Seg[] = [];
-  for (const s of segments) {
-    const when = s?.when;
-    const start = typeof when?.start === 'number' && Number.isFinite(when.start) ? when.start : undefined;
-    const end = typeof when?.end === 'number' && Number.isFinite(when.end) ? when.end : undefined;
-    const speed = clampSpeed(s?.speed);
-    if (start === undefined || end === undefined || speed === undefined) continue;
-    if (end <= start) continue;
-    const a = Math.max(0, start);
-    const b = Math.min(clipDuration, end);
-    if (b <= a) continue;
-    segs.push({ start: a, end: b, speed });
-  }
-  segs.sort((a, b) => (a.start - b.start) || (a.end - b.end));
-
-  // 去重/去重叠（保持最简单的确定性）
-  const normalized: Seg[] = [];
-  let cursor = 0;
-  for (const s of segs) {
-    const ss = Math.max(s.start, cursor);
-    const ee = s.end;
-    if (ee <= ss) continue;
-    normalized.push({ start: ss, end: ee, speed: s.speed });
-    cursor = ee;
-    if (cursor >= clipDuration) break;
-  }
-
-  let source = 0;
-  let cur = 0;
-  for (const s of normalized) {
-    if (cur >= t) break;
-    const gapEnd = Math.min(t, s.start);
-    if (gapEnd > cur) {
-      source += (gapEnd - cur) * 1;
-      cur = gapEnd;
-    }
-    if (cur >= t) break;
-    const segEnd = Math.min(t, s.end);
-    if (segEnd > cur) {
-      source += (segEnd - cur) * s.speed;
-      cur = segEnd;
-    }
-  }
-  if (cur < t) {
-    source += (t - cur) * 1;
-  }
-
-  return source;
-}
-
-type EasingName = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
-type PreparedSegment = {
-  start: number;
-  end: number;
-  speed0: number;
-  speed1: number;
-  easing: EasingName;
-  prefixSourceAtStart: number;
-};
-type PreparedTimeWarp = {
-  clipDuration: number;
-  segments: PreparedSegment[];
-};
-
-function clampTime(localTime: number, clipDuration: number): number {
-  if (!(typeof localTime === 'number') || !Number.isFinite(localTime)) return 0;
-  if (!(typeof clipDuration === 'number') || !Number.isFinite(clipDuration) || clipDuration <= 0) return Math.max(0, localTime);
-  return Math.min(clipDuration, Math.max(0, localTime));
-}
-
-function normalizeEasing(name: unknown): EasingName {
-  const s = typeof name === 'string' ? name : '';
-  if (s === 'ease-in' || s === 'ease-out' || s === 'ease-in-out' || s === 'linear') return s;
-  // 兼容常见别名
-  if (/easeinout/i.test(s)) return 'ease-in-out';
-  if (/easein/i.test(s)) return 'ease-in';
-  if (/easeout/i.test(s)) return 'ease-out';
-  return 'linear';
-}
-
-function ease(e: EasingName, t: number): number {
-  const x = Math.min(1, Math.max(0, t));
-  switch (e) {
-    case 'ease-in':
-      return x * x;
-    case 'ease-out':
-      return 1 - (1 - x) * (1 - x);
-    case 'ease-in-out':
-      return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
-    case 'linear':
-    default:
-      return x;
-  }
-}
-
-function integrateSpeedSegment(seg: PreparedSegment, tEnd: number): number {
-  const a = seg.start;
-  const b = Math.min(seg.end, tEnd);
-  if (b <= a) return 0;
-  // Simpson's rule with fixed even n
-  const n = 8;
-  const h = (b - a) / n;
-  const speedAt = (t: number) => {
-    const u = (t - seg.start) / Math.max(1e-9, (seg.end - seg.start));
-    const k = ease(seg.easing, u);
-    return seg.speed0 + (seg.speed1 - seg.speed0) * k;
-  };
-  let s = speedAt(a) + speedAt(b);
-  for (let i = 1; i < n; i++) {
-    const x = a + h * i;
-    s += speedAt(x) * (i % 2 === 0 ? 2 : 4);
-  }
-  return (h / 3) * s;
-}
-
-function prepareTimeWarp(
-  clipDuration: number,
-  timeWarp:
-    | { mode?: string; segments?: Array<{ when?: { start?: number; end?: number }; speed?: number; easing?: string }> }
-    | undefined
-): PreparedTimeWarp | null {
-  if (!timeWarp || typeof timeWarp !== 'object') return null;
-  const mode = typeof timeWarp.mode === 'string' ? timeWarp.mode : 'constant';
-  if (mode !== 'ramp') return null;
-
-  const clampSpeed = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(4, Math.max(0.1, v)) : undefined);
-  const raw = Array.isArray(timeWarp.segments) ? timeWarp.segments : [];
-
-  // 以“区间”为主：每段可选择 easing 表达“从上一段 speed → 当前段 speed”的连续过渡
-  type RawSeg = { start: number; end: number; speed: number; easing: EasingName };
-  const segs: RawSeg[] = [];
-  for (const s of raw) {
-    const when = s?.when;
-    const start = typeof when?.start === 'number' && Number.isFinite(when.start) ? when.start : undefined;
-    const end = typeof when?.end === 'number' && Number.isFinite(when.end) ? when.end : undefined;
-    const speed = clampSpeed(s?.speed);
-    if (start === undefined || end === undefined || speed === undefined) continue;
-    if (end <= start) continue;
-    const a = Math.max(0, start);
-    const b = Math.min(clipDuration, end);
-    if (b <= a) continue;
-    segs.push({ start: a, end: b, speed, easing: normalizeEasing(s?.easing) });
-  }
-  segs.sort((a, b) => (a.start - b.start) || (a.end - b.end));
-  if (segs.length === 0) return null;
-
-  // 构造覆盖全片段的“段列表”，空洞默认 speed=1（linear）
-  const prepared: PreparedSegment[] = [];
-  let cursor = 0;
-  let prevSpeed = 1;
-  let prefix = 0;
-
-  const pushSeg = (start: number, end: number, speed0: number, speed1: number, easingName: EasingName) => {
-    const seg: PreparedSegment = { start, end, speed0, speed1, easing: easingName, prefixSourceAtStart: prefix };
-    // 预计算该段完整积分，更新 prefix
-    prefix += integrateSpeedSegment(seg, end);
-    prepared.push(seg);
-  };
-
-  for (const s of segs) {
-    if (s.start > cursor) {
-      pushSeg(cursor, s.start, 1, 1, 'linear');
-      cursor = s.start;
-      prevSpeed = 1;
-    }
-    // 连续曲线：从 prevSpeed 过渡到当前段 speed
-    pushSeg(s.start, s.end, prevSpeed, s.speed, s.easing);
-    cursor = s.end;
-    prevSpeed = s.speed;
-  }
-  if (cursor < clipDuration) {
-    pushSeg(cursor, clipDuration, 1, 1, 'linear');
-  }
-
-  return { clipDuration, segments: prepared };
-}
-
-function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number): number {
-  const t = clampTime(localTime, prepared.clipDuration);
-  const segs = prepared.segments;
-  // 二分查找所在段
-  let lo = 0;
-  let hi = segs.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const s = segs[mid];
-    if (t < s.start) hi = mid - 1;
-    else if (t >= s.end) lo = mid + 1;
-    else {
-      return s.prefixSourceAtStart + integrateSpeedSegment(s, t);
-    }
-  }
-  // fallback：最后一段结束
-  const last = segs[segs.length - 1];
-  return last.prefixSourceAtStart + integrateSpeedSegment(last, last.end);
-}
 
   /**
    * 获取活跃的 Clips
@@ -953,14 +635,14 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
     // 获取入场/出场动画类型
     const enterType = clip.behavior?.enter || 'fade-in';
     const exitType = clip.behavior?.exit || 'fade-out';
-    
+
     // 当前绝对时间（秒）
     const currentTime = progress * duration;
     // 入场动画持续时间（秒）
     const enterDurSeconds = enterDuration * duration;
     // 入场完成后的时间
     const timeAfterEnter = Math.max(0, currentTime - enterDurSeconds);
-    
+
     // 调试日志
     if (Math.floor(currentTime * 2) !== Math.floor((currentTime - 0.5) * 2)) {
       console.log('[ModernComposer] Animation:', {
@@ -987,7 +669,7 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
         // shake: 整个显示期间持续抖动
         const shakeTime = currentTime * 30;  // 抖动频率
         let shakeIntensity = 1;
-        
+
         // 入场时逐渐增加抖动
         if (progress < enterDuration) {
           shakeIntensity = progress / enterDuration;
@@ -996,22 +678,22 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
         else if (progress > 1 - exitDuration) {
           shakeIntensity = (1 - progress) / exitDuration;
         }
-        
+
         state.translateX = Math.sin(shakeTime) * 8 * shakeIntensity;  // 8px 幅度
       } else if (enterType === 'pulse') {
         // pulse: 脉冲缩放效果
         const pulseTime = currentTime * 8;
         let pulseIntensity = 1;
-        
+
         if (progress < enterDuration) {
           pulseIntensity = progress / enterDuration;
         } else if (progress > 1 - exitDuration) {
           pulseIntensity = (1 - progress) / exitDuration;
         }
-        
+
         state.scale = 1 + Math.sin(pulseTime) * 0.1 * pulseIntensity;  // 10% 缩放幅度
       }
-      
+
       return state;
     }
 
@@ -1090,6 +772,7 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
 
   /**
    * 计算 Clip 位置
+   * 使用统一坐标转换确保与预览一致
    */
   private calculateClipPosition(
     clip: Clip,
@@ -1101,6 +784,23 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
     let width = this.config.width;
     let height = this.config.height;
 
+    // 检查是否有自定义位置（来自预览组件的拖拽）
+    const adjustment = project.adjustments?.clipOverrides?.[clip.id];
+    const transform = adjustment?.video?.transform;
+
+    // 如果有 VEIR 中的 offset，使用统一坐标转换
+    if (transform?.offset) {
+      // VEIR offset 是像素坐标，转换为百分比再转为画布像素
+      const resolution = project.meta.resolution;
+      const percentX = (transform.offset[0] / resolution[0]) * 100;
+      const percentY = (transform.offset[1] / resolution[1]) * 100;
+
+      // 使用统一坐标转换函数确保与预览一致
+      const pos = percentToCanvasPixel(percentX, percentY, this.config.width, this.config.height);
+      x = pos.x;
+      y = pos.y;
+    }
+
     // 处理 PIP 布局
     if (track.type === 'pip' && clip.expression?.preset) {
       const preset = project.vocabulary.presets[clip.expression.preset];
@@ -1111,14 +811,17 @@ function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number)
         width = this.config.width * size[0];
         height = this.config.height * size[1];
 
-        const padding = 20;
-        if (anchor.includes('right')) x = this.config.width - width / 2 - padding;
-        if (anchor.includes('left')) x = width / 2 + padding;
-        if (anchor.includes('bottom')) y = this.config.height - height / 2 - padding;
-        if (anchor.includes('top')) y = height / 2 + padding;
-        if (anchor === 'center') {
-          x = this.config.width / 2;
-          y = this.config.height / 2;
+        // 如果没有自定义位置，使用预设锚点
+        if (!transform?.offset) {
+          const padding = 20;
+          if (anchor.includes('right')) x = this.config.width - width / 2 - padding;
+          if (anchor.includes('left')) x = width / 2 + padding;
+          if (anchor.includes('bottom')) y = this.config.height - height / 2 - padding;
+          if (anchor.includes('top')) y = height / 2 + padding;
+          if (anchor === 'center') {
+            x = this.config.width / 2;
+            y = this.config.height / 2;
+          }
         }
       }
     }
@@ -1763,7 +1466,7 @@ export async function quickCompose(
 
       // 渲染并编码帧
       fabricEngine.render();
-      
+
       const frameDuration = 1 / fps;
       await videoComposer.encodeFrame(frame / fps, frameDuration, {
         keyFrame: frame % 30 === 0,
@@ -1931,6 +1634,347 @@ function calculateSubtitleAnimation(
   }
 
   return { opacity, translateY, scale };
+}
+
+/**
+ * 将转场效果应用到 RenderState（无重叠版本：分别作用于 outgoing/incoming 片段内部）
+ */
+function applyTransitionToRenderState(
+  state: RenderState,
+  type: string,
+  phase: 'in' | 'out',
+  t: number,
+  canvasW: number,
+  canvasH: number
+): void {
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const tt = clamp01(t);
+  const p = phase === 'in' ? tt : (1 - tt); // 1->0 for out, 0->1 for in（便于统一）
+
+  const baseOpacity = state.opacity ?? 1;
+
+  // 对齐类型：dissolve 在当前实现中与 fade 等价（不做双片段叠加）
+  const normalized = type === 'dissolve' ? 'fade' : type;
+
+  switch (normalized) {
+    case 'fade':
+      state.opacity = baseOpacity * p;
+      break;
+
+    case 'slide': {
+      const dx = canvasW * 0.08;
+      state.opacity = baseOpacity * p;
+      // incoming 从右进；outgoing 向左出
+      state.x = (state.x ?? canvasW / 2) + (phase === 'in' ? (1 - tt) * dx : -tt * dx);
+      break;
+    }
+
+    case 'zoom': {
+      const s = phase === 'in' ? (0.94 + 0.06 * tt) : (1 - 0.06 * tt);
+      state.opacity = baseOpacity * p;
+      state.scaleX = (state.scaleX ?? 1) * s;
+      state.scaleY = (state.scaleY ?? 1) * s;
+      break;
+    }
+
+    case 'blur': {
+      state.opacity = baseOpacity * p;
+      // 0~20 的轻模糊（Fabric 内部 /100）
+      const blurAmount = phase === 'in' ? (1 - tt) * 20 : tt * 20;
+      state.blur = Math.max(state.blur ?? 0, blurAmount);
+      break;
+    }
+
+    case 'wipe':
+    default:
+      // 当前 Fabric 渲染器不做 clip-mask，先降级为 fade
+      state.opacity = baseOpacity * p;
+      break;
+  }
+}
+
+function buildWipeClipPath(
+  phase: 'in' | 'out',
+  t: number,
+  direction: string | undefined,
+  canvasW: number,
+  canvasH: number
+): fabric.FabricObject {
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const tt = clamp01(t);
+  const dir = direction === 'right' || direction === 'up' || direction === 'down' ? direction : 'left';
+
+  // absolutePositioned：使用画布坐标系
+  const rect = new fabric.Rect({
+    left: 0,
+    top: 0,
+    width: canvasW,
+    height: canvasH,
+    absolutePositioned: true,
+  } as any);
+
+  // incoming: reveal from 0 -> full
+  // outgoing: hide from full -> 0
+  const k = phase === 'in' ? tt : (1 - tt);
+
+  if (dir === 'left') {
+    rect.set({
+      left: 0,
+      top: 0,
+      width: canvasW * k,
+      height: canvasH,
+    });
+  } else if (dir === 'right') {
+    rect.set({
+      left: canvasW * (1 - k),
+      top: 0,
+      width: canvasW * k,
+      height: canvasH,
+    });
+  } else if (dir === 'up') {
+    rect.set({
+      left: 0,
+      top: canvasH * (1 - k),
+      width: canvasW,
+      height: canvasH * k,
+    });
+  } else if (dir === 'down') {
+    rect.set({
+      left: 0,
+      top: 0,
+      width: canvasW,
+      height: canvasH * k,
+    });
+  }
+
+  return rect;
+}
+
+/**
+ * 将 clip 内的 localTime（timeline 时间）映射到 source 时间（素材播放时间）
+ * - constant: 统一倍率
+ * - ramp: 分段倍率曲线（按 segments 区间做积分；未覆盖区间默认 speed=1）
+ */
+function mapLocalTimeWithTimeWarp(
+  localTime: number,
+  clipDuration: number,
+  timeWarp:
+    | { mode?: string; segments?: Array<{ when?: { start?: number; end?: number }; speed?: number; easing?: string }> }
+    | undefined
+): number {
+  if (!(typeof localTime === 'number') || !Number.isFinite(localTime)) return 0;
+  if (!(typeof clipDuration === 'number') || !Number.isFinite(clipDuration) || clipDuration <= 0) return Math.max(0, localTime);
+
+  const t = Math.min(clipDuration, Math.max(0, localTime));
+  if (!timeWarp || typeof timeWarp !== 'object') return t;
+
+  const mode = typeof timeWarp.mode === 'string' ? timeWarp.mode : 'constant';
+  const segments = Array.isArray(timeWarp.segments) ? timeWarp.segments : [];
+
+  const clampSpeed = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(4, Math.max(0.1, v)) : undefined);
+
+  if (mode === 'constant') {
+    const s0 = clampSpeed(segments[0]?.speed) ?? 1;
+    return t * s0;
+  }
+
+  // ramp：按区间积分（piecewise-constant）
+  type Seg = { start: number; end: number; speed: number };
+  const segs: Seg[] = [];
+  for (const s of segments) {
+    const when = s?.when;
+    const start = typeof when?.start === 'number' && Number.isFinite(when.start) ? when.start : undefined;
+    const end = typeof when?.end === 'number' && Number.isFinite(when.end) ? when.end : undefined;
+    const speed = clampSpeed(s?.speed);
+    if (start === undefined || end === undefined || speed === undefined) continue;
+    if (end <= start) continue;
+    const a = Math.max(0, start);
+    const b = Math.min(clipDuration, end);
+    if (b <= a) continue;
+    segs.push({ start: a, end: b, speed });
+  }
+  segs.sort((a, b) => (a.start - b.start) || (a.end - b.end));
+
+  // 去重/去重叠（保持最简单的确定性）
+  const normalized: Seg[] = [];
+  let cursor = 0;
+  for (const s of segs) {
+    const ss = Math.max(s.start, cursor);
+    const ee = s.end;
+    if (ee <= ss) continue;
+    normalized.push({ start: ss, end: ee, speed: s.speed });
+    cursor = ee;
+    if (cursor >= clipDuration) break;
+  }
+
+  let source = 0;
+  let cur = 0;
+  for (const s of normalized) {
+    if (cur >= t) break;
+    const gapEnd = Math.min(t, s.start);
+    if (gapEnd > cur) {
+      source += (gapEnd - cur) * 1;
+      cur = gapEnd;
+    }
+    if (cur >= t) break;
+    const segEnd = Math.min(t, s.end);
+    if (segEnd > cur) {
+      source += (segEnd - cur) * s.speed;
+      cur = segEnd;
+    }
+  }
+  if (cur < t) {
+    source += (t - cur) * 1;
+  }
+
+  return source;
+}
+
+type EasingName = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+type PreparedSegment = {
+  start: number;
+  end: number;
+  speed0: number;
+  speed1: number;
+  easing: EasingName;
+  prefixSourceAtStart: number;
+};
+type PreparedTimeWarp = {
+  clipDuration: number;
+  segments: PreparedSegment[];
+};
+
+function clampTime(localTime: number, clipDuration: number): number {
+  if (!(typeof localTime === 'number') || !Number.isFinite(localTime)) return 0;
+  if (!(typeof clipDuration === 'number') || !Number.isFinite(clipDuration) || clipDuration <= 0) return Math.max(0, localTime);
+  return Math.min(clipDuration, Math.max(0, localTime));
+}
+
+function normalizeEasing(name: unknown): EasingName {
+  const s = typeof name === 'string' ? name : '';
+  if (s === 'ease-in' || s === 'ease-out' || s === 'ease-in-out' || s === 'linear') return s;
+  // 兼容常见别名
+  if (/easeinout/i.test(s)) return 'ease-in-out';
+  if (/easein/i.test(s)) return 'ease-in';
+  if (/easeout/i.test(s)) return 'ease-out';
+  return 'linear';
+}
+
+function ease(e: EasingName, t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  switch (e) {
+    case 'ease-in':
+      return x * x;
+    case 'ease-out':
+      return 1 - (1 - x) * (1 - x);
+    case 'ease-in-out':
+      return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    case 'linear':
+    default:
+      return x;
+  }
+}
+
+function integrateSpeedSegment(seg: PreparedSegment, tEnd: number): number {
+  const a = seg.start;
+  const b = Math.min(seg.end, tEnd);
+  if (b <= a) return 0;
+  // Simpson's rule with fixed even n
+  const n = 8;
+  const h = (b - a) / n;
+  const speedAt = (t: number) => {
+    const u = (t - seg.start) / Math.max(1e-9, (seg.end - seg.start));
+    const k = ease(seg.easing, u);
+    return seg.speed0 + (seg.speed1 - seg.speed0) * k;
+  };
+  let s = speedAt(a) + speedAt(b);
+  for (let i = 1; i < n; i++) {
+    const x = a + h * i;
+    s += speedAt(x) * (i % 2 === 0 ? 2 : 4);
+  }
+  return (h / 3) * s;
+}
+
+function prepareTimeWarp(
+  clipDuration: number,
+  timeWarp:
+    | { mode?: string; segments?: Array<{ when?: { start?: number; end?: number }; speed?: number; easing?: string }> }
+    | undefined
+): PreparedTimeWarp | null {
+  if (!timeWarp || typeof timeWarp !== 'object') return null;
+  const mode = typeof timeWarp.mode === 'string' ? timeWarp.mode : 'constant';
+  if (mode !== 'ramp') return null;
+
+  const clampSpeed = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(4, Math.max(0.1, v)) : undefined);
+  const raw = Array.isArray(timeWarp.segments) ? timeWarp.segments : [];
+
+  // 以“区间”为主：每段可选择 easing 表达“从上一段 speed → 当前段 speed”的连续过渡
+  type RawSeg = { start: number; end: number; speed: number; easing: EasingName };
+  const segs: RawSeg[] = [];
+  for (const s of raw) {
+    const when = s?.when;
+    const start = typeof when?.start === 'number' && Number.isFinite(when.start) ? when.start : undefined;
+    const end = typeof when?.end === 'number' && Number.isFinite(when.end) ? when.end : undefined;
+    const speed = clampSpeed(s?.speed);
+    if (start === undefined || end === undefined || speed === undefined) continue;
+    if (end <= start) continue;
+    const a = Math.max(0, start);
+    const b = Math.min(clipDuration, end);
+    if (b <= a) continue;
+    segs.push({ start: a, end: b, speed, easing: normalizeEasing(s?.easing) });
+  }
+  segs.sort((a, b) => (a.start - b.start) || (a.end - b.end));
+  if (segs.length === 0) return null;
+
+  // 构造覆盖全片段的“段列表”，空洞默认 speed=1（linear）
+  const prepared: PreparedSegment[] = [];
+  let cursor = 0;
+  let prevSpeed = 1;
+  let prefix = 0;
+
+  const pushSeg = (start: number, end: number, speed0: number, speed1: number, easingName: EasingName) => {
+    const seg: PreparedSegment = { start, end, speed0, speed1, easing: easingName, prefixSourceAtStart: prefix };
+    // 预计算该段完整积分，更新 prefix
+    prefix += integrateSpeedSegment(seg, end);
+    prepared.push(seg);
+  };
+
+  for (const s of segs) {
+    if (s.start > cursor) {
+      pushSeg(cursor, s.start, 1, 1, 'linear');
+      cursor = s.start;
+      prevSpeed = 1;
+    }
+    // 连续曲线：从 prevSpeed 过渡到当前段 speed
+    pushSeg(s.start, s.end, prevSpeed, s.speed, s.easing);
+    cursor = s.end;
+    prevSpeed = s.speed;
+  }
+  if (cursor < clipDuration) {
+    pushSeg(cursor, clipDuration, 1, 1, 'linear');
+  }
+
+  return { clipDuration, segments: prepared };
+}
+
+function evaluatePreparedTimeWarp(prepared: PreparedTimeWarp, localTime: number): number {
+  const t = clampTime(localTime, prepared.clipDuration);
+  const segs = prepared.segments;
+  // 二分查找所在段
+  let lo = 0;
+  let hi = segs.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const s = segs[mid];
+    if (t < s.start) hi = mid - 1;
+    else if (t >= s.end) lo = mid + 1;
+    else {
+      return s.prefixSourceAtStart + integrateSpeedSegment(s, t);
+    }
+  }
+  // fallback：最后一段结束
+  const last = segs[segs.length - 1];
+  return last.prefixSourceAtStart + integrateSpeedSegment(last, last.end);
 }
 
 
