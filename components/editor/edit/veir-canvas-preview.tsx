@@ -176,17 +176,18 @@ export function VEIRCanvasPreview({
     }
   }, [isMuted])
 
-  // CSS 样式：等比缩放适配容器，确保预览比例与 VEIR 分辨率一致
+  // CSS 样式：使用 max 约束确保 canvas 不超出父容器并保持比例居中
+  // 父容器 (UniversalPreview 的渲染区域) 已计算好正确的尺寸
   const canvasStyle = useMemo(() => {
-    const [w, h] = project.meta.resolution
     return {
-      width: '100%',
-      height: '100%',
+      display: 'block',
+      maxWidth: '100%',
+      maxHeight: '100%',
       objectFit: 'contain' as const,
-      // 保持 VEIR 项目的原始比例
-      aspectRatio: `${w} / ${h}`,
+      // 居中显示
+      margin: 'auto',
     }
-  }, [project.meta.resolution])
+  }, [])
 
   return (
     <canvas

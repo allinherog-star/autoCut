@@ -3,6 +3,11 @@
 /**
  * 视频预览区组件 - 支持素材拖拽调整位置
  * Video Preview Panel Component - Supports dragging materials to adjust position
+ * 
+ * 使用 UniversalPreview 组件实现专业级预览，支持：
+ * - 三层坐标系统（Content/Canvas/View Space）
+ * - 多比例自适应
+ * - 网格/安全区/中心线辅助
  */
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
@@ -27,6 +32,8 @@ import {
 import { useTimelineStore } from '@/lib/timeline/store'
 import type { Clip, Track, VEIRProject } from '@/lib/veir/types'
 import { VEIRCanvasPreview } from './veir-canvas-preview'
+import { UniversalPreview, type UniversalPreviewRef } from '@/components/ui/universal-preview'
+import { normalizedToPercent } from '@/lib/preview/coordinate-system'
 
 type TargetDevice = 'phone' | 'pc'
 
@@ -92,6 +99,17 @@ export function VideoPreviewPanel({
 }: VideoPreviewPanelProps) {
   const { data, playback, togglePlay, seek } = useTimelineStore()
 
+  // UniversalPreview 组件引用
+  const universalPreviewRef = useRef<UniversalPreviewRef>(null)
+
+  // 内容分辨率：优先使用 VEIR 项目的分辨率，确保预览与导出一致
+  const contentResolution: [number, number] = useMemo(() => {
+    if (veirProject?.meta?.resolution) {
+      return veirProject.meta.resolution as [number, number]
+    }
+    return [deviceConfig.width, deviceConfig.height]
+  }, [veirProject?.meta?.resolution, deviceConfig.width, deviceConfig.height])
+
   // 状态
   const [isMuted, setIsMuted] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
@@ -99,7 +117,7 @@ export function VideoPreviewPanel({
   // 拖拽临时覆盖（最终以 VEIR adjustments 为准）
   const [clipPositions, setClipPositions] = useState<Record<string, ClipPosition>>({})
 
-  // 严格比例预览内框（用于保证 phone=9:16 / pc=16:9）
+  // 严格比例预览内框（现在由 UniversalPreview 组件处理）
   const viewportRef = useRef<HTMLDivElement>(null) // 可用空间（去掉 padding 后）
   const [frameSize, setFrameSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
@@ -455,82 +473,58 @@ export function VideoPreviewPanel({
         </div>
       </div>
 
-      {/* 预览区域 */}
+      {/* 预览区域 - 使用 UniversalPreview 组件 */}
       <div
         ref={previewRef}
         className={`flex-1 relative overflow-hidden ${dragState.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
       >
-        {/* 可用空间（留出内边距） */}
-        <div ref={viewportRef} className="absolute inset-4 flex items-center justify-center">
-          {/* 严格比例内框：所有渲染/拖拽都以此为基准 */}
-          <div
-            ref={videoContainerRef}
-            className={`
-              relative bg-black overflow-hidden shadow-2xl
-              ${targetDevice === 'phone' ? 'rounded-2xl' : 'rounded-lg'}
-            `}
-            style={{
-              width: frameSize.width ? `${frameSize.width}px` : undefined,
-              height: frameSize.height ? `${frameSize.height}px` : undefined,
-              aspectRatio: deviceConfig.aspectRatio,
-            }}
-          >
-            {/* 网格参考线 */}
-            {showGrid && (
-              <div className="absolute inset-0 pointer-events-none">
-                {/* 三分线 */}
-                <div className="absolute top-1/3 left-0 right-0 h-px bg-white/10" />
-                <div className="absolute top-2/3 left-0 right-0 h-px bg-white/10" />
-                <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/10" />
-                <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/10" />
-                {/* 中心线 */}
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-violet-500/30" />
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-violet-500/30" />
-              </div>
-            )}
-
-            {/* 主视频区域（真实素材优先） */}
-            {veirProject ? (
-              <VEIRCanvasPreview
-                project={veirProject}
-                time={playback.currentTime}
-                isPlaying={playback.isPlaying}
-                isMuted={isMuted}
-                className="absolute inset-0 w-full h-full"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
-                    <Play className="w-8 h-8 text-[#444]" />
-                  </div>
-                  <p className="text-xs text-[#555]">{formatTime(playback.currentTime)} / {formatTime(playback.duration)}</p>
+        <UniversalPreview
+          ref={universalPreviewRef}
+          contentResolution={contentResolution}
+          showGrid={showGrid}
+          showCenterLines={showGrid}
+          showSafeArea={true}
+          showControls={false}
+          className="absolute inset-0"
+        >
+          {/* 主视频区域 - 使用 w-full h-full 填充渲染区域 */}
+          {veirProject ? (
+            <VEIRCanvasPreview
+              project={veirProject}
+              time={playback.currentTime}
+              isPlaying={playback.isPlaying}
+              isMuted={isMuted}
+              className="w-full h-full"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] to-[#0a0a14]">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-[#252528] flex items-center justify-center">
+                  <Play className="w-8 h-8 text-[#444]" />
                 </div>
+                <p className="text-xs text-[#555]">{formatTime(playback.currentTime)} / {formatTime(playback.duration)}</p>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* 交互层：仅对“当前选中且可见”的元素提供拖拽把手（画面由 Canvas 渲染，避免重复显示） */}
-            {selectedClipId &&
-              visibleClips
-                .filter(({ clip }) => clip.id === selectedClipId)
-                .map(({ clip, track, position }) => (
-                  <DraggableElement
-                    key={clip.id}
-                    clip={clip}
-                    track={track}
-                    position={position}
-                    isSelected={true}
-                    isLocked={isLocked}
-                    onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
-                    onSelect={() => onSelectClip?.(clip.id, track.id)}
-                    veirProject={veirProject}
-                  />
-                ))}
-
-            {/* 安全区域提示（基于严格比例内框） */}
-            <div className="absolute inset-2 border border-dashed border-[#333] rounded-md pointer-events-none opacity-30" />
-          </div>
-        </div>
+          {/* 交互层：仅对"当前选中且可见"的元素提供拖拽把手（画面由 Canvas 渲染，避免重复显示） */}
+          {selectedClipId &&
+            visibleClips
+              .filter(({ clip }) => clip.id === selectedClipId)
+              .map(({ clip, track, position }) => (
+                <DraggableElement
+                  key={clip.id}
+                  clip={clip}
+                  track={track}
+                  position={position}
+                  isSelected={true}
+                  isLocked={isLocked}
+                  onDragStart={(e) => handleDragStart(e, clip.id, track.type)}
+                  onSelect={() => onSelectClip?.(clip.id, track.id)}
+                  veirProject={veirProject}
+                />
+              ))}
+        </UniversalPreview>
       </div>
 
       {/* 播放控制栏 */}

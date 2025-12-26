@@ -201,8 +201,8 @@ export default function EditPage() {
     <div className="absolute inset-0 flex flex-col bg-[#0f0f12]">
       {/* 主内容区域 - 上半部分 */}
       <div className="flex-1 flex min-h-0">
-        {/* 左侧：素材列表 */}
-        <div className="w-64 flex-shrink-0 border-r border-[#2a2a2e] bg-[#141417]">
+        {/* 左侧：素材列表（略微压缩以给预览更多空间） */}
+        <div className="w-56 flex-shrink-0 border-r border-[#2a2a2e] bg-[#141417]">
           <MaterialList
             selectedClipId={selectedClipId}
             onSelectClip={handleSelectClip}
@@ -210,10 +210,10 @@ export default function EditPage() {
           />
         </div>
 
-        {/* 中间区域 */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* 中间区域（可压缩，优先为预览区让出空间） */}
+        <div className="w-[320px] min-w-[260px] flex-shrink flex flex-col border-r border-[#2a2a2e]">
           {/* 上方：素材功能操作区 */}
-          <div className="h-[260px] flex-shrink-0 border-b border-[#2a2a2e] bg-[#141417]">
+          <div className="h-[200px] flex-shrink-0 border-b border-[#2a2a2e] bg-[#141417]">
             <MaterialOperations
               selectedClipId={selectedClipId}
               selectedTrackId={selectedTrackId}
@@ -222,7 +222,7 @@ export default function EditPage() {
           </div>
 
           {/* 下方：AI聊天对话框 */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 bg-[#141417]">
             <AIChatPanel
               selectedClipId={selectedClipId}
               selectedTrackId={selectedTrackId}
@@ -231,8 +231,8 @@ export default function EditPage() {
           </div>
         </div>
 
-        {/* 右侧：预览区 */}
-        <div className="w-[480px] flex-shrink-0 border-l border-[#2a2a2e]">
+        {/* 右侧：预览区（优先空间，最佳预览效果） */}
+        <div className="flex-1 min-w-[400px]">
           <VideoPreviewPanel
             selectedClipId={selectedClipId}
             selectedTrackId={selectedTrackId}
