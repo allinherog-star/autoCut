@@ -2,27 +2,47 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import type { VEIRProject } from '@/lib/veir/types'
+import { VEIRAudioPlayer } from './veir-audio-player'
 
 type Props = {
   project: VEIRProject
   time: number
+  /** 是否正在播放（控制音频同步） */
+  isPlaying?: boolean
+  /** 是否静音 */
+  isMuted?: boolean
   className?: string
 }
 
 /**
  * VEIR Canvas 预览（与导出同一渲染内核）
+ * 
+ * 标准化预览组件：
+ * - Canvas 分辨率 = project.meta.resolution（与导出完全一致）
  * - 复用 ModernComposer.renderFrame()，不启动编码器
- * - Canvas 实际分辨率 = project.meta.resolution，外层用 CSS 做等比缩放
+ * - 集成音频播放器，实现音画同步
+ * - CSS 等比缩放显示
  */
-export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
+export function VEIRCanvasPreview({
+  project,
+  time,
+  isPlaying = false,
+  isMuted = false,
+  className = ''
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const composerRef = useRef<null | { render: (t: number) => void; destroy: () => void }>(null)
+  const audioPlayerRef = useRef<VEIRAudioPlayer | null>(null)
   const projectRef = useRef<VEIRProject>(project)
   // 跟踪当前正在初始化的 composer，避免 React Strict Mode 下重复初始化导致的 Fabric 错误
   const initializingComposerRef = useRef<{ destroy: () => void } | null>(null)
 
   useEffect(() => {
     projectRef.current = project
+    // 更新音频播放器的项目
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.setProject(project)
+    }
   }, [project])
 
   const key = useMemo(() => {
@@ -30,12 +50,13 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
     return `${w}x${h}@${project.meta.fps}`
   }, [project.meta.resolution, project.meta.fps])
 
+  // 初始化 Canvas 渲染器
   useEffect(() => {
     let cancelled = false
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // 设置真实像素尺寸（避免 CSS 拉伸导致渲染模糊）
+    // 设置真实像素尺寸（与 VEIR 分辨率一致，确保预览 = 导出）
     canvas.width = project.meta.resolution[0]
     canvas.height = project.meta.resolution[1]
 
@@ -109,11 +130,69 @@ export function VEIRCanvasPreview({ project, time, className = '' }: Props) {
     // key 变化代表分辨率/fps 变化，需要重建 composer
   }, [key, project.meta.duration])
 
+  // 初始化音频播放器
+  useEffect(() => {
+    const player = new VEIRAudioPlayer(project)
+    audioPlayerRef.current = player
+
+    // 预加载音频
+    player.preload().catch(err => {
+      console.warn('[VEIRCanvasPreview] Audio preload failed:', err)
+    })
+
+    return () => {
+      player.destroy()
+      audioPlayerRef.current = null
+    }
+  }, [project])
+
+  // 渲染帧
   useEffect(() => {
     composerRef.current?.render(time)
   }, [time])
 
-  return <canvas ref={canvasRef} className={className} />
+  // 同步音频时间
+  useEffect(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.seek(time)
+    }
+  }, [time])
+
+  // 控制音频播放/暂停
+  useEffect(() => {
+    if (!audioPlayerRef.current) return
+
+    if (isPlaying) {
+      audioPlayerRef.current.play()
+    } else {
+      audioPlayerRef.current.pause()
+    }
+  }, [isPlaying])
+
+  // 控制音频静音
+  useEffect(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.setMuted(isMuted)
+    }
+  }, [isMuted])
+
+  // CSS 样式：等比缩放适配容器，确保预览比例与 VEIR 分辨率一致
+  const canvasStyle = useMemo(() => {
+    const [w, h] = project.meta.resolution
+    return {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain' as const,
+      // 保持 VEIR 项目的原始比例
+      aspectRatio: `${w} / ${h}`,
+    }
+  }, [project.meta.resolution])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={className}
+      style={canvasStyle}
+    />
+  )
 }
-
-

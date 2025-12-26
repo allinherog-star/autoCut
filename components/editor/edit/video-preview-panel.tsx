@@ -125,11 +125,17 @@ export function VideoPreviewPanel({
   const dragPendingRef = useRef<{ clipId: string; x: number; y: number } | null>(null)
 
   // 监听可用空间变化，计算严格比例内框尺寸
+  // 关键：使用 VEIR 项目的分辨率 (meta.resolution) 确保预览与导出效果一致
   useEffect(() => {
     const el = viewportRef.current
     if (!el) return
 
-    const ratio = deviceConfig.width > 0 && deviceConfig.height > 0 ? deviceConfig.width / deviceConfig.height : 16 / 9
+    // 优先使用 VEIR 项目分辨率，回退到 deviceConfig
+    // 这确保预览比例与导出完全一致（类似 PR/AE 的 WYSIWYG 体验）
+    const [veirW, veirH] = veirProject?.meta?.resolution || [0, 0]
+    const ratio = veirW > 0 && veirH > 0
+      ? veirW / veirH
+      : (deviceConfig.width > 0 && deviceConfig.height > 0 ? deviceConfig.width / deviceConfig.height : 16 / 9)
 
     const compute = () => {
       const rect = el.getBoundingClientRect()
@@ -164,7 +170,7 @@ export function VideoPreviewPanel({
       window.clearTimeout(timer)
       ro?.disconnect()
     }
-  }, [deviceConfig.width, deviceConfig.height])
+  }, [veirProject?.meta?.resolution, deviceConfig.width, deviceConfig.height])
 
   // 获取选中素材信息
   const selectedClipInfo = useMemo(() => {
@@ -410,11 +416,16 @@ export function VideoPreviewPanel({
 
         {/* 右侧：缩放控制 */}
         <div className="flex items-center gap-1">
-          {/* 目标设备提示（严格比例渲染） */}
+          {/* 目标设备提示：优先显示 VEIR 项目分辨率（确保预览 = 导出） */}
           <div className="hidden sm:flex items-center gap-2 mr-2 px-2 py-1 rounded bg-black/30 border border-white/10">
-            <span className="text-[10px] text-[#9aa]">{deviceConfig.name}</span>
+            <span className="text-[10px] text-[#9aa]">
+              {veirProject ? '项目分辨率' : deviceConfig.name}
+            </span>
             <span className="text-[10px] text-[#666] font-mono">
-              {deviceConfig.width}×{deviceConfig.height}
+              {veirProject
+                ? `${veirProject.meta.resolution[0]}×${veirProject.meta.resolution[1]}`
+                : `${deviceConfig.width}×${deviceConfig.height}`
+              }
             </span>
           </div>
           <button
@@ -480,7 +491,13 @@ export function VideoPreviewPanel({
 
             {/* 主视频区域（真实素材优先） */}
             {veirProject ? (
-              <VEIRCanvasPreview project={veirProject} time={playback.currentTime} className="absolute inset-0 w-full h-full" />
+              <VEIRCanvasPreview
+                project={veirProject}
+                time={playback.currentTime}
+                isPlaying={playback.isPlaying}
+                isMuted={isMuted}
+                className="absolute inset-0 w-full h-full"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
