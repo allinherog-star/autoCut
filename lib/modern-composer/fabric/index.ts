@@ -566,12 +566,71 @@ export class FabricEngine {
    * 获取元素的包围盒（对齐视觉渲染）
    * - 返回值在 Content Space（画布像素）中
    * - 默认包含旋转/缩放后的 axis-aligned bounding box
+   * - 对于 Textbox：返回实际文字渲染区域（非整个排版宽度）
    */
   getElementBounds(id: string): ElementBounds | null {
-    const element = this.elements.get(id) as unknown as { setCoords?: () => void; getBoundingRect?: (...args: any[]) => any } | undefined;
+    const element = this.elements.get(id) as unknown as {
+      setCoords?: () => void;
+      getBoundingRect?: (...args: any[]) => any;
+      type?: string;
+      textLines?: string[];
+      getHeightOfLine?: (lineIndex: number) => number;
+      calcTextWidth?: () => number;
+      _getLineLeftOffset?: (lineIndex: number) => number;
+      left?: number;
+      top?: number;
+      width?: number;
+      height?: number;
+      scaleX?: number;
+      scaleY?: number;
+      originX?: string;
+      originY?: string;
+    } | undefined;
     if (!element) return null;
     try {
       element.setCoords?.();
+
+      // 特殊处理 Textbox：计算实际文字内容的宽度，而非整个排版宽度
+      if (element.type === 'textbox' && typeof element.calcTextWidth === 'function') {
+        const actualTextWidth = element.calcTextWidth();
+        const textHeight = element.height ?? 0;
+        const scaleX = element.scaleX ?? 1;
+        const scaleY = element.scaleY ?? 1;
+        const left = element.left ?? 0;
+        const top = element.top ?? 0;
+        const originX = element.originX ?? 'left';
+        const originY = element.originY ?? 'top';
+
+        // 计算实际渲染尺寸
+        const scaledWidth = actualTextWidth * scaleX;
+        const scaledHeight = textHeight * scaleY;
+
+        // 根据 origin 计算左上角位置
+        let actualLeft = left;
+        let actualTop = top;
+
+        if (originX === 'center') {
+          actualLeft = left - scaledWidth / 2;
+        } else if (originX === 'right') {
+          actualLeft = left - scaledWidth;
+        }
+
+        if (originY === 'center') {
+          actualTop = top - scaledHeight / 2;
+        } else if (originY === 'bottom') {
+          actualTop = top - scaledHeight;
+        }
+
+        if ([actualLeft, actualTop, scaledWidth, scaledHeight].every(Number.isFinite)) {
+          return {
+            left: actualLeft,
+            top: actualTop,
+            width: scaledWidth,
+            height: scaledHeight,
+          };
+        }
+      }
+
       // Fabric: getBoundingRect(absolute, calculate) 的签名在不同版本略有差异，这里做兼容调用
       const rect = typeof element.getBoundingRect === 'function'
         ? element.getBoundingRect(true, true)

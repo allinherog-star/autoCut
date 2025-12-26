@@ -201,22 +201,12 @@ function DraggableElement({
                     )}
                 </div>
             ) : (
+                // Text/Subtitle 素材：不需要显示标签，实际渲染由 canvas 完成
+                // 只提供一个透明的点击/拖拽热区
                 <div
-                    className={`
-              px-3 py-2 rounded-lg border backdrop-blur
-              ${isSubtitle
-                            ? 'bg-black/45 border-white/20'
-                            : 'bg-amber-400/15 border-amber-400/25'}
-            `}
-                    style={{
-                        maxWidth: isSubtitle ? 320 : 240,
-                        textAlign: isSubtitle ? 'center' : 'left',
-                    }}
-                >
-                    <span className={`text-xs ${isSubtitle ? 'text-white/95' : 'text-amber-200'}`}>
-                        {displayText}
-                    </span>
-                </div>
+                    className="w-4 h-4"
+                    style={{ opacity: 0 }}
+                />
             )}
         </motion.div>
     )

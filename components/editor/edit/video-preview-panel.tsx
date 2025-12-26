@@ -141,7 +141,7 @@ export function VideoPreviewPanel({
   const [isMuted, setIsMuted] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  
+
   // 拖拽时的临时位置覆盖（仅在拖拽过程中使用，松手后清除）
   const [dragOverride, setDragOverride] = useState<{ clipId: string; x: number; y: number } | null>(null)
 
@@ -260,19 +260,19 @@ export function VideoPreviewPanel({
   // - 字幕：originY 取决于 track.layout.position（'top' 或 'bottom'）
   // - 文本/PIP：originY='center'
   const getPositionFromBounds = useCallback((
-    clipId: string, 
+    clipId: string,
     trackType: string,
     trackLayout?: { position?: 'top' | 'bottom' }
   ): { x: number; y: number } | null => {
     const bounds = boundsByClipId[clipId]
     if (!bounds) return null
-    
+
     const [cw, ch] = contentResolution
     if (cw <= 0 || ch <= 0) return null
-    
+
     // originX 始终是 'center'
     const anchorX = ((bounds.left + bounds.width / 2) / cw) * 100
-    
+
     // originY 取决于轨道类型和布局
     let anchorY: number
     if (trackType === 'subtitle') {
@@ -289,14 +289,14 @@ export function VideoPreviewPanel({
       // 文本、PIP 使用 originY: 'center'
       anchorY = ((bounds.top + bounds.height / 2) / ch) * 100
     }
-    
+
     return { x: anchorX, y: anchorY }
   }, [boundsByClipId, contentResolution])
 
   // 获取素材位置：优先拖拽覆盖 > Canvas bounds > VEIR > 默认
   // trackLayout 用于字幕元素确定 originY
   const getClipPosition = useCallback((
-    clipId: string, 
+    clipId: string,
     trackType: string,
     trackLayout?: { position?: 'top' | 'bottom' }
   ): ClipPosition => {
@@ -345,20 +345,30 @@ export function VideoPreviewPanel({
   }, [selectedClipId, selectedTrackId, data.tracks, getClipPosition])
 
   // 获取当前时间点可见的所有素材（用于交互层渲染）
+  // 关键优化：
+  // 1. 时间范围使用 < 而非 <= 避免边界问题
+  // 2. 选中的素材始终显示（即使在淡出阶段或略微超出时间范围）
   const visibleClips = useMemo(() => {
     const clips: Array<{ clip: Clip; track: Track; position: ClipPosition }> = []
+    const addedClipIds = new Set<string>()
 
     data.tracks.forEach(track => {
       // 预览区可交互/可拖拽对象：overlay 类型（不包含 audio；video 由底层 Canvas 渲染）
       if (track.type === 'pip' || track.type === 'text' || track.type === 'subtitle') {
         const trackLayout = (track.layout || {}) as { position?: 'top' | 'bottom' }
         track.clips.forEach(clip => {
-          if (playback.currentTime >= clip.time.start && playback.currentTime <= clip.time.end) {
+          // 时间范围判断：使用严格 < 避免 end 边界问题
+          const isInTimeRange = playback.currentTime >= clip.time.start && playback.currentTime < clip.time.end
+          // 选中的素材始终显示（解决淡出阶段看不到选中框的问题）
+          const isSelected = clip.id === selectedClipId
+
+          if ((isInTimeRange || isSelected) && !addedClipIds.has(clip.id)) {
             clips.push({
               clip,
               track,
               position: getClipPosition(clip.id, track.type, trackLayout),
             })
+            addedClipIds.add(clip.id)
           }
         })
       }
@@ -368,7 +378,7 @@ export function VideoPreviewPanel({
     clips.sort((a, b) => (a.track.layer || 0) - (b.track.layer || 0))
 
     return clips
-  }, [data.tracks, playback.currentTime, getClipPosition])
+  }, [data.tracks, playback.currentTime, getClipPosition, selectedClipId])
 
   // 格式化时间
   const formatTime = (seconds: number) => {
@@ -392,7 +402,7 @@ export function VideoPreviewPanel({
     // 这确保拖拽起点与元素的实际锚点一致（字幕用底部锚点，文本/PIP用中心锚点）
     const trackLayout = (track.layout || {}) as { position?: 'top' | 'bottom' }
     const pos = getClipPosition(clipId, track.type, trackLayout)
-    
+
     dragSessionRef.current = {
       phase: 'pending',
       clipId,
@@ -447,7 +457,7 @@ export function VideoPreviewPanel({
       const nextX = Math.max(0, Math.min(100, currentPosition.x + dx))
       const nextY = Math.max(0, Math.min(100, currentPosition.y + dy))
       setSnapGuides({ v: null, h: null })
-      
+
       // 直接写入 VEIR（让 Canvas 重新渲染）
       onClipTransformChange?.(selectedClipId, { xPercent: nextX, yPercent: nextY })
       onClipPositionChange?.(selectedClipId, nextX, nextY)
@@ -533,7 +543,7 @@ export function VideoPreviewPanel({
 
     // 拖拽时：设置临时覆盖位置（用于交互层实时跟随）
     setDragOverride({ clipId: s.clipId, x: snapped.x, y: snapped.y })
-    
+
     // 同时实时更新 VEIR（让 Canvas 也跟着动）
     onClipTransformChange?.(s.clipId, { xPercent: snapped.x, yPercent: snapped.y })
   }, [computeSnapped, showGrid, pause, playback.isPlaying, onClipTransformChange])
@@ -584,7 +594,6 @@ export function VideoPreviewPanel({
   const handleScaleChange = (delta: number) => {
     if (!selectedClipId) return
     const nextScale = Math.max(10, Math.min(300, currentPosition.scale + delta))
-    setClipPositions(prev => ({ ...prev, [selectedClipId]: { ...currentPosition, scale: nextScale } }))
     // scale 传 UI 百分比（100=100%），由上层写回 VEIR 时再换算为 ratio
     onClipTransformChange?.(selectedClipId, { scale: nextScale })
   }
@@ -592,10 +601,6 @@ export function VideoPreviewPanel({
   // 重置位置
   const handleResetPosition = () => {
     if (!selectedClipId) return
-    setClipPositions(prev => ({
-      ...prev,
-      [selectedClipId]: DEFAULT_POSITION,
-    }))
     onClipTransformChange?.(selectedClipId, {
       xPercent: DEFAULT_POSITION.x,
       yPercent: DEFAULT_POSITION.y,
@@ -824,12 +829,13 @@ export function VideoPreviewPanel({
 }
 
 /**
- * 交互层素材框组件 - 专业剪辑软件风格
+ * 交互层素材框组件 - 极简风格
  * 
- * 设计理念（对标 PR/AE/Figma）：
- * - 选中时：明亮的边框 + 8 个控制点 + 发光效果
+ * 设计理念：
+ * - 选中时：简洁线框 + 4 角小圆点指示
  * - 悬停时：微弱的边框提示
- * - 拖拽时：投影效果 + 位置跟随
+ * - 拖拽时：边框高亮
+ * - 标签：底部简洁标签
  */
 function OverlayRectInteractiveBox({
   clip,
@@ -871,7 +877,7 @@ function OverlayRectInteractiveBox({
 
   // 从 bounds 计算位置和尺寸
   const rect = bounds ? boundsToPercentRect(bounds, contentResolution) : null
-  
+
   // 计算位置：优先使用 bounds，否则使用 position（拖拽时）
   const boxStyle = useMemo(() => {
     if (rect) {
@@ -892,26 +898,17 @@ function OverlayRectInteractiveBox({
     }
   }, [rect, position.x, position.y])
 
-  // 选中时的颜色主题
-  const themeColor = isSubtitle ? 'cyan' : isText ? 'amber' : 'pink'
-  const ringColor = isSubtitle ? 'ring-cyan-400' : isText ? 'ring-amber-400' : 'ring-pink-400'
-  const bgColor = isSubtitle ? 'bg-cyan-400' : isText ? 'bg-amber-400' : 'bg-pink-400'
-  const glowColor = isSubtitle ? 'shadow-cyan-400/40' : isText ? 'shadow-amber-400/40' : 'shadow-pink-400/40'
+  // 选中时的颜色主题 - 简化为统一的青色
+  const borderColor = isSubtitle ? '#22d3ee' : isText ? '#fbbf24' : '#f472b6'
 
   return (
-    <motion.div
+    <div
       className="absolute pointer-events-auto select-none"
       style={{
         ...boxStyle,
         touchAction: 'none',
         zIndex: interactionZIndex,
       }}
-      initial={false}
-      animate={{
-        scale: isDragging ? 1.02 : 1,
-        boxShadow: isDragging ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
-      }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -920,115 +917,67 @@ function OverlayRectInteractiveBox({
       {/* 主交互区域 */}
       <div
         className={[
-          'relative w-full h-full group rounded-lg',
+          'relative w-full h-full',
           isLocked ? 'cursor-not-allowed' : isDragging ? 'cursor-grabbing' : 'cursor-move',
         ].join(' ')}
         title={label}
       >
-        {/* 透明命中区域 */}
-        <div className="absolute inset-0 rounded-lg" />
-
-        {/* 悬停时的边框提示 */}
+        {/* 选中/悬停边框 - 极简风格 */}
         <div
-          className={[
-            'absolute inset-0 rounded-lg transition-all duration-150',
-            !isSelected && !isLocked ? 'opacity-0 group-hover:opacity-100 ring-1 ring-white/30' : 'opacity-0',
-          ].join(' ')}
+          className="absolute inset-0 transition-all duration-100"
+          style={{
+            border: isSelected
+              ? `2px solid ${borderColor}`
+              : '1px solid transparent',
+            borderRadius: '2px',
+          }}
         />
 
-        {/* 选中时的发光边框 */}
-        <AnimatePresence>
-          {isSelected && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className={[
-                'absolute -inset-0.5 rounded-lg',
-                'ring-2',
-                ringColor,
-                isDragging ? `shadow-lg ${glowColor}` : '',
-              ].join(' ')}
+        {/* 4 个角指示器（仅选中时显示） */}
+        {isSelected && !isLocked && (
+          <>
+            {/* 左上 */}
+            <div
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                left: -4,
+                top: -4,
+                backgroundColor: borderColor,
+              }}
             />
-          )}
-        </AnimatePresence>
-
-        {/* 控制点（选中且未锁定时显示） */}
-        <AnimatePresence>
-          {isSelected && !isLocked && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 pointer-events-none"
-            >
-              {/* 8 个控制点 */}
-              {[
-                { className: '-left-1.5 -top-1.5' },
-                { className: 'left-1/2 -top-1.5 -translate-x-1/2' },
-                { className: '-right-1.5 -top-1.5' },
-                { className: '-right-1.5 top-1/2 -translate-y-1/2' },
-                { className: '-right-1.5 -bottom-1.5' },
-                { className: 'left-1/2 -bottom-1.5 -translate-x-1/2' },
-                { className: '-left-1.5 -bottom-1.5' },
-                { className: '-left-1.5 top-1/2 -translate-y-1/2' },
-              ].map((p, idx) => (
-                <div
-                  key={idx}
-                  className={[
-                    'absolute w-3 h-3 rounded-sm border-2 border-white shadow-md',
-                    bgColor,
-                    p.className,
-                  ].join(' ')}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 选中标签 */}
-        <AnimatePresence>
-          {isSelected && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 4 }}
-              transition={{ duration: 0.15 }}
-              className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-              style={{ top: 'calc(100% + 8px)' }}
-            >
-              <div
-                className={[
-                  'px-2.5 py-1 rounded-md text-[11px] font-medium',
-                  'shadow-lg backdrop-blur-sm',
-                  'flex items-center gap-1.5',
-                  isSubtitle
-                    ? 'bg-cyan-500/90 text-white'
-                    : isText
-                    ? 'bg-amber-400 text-black'
-                    : 'bg-pink-400 text-white',
-                ].join(' ')}
-              >
-                {isPip && <span>🖼️</span>}
-                {isSubtitle && <span>💬</span>}
-                {isText && <span>✨</span>}
-                <span className="line-clamp-1 max-w-[200px]">{label}</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 拖拽时的位置指示器 */}
-        {isDragging && (
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none">
-            <div className="px-2 py-0.5 rounded bg-black/80 text-white text-[10px] font-mono whitespace-nowrap">
-              {Math.round(position.x)}%, {Math.round(position.y)}%
-            </div>
-          </div>
+            {/* 右上 */}
+            <div
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                right: -4,
+                top: -4,
+                backgroundColor: borderColor,
+              }}
+            />
+            {/* 左下 */}
+            <div
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                left: -4,
+                bottom: -4,
+                backgroundColor: borderColor,
+              }}
+            />
+            {/* 右下 */}
+            <div
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                right: -4,
+                bottom: -4,
+                backgroundColor: borderColor,
+              }}
+            />
+          </>
         )}
+
+        {/* 选中标签已移除 - 只保留边框和四角控制点 */}
       </div>
-    </motion.div>
+    </div>
   )
 }
 
