@@ -84,6 +84,7 @@ export {
 // ============================================
 
 import type { VEIRProject, Clip, Track, Asset } from '../veir/types';
+import { compileVEIRToRenderPlan, createPreferredTimeStretchEngine, frameIndexToTimeUs, usToSec } from '../veir/engine';
 import { FabricEngine, type ElementConfig, type RenderState, fabric } from './fabric';
 import { AnimeEngine, calculateAnimationState, type Keyframe, type AnimationState } from './anime';
 import {
@@ -95,7 +96,7 @@ import {
 } from './webcodecs';
 import { decodeAudioFromUrl } from './audio/decode';
 import { decodePcmFromMediaUrl } from './audio/extract';
-import { wsolaTimeStretch } from './audio/wsola';
+import type { TimeStretchEngine } from '../veir/engine';
 import { percentToCanvasPixel } from '../preview/coordinate-system';
 
 /**
@@ -245,7 +246,10 @@ export class ModernComposer {
       await this.initialize();
     }
 
-    const totalFrames = Math.ceil(this.config.duration * this.config.frameRate);
+    // Pro Engine (v0): compile deterministic Render Plan (timeUs) to drive sampling.
+    // This is the first step to ensure preview/export are driven by the same evaluator/time grid.
+    const plan = compileVEIRToRenderPlan(project, { audio: { sampleRate: 48_000, channels: 2 } });
+    const totalFrames = plan.meta.frameCount;
 
     onProgress?.(0, 'loading', '加载素材...');
 
@@ -256,7 +260,7 @@ export class ModernComposer {
     // - 若存在 audio track，编码其音频
     // - 若不存在 audio track，则尝试自动抽取视频原声并随 timeWarp 变化
     // 注意：pip 轨道也可能包含视频素材（画中画/主画面），需要纳入音频判断
-    const wantAudio = project.timeline.tracks.some((t) => t.type === 'audio' || t.type === 'video' || t.type === 'pip');
+    const wantAudio = plan.audio.clips.length > 0;
 
     // 启动编码器（在这里确定是否包含音频轨道）
     await this.startComposer(wantAudio);
@@ -265,13 +269,13 @@ export class ModernComposer {
 
     // 逐帧渲染
     for (let frame = 0; frame < totalFrames; frame++) {
-      const time = frame / this.config.frameRate;
+      const time = usToSec(frameIndexToTimeUs(frame, plan.meta.fps));
 
       // 更新场景
       await this.renderFrameFromVEIR(project, time);
 
       // 编码帧 (传入时间戳，帧时长，关键帧选项)
-      const frameDuration = 1 / this.config.frameRate;
+      const frameDuration = 1 / plan.meta.fps;
       await this.videoComposer!.encodeFrame(time, frameDuration, {
         keyFrame: frame % 30 === 0,
       });
@@ -1049,7 +1053,6 @@ export class ModernComposer {
    */
   private async renderAndEncodeAudioFromVEIR(project: VEIRProject, onProgress?: ProgressCallback): Promise<void> {
     if (!this.videoComposer) return;
-    if (typeof AudioData === 'undefined') throw new Error('WebCodecs AudioData not available');
 
     const targetSampleRate = 48000;
     const targetChannels = 2;
@@ -1131,6 +1134,8 @@ export class ModernComposer {
 
     // 3) 逐 clip 生成音频并混音（显式音频轨 + 视频原声）
     let hasAnyDecodedAudio = false;
+    // TimeStretch engine (WASM/Worker preferred; JS fallback guaranteed)
+    let timeStretchEngine: TimeStretchEngine | null = null;
 
     const tryDecodeVideoAudio = async (url: string, startTime: number, endTime: number) => {
       // 优先：MediaBunny demux+decode（更“剪辑友好”，可按区间解码）
@@ -1307,59 +1312,34 @@ export class ModernComposer {
           });
           console.log('[ModernComposer] Audio: skipping WSOLA (no speed change needed)', { clipId: clip.id });
         } else {
-          // 保护 1：当输入太短/输出太短时 WSOLA 容易不稳定，直接回退到非保音高重采样
-          const inLen = inputSlice[0]?.length ?? 0;
-          if (inLen < 4096 || outLen < 4096) {
-            console.warn('[ModernComposer] Audio: skipping WSOLA (too short), fallback to timeWarp resample', {
-              clipId: clip.id,
-              inLen,
-              outLen,
-            });
-            stretched = inputSlice.map(resampleWithTimeWarp);
-          } else {
-          // PR 对标：保音高 time-stretch（WSOLA），支持 slowly-varying ratio
-          const ratioAt = (tSec: number) => {
-            // ratio = outputHop / analysisHop = outputDuration / inputDuration ≈ 1/speed
-            const speed = speedAtTimeWarp(timeWarp, clipDur, tSec);
-            const s = Math.min(4, Math.max(0.1, speed));
-            return 1 / s;
-          };
-          console.log('[ModernComposer] Audio: using WSOLA time-stretch', { clipId: clip.id, timeWarp });
-          stretched = wsolaTimeStretch(inputSlice, outLen, ratioAt, {
-            sampleRate: targetSampleRate,
-            channels: targetChannels,
-          });
-
-          // 保护 2：对 WSOLA 输出做健康检查，异常则熔断回退（避免“必现爆噪”）
-          let nonFinite = 0;
-          let peak = 0;
-          let sumSq = 0;
-          let count = 0;
-          for (let c = 0; c < stretched.length; c++) {
-            const ch = stretched[c]!;
-            for (let i = 0; i < ch.length; i++) {
-              const v = ch[i]!;
-              if (!Number.isFinite(v)) {
-                nonFinite++;
-                continue;
-              }
-              const a = Math.abs(v);
-              if (a > peak) peak = a;
-              sumSq += v * v;
-              count++;
+          // Pro path: pitch-preserving time-stretch via WASM/Worker (ffmpeg.wasm atempo)
+          // - Always deterministic (ratioCurve sampled per output frame)
+          // - Any error will fallback to JS engine (handled by createPreferredTimeStretchEngine)
+          // - If still fails, fallback to non-pitch resample (last resort)
+          try {
+            if (!timeStretchEngine) {
+              timeStretchEngine = await createPreferredTimeStretchEngine({ coreBaseURL: '/ffmpeg-core' });
             }
-          }
-          const rms = count > 0 ? Math.sqrt(sumSq / count) : 0;
-          const suspicious = nonFinite > 0 || peak > 1.5 || rms > 0.8;
-          if (suspicious) {
-            console.warn('[ModernComposer] Audio: WSOLA output suspicious, fallback to timeWarp resample', {
-              clipId: clip.id,
-              nonFinite,
-              peak,
-              rms,
+
+            const ratioAtUs = (tUs: any) => {
+              const tSec = (tUs as number) / 1e6;
+              const speed = speedAtTimeWarp(timeWarp, clipDur, tSec);
+              const s = Math.min(4, Math.max(0.1, speed));
+              return 1 / s;
+            };
+
+            console.log('[ModernComposer] Audio: using WASM time-stretch (ffmpeg atempo)', { clipId: clip.id, timeWarp });
+            stretched = await timeStretchEngine.stretchPlanarF32({
+              sampleRate: targetSampleRate,
+              channels: targetChannels,
+              input: inputSlice,
+              outputFrames: outLen,
+              ratioAt: ratioAtUs,
+              quality: 'high',
             });
+          } catch (e) {
+            console.warn('[ModernComposer] Audio: WASM time-stretch failed, fallback to timeWarp resample', { clipId: clip.id, e });
             stretched = inputSlice.map(resampleWithTimeWarp);
-          }
           }
         }
       }
@@ -1393,6 +1373,9 @@ export class ModernComposer {
         for (let i = 0; i < maxWrite; i++) dst[outOffset + i] += srcCh[i] * envelope(i);
       }
     }
+
+    // Ensure we clean up worker/wasm resources (important for repeated exports)
+    try { timeStretchEngine?.destroy(); } catch {}
 
     // 说明：若没有任何音频成功解码，也要继续写入“静音”，确保输出包含音频轨
     if (!hasAnyDecodedAudio) {
@@ -1478,18 +1461,13 @@ export class ModernComposer {
       for (let c = 0; c < targetChannels; c++) {
         planar.set(mix[c].subarray(offset, offset + n), c * n);
       }
-      const timestamp = Math.round((offset / targetSampleRate) * 1e6);
-      const audioData = new AudioData({
-        format: 'f32-planar',
-        sampleRate: targetSampleRate,
-        numberOfFrames: n,
-        numberOfChannels: targetChannels,
-        timestamp,
+      const timestampUs = Math.round((offset / targetSampleRate) * 1e6);
+      await this.videoComposer.encodeAudioPlanarF32({
         data: planar,
+        sampleRate: targetSampleRate,
+        numberOfChannels: targetChannels,
+        timestampUs,
       });
-
-      await this.videoComposer.encodeAudioSamples(audioData);
-      audioData.close();
     }
   }
 }

@@ -272,6 +272,34 @@ export class MediaBunnyComposer {
   }
 
   /**
+   * 编码 planar f32 音频（推荐路径）
+   * - 直接构造 MediaBunny AudioSample，避免不同浏览器对 WebCodecs AudioData 的实现差异
+   * - data layout: [ch0 frames...][ch1 frames...]...
+   */
+  async encodeAudioPlanarF32(params: {
+    data: Float32Array;
+    sampleRate: number;
+    numberOfChannels: number;
+    timestampUs: number;
+  }): Promise<void> {
+    if (!this.audioSource) {
+      throw new Error('Audio track not added');
+    }
+
+    const { data, sampleRate, numberOfChannels, timestampUs } = params;
+    const audioSample = new AudioSample({
+      data,
+      format: 'f32-planar',
+      sampleRate,
+      numberOfChannels,
+      timestamp: timestampUs / 1e6, // seconds
+    });
+
+    await this.audioSource.add(audioSample);
+    audioSample.close();
+  }
+
+  /**
    * 完成编码并获取结果
    */
   async finalize(): Promise<CompositionResult> {

@@ -29,8 +29,8 @@ import {
   VideoPreviewPanel,
 } from '@/components/editor/edit'
 
-// VEIR 全功能示例（作为“智能混剪规范”的基准测试项目）
-import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.json'
+// VEIR 测试项目 - 使用网络视频（CORS 友好，用于测试跨域视频加载）
+import networkVideoDemo from '@/lib/veir/test-projects/network-video-demo.json'
 
 // ============================================
 // 剪辑微调页面
@@ -43,7 +43,7 @@ export default function EditPage() {
   const { data, playback, loadData, _tick } = useTimelineStore()
 
   // 本地可变的 VEIR 项目状态
-  const [veirProject, setVeirProject] = useState<VEIRProject>(() => fullFeatureDemo as unknown as VEIRProject)
+  const [veirProject, setVeirProject] = useState<VEIRProject>(() => networkVideoDemo as unknown as VEIRProject)
 
   // 将当前项目写入 EditorLayout context，供 /editor/export 使用
   // 每次 veirProject 变化时都同步到 context

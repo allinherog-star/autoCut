@@ -1,0 +1,288 @@
+{
+    "meta": {
+        "resolution": [
+            1920,
+            1080
+        ],
+        "fps": 30,
+        "duration": 10,
+        "colorSpace": "sRGB"
+    },
+    "assets": {
+        "assets": {
+            "video-a": {
+                "type": "video",
+                "src": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                "semanticRole": "background"
+            },
+            "video-b": {
+                "type": "video",
+                "src": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                "semanticRole": "scene.broll"
+            },
+            "title-text": {
+                "type": "text",
+                "content": "网络视频剪辑测试 🎬",
+                "editable": true,
+                "semanticRole": "title"
+            },
+            "callout-text": {
+                "type": "text",
+                "content": "CORS 友好 + 转场效果 ✅",
+                "editable": true,
+                "semanticRole": "callout"
+            },
+            "subtitle-1": {
+                "type": "text",
+                "content": "（1）使用 Google 托管的测试视频",
+                "editable": true
+            },
+            "subtitle-2": {
+                "type": "text",
+                "content": "（2）跨域视频自动转 Blob 加载",
+                "editable": true
+            },
+            "subtitle-3": {
+                "type": "text",
+                "content": "（3）Wipe 转场 + 字幕渲染",
+                "editable": true
+            }
+        }
+    },
+    "vocabulary": {
+        "expressions": {
+            "fade-in": {
+                "category": "entrance",
+                "semantic": "渐入",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "fade-out": {
+                "category": "exit",
+                "semantic": "渐出",
+                "intensityRange": [
+                    0.3,
+                    1.0
+                ]
+            },
+            "bounce": {
+                "category": "entrance",
+                "semantic": "弹跳进入",
+                "intensityRange": [
+                    0.4,
+                    1.0
+                ]
+            },
+            "slide-up": {
+                "category": "entrance",
+                "semantic": "上滑进入",
+                "intensityRange": [
+                    0.5,
+                    1.0
+                ]
+            }
+        },
+        "presets": {
+            "title-variety": {
+                "type": "textStyle",
+                "category": "综艺",
+                "anchor": "center"
+            },
+            "subtitle-bottom": {
+                "type": "textStyle",
+                "category": "信息",
+                "anchor": "bottom"
+            },
+            "tr-wipe-left": {
+                "type": "transition",
+                "category": "转场",
+                "transitionType": "wipe",
+                "duration": 0.6,
+                "direction": "left",
+                "easing": "ease-in-out"
+            }
+        },
+        "filters": {
+            "cinematic": {
+                "semantic": "电影感",
+                "supportsIntensity": true
+            }
+        }
+    },
+    "timeline": {
+        "tracks": [
+            {
+                "id": "track-video-main",
+                "type": "video",
+                "layer": 0,
+                "clips": [
+                    {
+                        "id": "clip-v1",
+                        "asset": "video-a",
+                        "time": {
+                            "start": 0,
+                            "end": 5
+                        },
+                        "sourceRange": {
+                            "start": 0,
+                            "end": 5
+                        },
+                        "transitionOut": {
+                            "preset": "tr-wipe-left"
+                        }
+                    },
+                    {
+                        "id": "clip-v2",
+                        "asset": "video-b",
+                        "time": {
+                            "start": 4.4,
+                            "end": 10
+                        },
+                        "sourceRange": {
+                            "start": 0,
+                            "end": 5.6
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "track-text-overlay",
+                "type": "text",
+                "layer": 1,
+                "clips": [
+                    {
+                        "id": "clip-title",
+                        "asset": "title-text",
+                        "time": {
+                            "start": 0,
+                            "end": 3
+                        },
+                        "expression": {
+                            "preset": "title-variety",
+                            "intensity": 1.0
+                        },
+                        "behavior": {
+                            "enter": "bounce",
+                            "exit": "fade-out"
+                        }
+                    },
+                    {
+                        "id": "clip-callout",
+                        "asset": "callout-text",
+                        "time": {
+                            "start": 6,
+                            "end": 10
+                        },
+                        "expression": {
+                            "preset": "title-variety",
+                            "intensity": 0.8
+                        },
+                        "behavior": {
+                            "enter": "fade-in",
+                            "exit": "fade-out"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "track-subtitle",
+                "type": "subtitle",
+                "layer": 2,
+                "layout": {
+                    "position": "bottom",
+                    "alignment": "center",
+                    "safeArea": {
+                        "left": 0.06,
+                        "right": 0.06,
+                        "bottom": 0.08,
+                        "top": 0.06
+                    },
+                    "maxWidth": 1,
+                    "lineHeight": 1.25
+                },
+                "clips": [
+                    {
+                        "id": "clip-sub-1",
+                        "asset": "subtitle-1",
+                        "time": {
+                            "start": 0.5,
+                            "end": 3.5
+                        },
+                        "expression": {
+                            "preset": "subtitle-bottom",
+                            "intensity": 0.8
+                        },
+                        "behavior": {
+                            "enter": "slide-up",
+                            "exit": "fade-out"
+                        }
+                    },
+                    {
+                        "id": "clip-sub-2",
+                        "asset": "subtitle-2",
+                        "time": {
+                            "start": 3.5,
+                            "end": 6.5
+                        },
+                        "expression": {
+                            "preset": "subtitle-bottom",
+                            "intensity": 0.8
+                        },
+                        "behavior": {
+                            "enter": "fade-in",
+                            "exit": "fade-out"
+                        }
+                    },
+                    {
+                        "id": "clip-sub-3",
+                        "asset": "subtitle-3",
+                        "time": {
+                            "start": 6.5,
+                            "end": 10
+                        },
+                        "expression": {
+                            "preset": "subtitle-bottom",
+                            "intensity": 0.8
+                        },
+                        "behavior": {
+                            "enter": "slide-up",
+                            "exit": "fade-out"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "annotations": {},
+    "adjustments": {
+        "clipOverrides": {
+            "clip-v1": {
+                "video": {
+                    "filter": {
+                        "id": "cinematic",
+                        "intensity": 0.3
+                    },
+                    "motion": [
+                        {
+                            "when": {
+                                "start": 0.0,
+                                "end": 1.0
+                            },
+                            "from": {
+                                "opacity": 0,
+                                "scale": 1.05
+                            },
+                            "to": {
+                                "opacity": 1,
+                                "scale": 1.0
+                            },
+                            "easing": "ease-out"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

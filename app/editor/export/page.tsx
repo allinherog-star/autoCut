@@ -23,8 +23,8 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Switch, Slider } from '@/components/ui'
 import { useEditor } from '../layout'
-// 使用与编辑页面相同的演示项目作为回退
-import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.json'
+// 使用与编辑页面相同的网络视频测试项目作为回退
+import networkVideoDemo from '@/lib/veir/test-projects/network-video-demo.json'
 import type { VEIRProject } from '@/lib/veir/types'
 
 // ============================================
@@ -171,9 +171,9 @@ export default function ExportPage() {
     let projectToExport = veirProject
 
     if (!projectToExport) {
-      console.log('No project in context, using full-feature-edit-demo.json as fallback')
-      projectToExport = fullFeatureDemo as unknown as VEIRProject
-      setExportMessage('使用编辑页面的演示项目...')
+      console.log('No project in context, using network-video-demo.json as fallback')
+      projectToExport = networkVideoDemo as unknown as VEIRProject
+      setExportMessage('使用网络视频测试项目...')
     }
 
     setIsExporting(true)
