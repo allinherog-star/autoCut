@@ -1235,23 +1235,135 @@ export class ModernComposer {
       };
       const inputSlice = pcmResampled.map(slice);
 
+      // 非保音高变速（更稳的回退路径）：按 timeWarp 把输出时间映射到源时间，再线性插值取样
+      // 注意：inputSlice 已经是“以 sourceRange.start 为 0”的源音频片段
+      const resampleWithTimeWarp = (ch: Float32Array): Float32Array => {
+        // 没有 timeWarp：直接截断/补零
+        if (!timeWarp) {
+          if (ch.length >= outLen) return ch.subarray(0, outLen) as unknown as Float32Array;
+          const out = new Float32Array(outLen);
+          out.set(ch);
+          return out;
+        }
+
+        const inLen = ch.length;
+        const out = new Float32Array(outLen);
+        if (inLen <= 1) return out; // 只有 0/1 个样本时，直接输出静音（避免插值越界）
+
+        const maxIdx = inLen - 1;
+        for (let i = 0; i < outLen; i++) {
+          const tOut = i / targetSampleRate; // clip local time
+          const tIn = mapLocalTimeWithTimeWarp(tOut, clipDur, timeWarp); // source time
+          let x = tIn * targetSampleRate; // source sample index (in inputSlice domain)
+          if (!Number.isFinite(x)) x = 0;
+          if (x < 0) x = 0;
+          if (x > maxIdx) x = maxIdx;
+          const x0 = Math.floor(x);
+          const x1 = Math.min(maxIdx, x0 + 1);
+          const t = x - x0;
+          const s0 = ch[x0] ?? 0;
+          const s1 = ch[x1] ?? 0;
+          out[i] = s0 * (1 - t) + s1 * t;
+        }
+        return out;
+      };
+
       let stretched: Float32Array[];
       if (!maintainPitch) {
-        // 降级：不保音高时，直接截取/填充（不做变速）
-        stretched = inputSlice.map((ch) => ch.subarray(0, outLen) as unknown as Float32Array);
+        // 不保音高：按 timeWarp 做“速率映射重采样”（避免 WSOLA，同时保证时间一致）
+        stretched = inputSlice.map(resampleWithTimeWarp);
       } else {
-        // PR 对标：保音高 time-stretch（WSOLA），支持 slowly-varying ratio
-        const ratioAt = (tSec: number) => {
-          // ratio = outputHop / analysisHop = outputDuration / inputDuration ≈ 1/speed
-          const speed = speedAtTimeWarp(timeWarp, clipDur, tSec);
-          const s = Math.min(4, Math.max(0.1, speed));
-          return 1 / s;
-        };
-        stretched = wsolaTimeStretch(inputSlice, outLen, ratioAt, {
-          sampleRate: targetSampleRate,
-          channels: targetChannels,
-        });
+        // 检查是否真正需要变速处理
+        // 如果没有 timeWarp，或者是恒定速度为 1.0，则跳过 WSOLA 避免引入伪影
+        const needsTimeStretch = (() => {
+          if (!timeWarp) return false;
+          const mode = typeof timeWarp.mode === 'string' ? timeWarp.mode : 'constant';
+          const segments = Array.isArray(timeWarp.segments) ? timeWarp.segments : [];
+
+          if (mode === 'constant') {
+            const speed = segments[0]?.speed;
+            // 如果是恒定速度 1.0（或未定义），不需要变速
+            return typeof speed === 'number' && Math.abs(speed - 1.0) > 0.01;
+          }
+
+          // ramp 模式：检查是否所有 segment 都是 1.0 速度
+          const hasVariableSpeed = segments.some(s => {
+            const speed = s?.speed;
+            return typeof speed === 'number' && Math.abs(speed - 1.0) > 0.01;
+          });
+          return hasVariableSpeed;
+        })();
+
+        if (!needsTimeStretch) {
+          // 不需要变速，直接使用原音频（避免 WSOLA 伪影）
+          stretched = inputSlice.map((ch) => {
+            if (ch.length >= outLen) {
+              return ch.subarray(0, outLen) as unknown as Float32Array;
+            }
+            // 如果输入比输出短，填充静音
+            const out = new Float32Array(outLen);
+            out.set(ch);
+            return out;
+          });
+          console.log('[ModernComposer] Audio: skipping WSOLA (no speed change needed)', { clipId: clip.id });
+        } else {
+          // 保护 1：当输入太短/输出太短时 WSOLA 容易不稳定，直接回退到非保音高重采样
+          const inLen = inputSlice[0]?.length ?? 0;
+          if (inLen < 4096 || outLen < 4096) {
+            console.warn('[ModernComposer] Audio: skipping WSOLA (too short), fallback to timeWarp resample', {
+              clipId: clip.id,
+              inLen,
+              outLen,
+            });
+            stretched = inputSlice.map(resampleWithTimeWarp);
+          } else {
+          // PR 对标：保音高 time-stretch（WSOLA），支持 slowly-varying ratio
+          const ratioAt = (tSec: number) => {
+            // ratio = outputHop / analysisHop = outputDuration / inputDuration ≈ 1/speed
+            const speed = speedAtTimeWarp(timeWarp, clipDur, tSec);
+            const s = Math.min(4, Math.max(0.1, speed));
+            return 1 / s;
+          };
+          console.log('[ModernComposer] Audio: using WSOLA time-stretch', { clipId: clip.id, timeWarp });
+          stretched = wsolaTimeStretch(inputSlice, outLen, ratioAt, {
+            sampleRate: targetSampleRate,
+            channels: targetChannels,
+          });
+
+          // 保护 2：对 WSOLA 输出做健康检查，异常则熔断回退（避免“必现爆噪”）
+          let nonFinite = 0;
+          let peak = 0;
+          let sumSq = 0;
+          let count = 0;
+          for (let c = 0; c < stretched.length; c++) {
+            const ch = stretched[c]!;
+            for (let i = 0; i < ch.length; i++) {
+              const v = ch[i]!;
+              if (!Number.isFinite(v)) {
+                nonFinite++;
+                continue;
+              }
+              const a = Math.abs(v);
+              if (a > peak) peak = a;
+              sumSq += v * v;
+              count++;
+            }
+          }
+          const rms = count > 0 ? Math.sqrt(sumSq / count) : 0;
+          const suspicious = nonFinite > 0 || peak > 1.5 || rms > 0.8;
+          if (suspicious) {
+            console.warn('[ModernComposer] Audio: WSOLA output suspicious, fallback to timeWarp resample', {
+              clipId: clip.id,
+              nonFinite,
+              peak,
+              rms,
+            });
+            stretched = inputSlice.map(resampleWithTimeWarp);
+          }
+          }
+        }
       }
+
 
       // 音频 crossfade：转场窗口淡入淡出（对标 PR）
       const neighbor = neighborsByTrackAndClipId.get(`${track.id}:${clip.id}`);
@@ -1287,24 +1399,93 @@ export class ModernComposer {
       console.warn('[ModernComposer] no decodable audio sources; writing silent audio track to keep container audio track');
     }
 
-    // 4) 输出到编码器：分块写入 AudioData
+    // 4) 混音后的清洗 + 峰值归一化 + 软限幅
+    // - 先把 NaN/Infinity 等异常样本清零，避免导出变成“麦没插好”的爆噪
+    // - 再做峰值归一化与软限幅，降低削波失真风险
+    let peakValue = 0;
+    let nonFiniteCount = 0;
+    let sumSq = 0;
+    let sumCount = 0;
+    for (let c = 0; c < targetChannels; c++) {
+      const ch = mix[c];
+      for (let i = 0; i < ch.length; i++) {
+        const v = ch[i];
+        if (!Number.isFinite(v)) {
+          ch[i] = 0;
+          nonFiniteCount++;
+          continue;
+        }
+        const absVal = Math.abs(v);
+        if (absVal > peakValue) peakValue = absVal;
+        sumSq += v * v;
+        sumCount++;
+      }
+    }
+
+    const targetPeak = 0.9; // 目标峰值，留有余量
+    const shouldNormalize = peakValue > 1.0;
+    for (let c = 0; c < targetChannels; c++) {
+      const ch = mix[c];
+      for (let i = 0; i < ch.length; i++) {
+        let v = ch[i];
+
+        // 峰值过高时做统一缩放
+        if (shouldNormalize) {
+          v = (v / peakValue) * targetPeak;
+        }
+
+        // 软限幅 + 最终硬限幅（编码前兜底，防止极端值导致杂音/爆音）
+        if (Math.abs(v) > 0.9) {
+          const sign = v > 0 ? 1 : -1;
+          const excess = Math.abs(v) - 0.9;
+          v = sign * (0.9 + 0.08 * Math.tanh(excess * 8));
+        }
+        // clamp 到 WebAudio 典型 [-1, 1]，避免某些编码器实现对越界 float 处理异常
+        if (v > 1) v = 1;
+        if (v < -1) v = -1;
+
+        ch[i] = v;
+      }
+    }
+    if (shouldNormalize) {
+      console.log(`[ModernComposer] Audio peak normalization applied: ${peakValue.toFixed(2)} -> ${targetPeak}`);
+    }
+    if (nonFiniteCount > 0) {
+      console.warn(`[ModernComposer] Audio contained non-finite samples, zeroed: ${nonFiniteCount}`);
+    }
+    // 便于排查“必现爆噪”：快速观测音频整体能量是否异常（接近 1 的 RMS 往往意味着全段饱和/噪声）
+    const rms = sumCount > 0 ? Math.sqrt(sumSq / sumCount) : 0;
+    const stats = {
+      sampleRate: targetSampleRate,
+      channels: targetChannels,
+      frames: totalFrames,
+      peak: peakValue,
+      rms,
+      hasAnyDecodedAudio,
+    };
+    console.log('[ModernComposer] Audio stats', stats);
+    // 方便你在 Chrome 里直接复制（单行 JSON）
+    console.log('[ModernComposer] Audio stats JSON', JSON.stringify(stats));
+
+    // 5) 输出到编码器：分块写入 AudioData
     const chunkFrames = 1024;
+
     for (let offset = 0; offset < totalFrames; offset += chunkFrames) {
       const n = Math.min(chunkFrames, totalFrames - offset);
-      const interleaved = new Float32Array(n * targetChannels);
-      for (let i = 0; i < n; i++) {
-        for (let c = 0; c < targetChannels; c++) {
-          interleaved[i * targetChannels + c] = mix[c][offset + i];
-        }
+      // 重要：使用 f32-planar（按声道平面顺序存储）更符合 MediaBunny/AudioEncoder 的“最兼容”路径
+      // layout: [ch0 frames...][ch1 frames...]...
+      const planar = new Float32Array(n * targetChannels);
+      for (let c = 0; c < targetChannels; c++) {
+        planar.set(mix[c].subarray(offset, offset + n), c * n);
       }
       const timestamp = Math.round((offset / targetSampleRate) * 1e6);
       const audioData = new AudioData({
-        format: 'f32',
+        format: 'f32-planar',
         sampleRate: targetSampleRate,
         numberOfFrames: n,
         numberOfChannels: targetChannels,
         timestamp,
-        data: interleaved,
+        data: planar,
       });
 
       await this.videoComposer.encodeAudioSamples(audioData);

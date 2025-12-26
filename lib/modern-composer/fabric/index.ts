@@ -168,7 +168,7 @@ export class FabricEngine {
     if (this.isLikelyLocalFilesystemPath(normalizedSrc)) {
       throw new Error(
         `Invalid video src (looks like a local filesystem path, not a URL): ${config.src}. ` +
-          `Please provide a URL (e.g. /uploads/xxx.mp4) or a blob: URL.`
+        `Please provide a URL (e.g. /uploads/xxx.mp4) or a blob: URL.`
       );
     }
 
@@ -181,14 +181,14 @@ export class FabricEngine {
     let videoSrc = normalizedSrc;
     let fetchDebug:
       | {
-          requestedUrl: string;
-          finalUrl?: string;
-          status?: number;
-          statusText?: string;
-          contentType?: string | null;
-          blobType?: string;
-          blobSize?: number;
-        }
+        requestedUrl: string;
+        finalUrl?: string;
+        status?: number;
+        statusText?: string;
+        contentType?: string | null;
+        blobType?: string;
+        blobSize?: number;
+      }
       | undefined;
 
     const shouldBlobFetch = this.shouldFetchVideoAsBlob(normalizedSrc);
@@ -223,7 +223,9 @@ export class FabricEngine {
       }
     }
 
+    console.log('[FabricEngine] addVideo: about to set video.src:', { id: config.id, videoSrc, normalizedSrc, typeof: typeof videoSrc, isEmpty: videoSrc === '' });
     video.src = videoSrc;
+    console.log('[FabricEngine] addVideo: after set video.src:', { id: config.id, videoSrcAttr: video.src, videoCurrentSrc: video.currentSrc });
 
     // Blob URL 是同源的，不需要 crossOrigin，但如果 fallback 到原始 URL 可能需要
     if (videoSrc === normalizedSrc && this.isCrossOrigin(normalizedSrc)) {
@@ -268,8 +270,8 @@ export class FabricEngine {
         reject(
           new Error(
             `Failed to load video: ${config.src} ` +
-              `(code=${errorInfo.code ?? 'unknown'}${errorInfo.codeName ? `/${errorInfo.codeName}` : ''}, ` +
-              `networkState=${video.networkState}, readyState=${video.readyState})`
+            `(code=${errorInfo.code ?? 'unknown'}${errorInfo.codeName ? `/${errorInfo.codeName}` : ''}, ` +
+            `networkState=${video.networkState}, readyState=${video.readyState})`
           )
         );
       };
@@ -521,7 +523,15 @@ export class FabricEngine {
     const video = this.videoElements.get(id);
     if (video) {
       video.pause();
-      video.src = '';
+      // 先清除所有事件处理器，避免触发虚假的 onerror（src='' 会导致 "Empty src attribute" 错误）
+      video.onerror = null;
+      video.onloadeddata = null;
+      video.onloadedmetadata = null;
+      video.oncanplay = null;
+      video.onseeked = null;
+      video.removeAttribute('src');
+      // 触发资源释放
+      video.load();
       try {
         video.remove();
       } catch {

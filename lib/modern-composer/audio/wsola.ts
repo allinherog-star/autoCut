@@ -37,6 +37,9 @@ export function wsolaTimeStretch(
   if (inLen === 0) return new Array(channels).fill(0).map(() => new Float32Array(outputLength));
 
   const out: Float32Array[] = new Array(channels).fill(0).map(() => new Float32Array(outputLength));
+  // 关键：为 OLA 做逐样本归一化（可变 hop 时不能用常数增益补偿）
+  // weights[i] 记录当前位置累计的窗口权重（不是权重平方），最终 out /= weights
+  const weights = new Float32Array(outputLength);
 
   // Hann window
   const win = new Float32Array(N);
@@ -68,12 +71,18 @@ export function wsolaTimeStretch(
   let inPos = 0;
 
   // Seed first frame
-  const seedLen = Math.min(N, outputLength);
+  // 边界检查：确保不越界访问输入数组
+  const seedLen = Math.min(N, outputLength, inLen);
   for (let c = 0; c < channels; c++) {
-    for (let i = 0; i < seedLen; i++) out[c][i] = input[c][i] * win[i];
+    const src = input[c];
+    for (let i = 0; i < seedLen; i++) {
+      out[c][i] = (src[i] ?? 0) * win[i];
+    }
   }
+  for (let i = 0; i < seedLen; i++) weights[i] += win[i];
   outPos += Ha;
   inPos += Ha;
+
 
   // Main loop
   while (outPos + N < outputLength && inPos + N < inLen) {
@@ -123,25 +132,44 @@ export function wsolaTimeStretch(
       for (let i = 0; i < N; i++) {
         const o = outPos + i;
         if (o >= outputLength) break;
-        out[c][o] += src[best + i] * win[i];
+        // 边界检查：确保不越界访问输入数组
+        const srcIdx = best + i;
+        if (srcIdx >= inLen) break;
+        out[c][o] += src[srcIdx] * win[i];
       }
     }
+    for (let i = 0; i < N; i++) {
+      const o = outPos + i;
+      if (o >= outputLength) break;
+      weights[o] += win[i];
+    }
+
 
     // Advance
     outPos += Hs;
     inPos = best + Ha;
   }
 
-  // Normalize: Hann overlap-add needs gain compensation; approximate by limiting
+  // Normalize: 逐样本除以累计窗口权重（支持可变 hop）
   for (let c = 0; c < channels; c++) {
     const ch = out[c];
     for (let i = 0; i < ch.length; i++) {
-      if (ch[i] > 1) ch[i] = 1;
-      else if (ch[i] < -1) ch[i] = -1;
+      const w = weights[i];
+      let v = w > 1e-9 ? ch[i] / w : 0;
+      // 使用软限幅（tanh-based soft clipping）避免硬削波失真
+      // 只在接近饱和时才进行软限幅，保持正常音频不失真
+      if (Math.abs(v) > 0.9) {
+        // tanh 软限幅：将 >0.9 的部分平滑压缩到 0.95
+        const sign = v > 0 ? 1 : -1;
+        const excess = Math.abs(v) - 0.9;
+        v = sign * (0.9 + 0.05 * Math.tanh(excess * 10));
+      }
+      ch[i] = v;
     }
   }
 
   return out;
 }
+
 
 
