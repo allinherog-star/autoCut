@@ -5,7 +5,7 @@
  * Material List Component - Displays timeline clips by type
  */
 
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Video, 
@@ -16,13 +16,16 @@ import {
   Clock,
 } from 'lucide-react'
 import { useTimelineStore } from '@/lib/timeline/store'
-import type { Track, Clip, TrackType } from '@/lib/veir/types'
+import type { Track, Clip, TrackType, VEIRProject } from '@/lib/veir/types'
+import { getAssetDisplayName } from './clip-display'
 
 interface MaterialListProps {
   /** 当前选中的素材 ID */
   selectedClipId: string | null
   /** 选中素材回调 */
   onSelectClip: (clipId: string, trackId: string) => void
+  /** 可选：VEIR 项目（用于把 assetId 映射成更贴近预览的显示名） */
+  veirProject?: VEIRProject | null
   /** 自定义类名 */
   className?: string
 }
@@ -79,6 +82,7 @@ function formatDuration(seconds: number): string {
 export function MaterialList({ 
   selectedClipId,
   onSelectClip,
+  veirProject,
   className = ''
 }: MaterialListProps) {
   const { data, playback, seek } = useTimelineStore()
@@ -111,6 +115,11 @@ export function MaterialList({
     
     return grouped
   }, [data.tracks])
+
+  const getClipLabel = useCallback(
+    (clip: Clip) => getAssetDisplayName(veirProject, clip.asset),
+    [veirProject]
+  )
 
   // 切换类型展开状态
   const toggleType = (type: TrackType) => {
@@ -211,8 +220,14 @@ export function MaterialList({
                             {/* 素材信息 */}
                             <div className="flex-1 min-w-0 text-left">
                               <p className={`text-sm truncate ${isSelected ? 'text-amber-400' : 'text-[#ccc]'}`}>
-                                {clip.asset}
+                                {getClipLabel(clip)}
                               </p>
+                              {/* 当展示名与 assetId 不一致时，补充显示 assetId 便于定位 */}
+                              {veirProject && getClipLabel(clip) !== clip.asset && (
+                                <p className="text-[11px] text-[#555] truncate mt-0.5 font-mono">
+                                  {clip.asset}
+                                </p>
+                              )}
                               <div className="flex items-center gap-2 mt-0.5">
                                 <Clock className="w-3 h-3 text-[#555]" />
                                 <span className="text-xs text-[#666] font-mono">

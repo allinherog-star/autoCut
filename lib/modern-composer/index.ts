@@ -32,6 +32,7 @@ export {
   type FabricEngineConfig,
   type ElementConfig,
   type RenderState,
+  type ElementBounds,
   fabric,
 } from './fabric';
 
@@ -85,7 +86,7 @@ export {
 
 import type { VEIRProject, Clip, Track, Asset } from '../veir/types';
 import { compileVEIRToRenderPlan, createPreferredTimeStretchEngine, frameIndexToTimeUs, usToSec } from '../veir/engine';
-import { FabricEngine, type ElementConfig, type RenderState, fabric } from './fabric';
+import { FabricEngine, type ElementBounds, type ElementConfig, type RenderState, fabric } from './fabric';
 import { AnimeEngine, calculateAnimationState, type Keyframe, type AnimationState } from './anime';
 import {
   MediaBunnyComposer,
@@ -200,6 +201,46 @@ export class ModernComposer {
    */
   getCanvasElement(): HTMLCanvasElement | null {
     return this.fabricEngine?.getCanvasElement() ?? null;
+  }
+
+  /**
+   * 交互层：获取当前帧中“活跃”的 clipId 列表（用于 WYSIWYG 选框/命中测试）
+   * - 来源于渲染层 activeElements（真实存在的 Fabric 元素）
+   */
+  getActiveClipIds(): string[] {
+    const ids = new Set<string>();
+    for (const v of this.activeElements.values()) {
+      if (v?.clipId) ids.add(v.clipId);
+    }
+    return Array.from(ids);
+  }
+
+  /**
+   * 交互层：获取某个 clip 的渲染包围盒（axis-aligned bounding box）
+   * 优先级：subtitle > text > image > video（与渲染分流一致）
+   */
+  getClipBounds(clipId: string): ElementBounds | null {
+    if (!this.fabricEngine) return null;
+    const candidates = [`subtitle-${clipId}`, `text-${clipId}`, `image-${clipId}`, `video-${clipId}`];
+    for (const elementId of candidates) {
+      if (this.fabricEngine.getElement(elementId)) {
+        const b = this.fabricEngine.getElementBounds(elementId);
+        if (b) return b;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 交互层：批量获取 clip 的渲染包围盒
+   */
+  getClipBoundsBatch(clipIds: string[]): Record<string, ElementBounds> {
+    const out: Record<string, ElementBounds> = {};
+    for (const clipId of clipIds) {
+      const b = this.getClipBounds(clipId);
+      if (b) out[clipId] = b;
+    }
+    return out;
   }
 
   /**
@@ -427,11 +468,8 @@ export class ModernComposer {
       // 计算动画状态
       const animState = this.calculateClipAnimation(clip, progress, clipDuration);
 
-      // 计算位置（字幕轨道走专用布局，不走通用定位）
-      const position =
-        track.type === 'subtitle'
-          ? { x: this.config.width / 2, y: this.config.height / 2, width: this.config.width, height: this.config.height }
-          : this.calculateClipPosition(clip, track, project);
+      // 计算位置（所有轨道类型都统一读取 clipOverrides，确保拖拽更新能正确反映）
+      const position = this.calculateClipPosition(clip, track, project);
 
       // 应用渲染状态
       // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
@@ -875,6 +913,7 @@ export class ModernComposer {
 
   /**
    * 渲染文本 Clip
+   * 关键修复：读取 clipOverrides.video.transform.offset 确保拖拽位置生效
    */
   private renderTextClip(
     clip: Clip,
@@ -886,6 +925,23 @@ export class ModernComposer {
 
     const elementId = `text-${clip.id}`;
     const existingElement = this.fabricEngine.getElement(elementId);
+
+    // 读取 clipOverrides 中的自定义位置（来自预览拖拽）
+    const adjustment = project.adjustments?.clipOverrides?.[clip.id];
+    const transform = adjustment?.video?.transform;
+    
+    // 计算最终位置：优先使用 clipOverrides，否则使用默认中心位置
+    let finalX = this.config.width / 2;
+    let finalY = this.config.height * 0.85; // 文本默认在下方 85% 位置
+
+    if (transform?.offset) {
+      // VEIR offset 是像素坐标，转换为画布像素
+      const resolution = project.meta.resolution;
+      const percentX = (transform.offset[0] / resolution[0]) * 100;
+      const percentY = (transform.offset[1] / resolution[1]) * 100;
+      finalX = (percentX / 100) * this.config.width;
+      finalY = (percentY / 100) * this.config.height;
+    }
 
     if (!existingElement) {
       // 创建文本元素
@@ -910,23 +966,31 @@ export class ModernComposer {
         id: elementId,
         type: 'text',
         content: asset.content,
-        x: renderState.x || this.config.width / 2,
-        y: renderState.y || this.config.height / 2,
+        x: finalX,
+        y: finalY,
         fontSize,
         fill,
         stroke,
         strokeWidth: stroke ? 4 : 0,
         opacity: renderState.opacity,
+        originX: 'center',
+        originY: 'center',
       });
       this.activeElements.set(elementId, { clipId: clip.id, elementType: 'text' });
     } else {
-      this.fabricEngine.applyRenderState(elementId, renderState);
+      // 更新位置和动画状态
+      this.fabricEngine.applyRenderState(elementId, {
+        ...renderState,
+        x: finalX + (renderState.x ? renderState.x - this.config.width / 2 : 0),
+        y: finalY + (renderState.y ? renderState.y - this.config.height / 2 : 0),
+      });
     }
   }
 
   /**
    * 渲染字幕 Clip（强制统一安全区 + 底部/顶部对齐 + 自动换行）
    * - 新方案：字幕与花字/强调文本彻底分流，避免定位与对齐互相影响
+   * - 关键修复：读取 clipOverrides.video.transform.offset 确保拖拽位置生效
    */
   private renderSubtitleClip(
     track: Track,
@@ -976,17 +1040,35 @@ export class ModernComposer {
     const position = layout.position ?? 'bottom';
     const alignment = layout.alignment ?? 'center';
 
-    const xCenter = this.config.width * safeLeft + safeWidth / 2;
-    const y = position === 'top' ? this.config.height * safeTop : this.config.height * (1 - safeBottom);
+    // 默认位置（基于 track.layout）
+    const defaultX = this.config.width * safeLeft + safeWidth / 2;
+    const defaultY = position === 'top' ? this.config.height * safeTop : this.config.height * (1 - safeBottom);
     const originY: 'top' | 'bottom' = position === 'top' ? 'top' : 'bottom';
+
+    // 读取 clipOverrides 中的自定义位置（来自预览拖拽）
+    const adjustment = project.adjustments?.clipOverrides?.[clip.id];
+    const transform = adjustment?.video?.transform;
+    
+    // 计算最终位置：优先使用 clipOverrides
+    let finalX = defaultX;
+    let finalY = defaultY;
+
+    if (transform?.offset) {
+      // VEIR offset 是像素坐标，转换为画布像素
+      const resolution = project.meta.resolution;
+      const percentX = (transform.offset[0] / resolution[0]) * 100;
+      const percentY = (transform.offset[1] / resolution[1]) * 100;
+      finalX = (percentX / 100) * this.config.width;
+      finalY = (percentY / 100) * this.config.height;
+    }
 
     if (!existing) {
       this.fabricEngine.addText({
         id: elementId,
         type: 'text',
         content: asset.content,
-        x: xCenter,
-        y,
+        x: finalX,
+        y: finalY,
         // 关键：传入 width 触发 Fabric Textbox（自动换行）
         width: textBoxWidth,
         fontSize,
@@ -1004,10 +1086,10 @@ export class ModernComposer {
       });
       this.activeElements.set(elementId, { clipId: clip.id, elementType: 'subtitle' });
     } else {
-      // 更新动画/透明度（定位由字幕布局控制，动画 translateY 仍可叠加）
+      // 更新位置和动画状态
       this.fabricEngine.applyRenderState(elementId, {
-        x: (renderState.x ?? xCenter),
-        y: (renderState.y ?? y),
+        x: finalX,
+        y: finalY,
         scaleX: renderState.scaleX,
         scaleY: renderState.scaleY,
         angle: renderState.angle,
@@ -1375,7 +1457,7 @@ export class ModernComposer {
     }
 
     // Ensure we clean up worker/wasm resources (important for repeated exports)
-    try { timeStretchEngine?.destroy(); } catch {}
+    try { timeStretchEngine?.destroy(); } catch { }
 
     // 说明：若没有任何音频成功解码，也要继续写入“静音”，确保输出包含音频轨
     if (!hasAnyDecodedAudio) {

@@ -206,6 +206,7 @@ export default function EditPage() {
           <MaterialList
             selectedClipId={selectedClipId}
             onSelectClip={handleSelectClip}
+            veirProject={veirProject}
             className="h-full"
           />
         </div>
@@ -217,6 +218,7 @@ export default function EditPage() {
             <MaterialOperations
               selectedClipId={selectedClipId}
               selectedTrackId={selectedTrackId}
+              veirProject={veirProject}
               className="h-full"
             />
           </div>
@@ -226,6 +228,7 @@ export default function EditPage() {
             <AIChatPanel
               selectedClipId={selectedClipId}
               selectedTrackId={selectedTrackId}
+              veirProject={veirProject}
               className="h-full"
             />
           </div>

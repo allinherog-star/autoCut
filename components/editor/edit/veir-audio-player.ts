@@ -43,6 +43,11 @@ export class VEIRAudioPlayer {
     private masterVolume: number = 1
     private preloaded: boolean = false
 
+    // 节流控制：避免重播时快速连续 seek 导致的卡顿
+    private pendingSeekTime: number | null = null
+    private seekRafId: number | null = null
+    private lastActualSeekTime: number = 0
+
     constructor(project: VEIRProject, options?: VEIRAudioPlayerOptions) {
         this.project = project
         this.resolver = options?.resolver || {
@@ -163,10 +168,68 @@ export class VEIRAudioPlayer {
 
     /**
      * 跳转到指定时间
+     * 使用 rAF 节流机制：当快速连续调用时，只在下一帧执行最后一次请求
+     * 这避免了重播时从末尾跳到开头导致的音频卡顿
      */
     seek(time: number): void {
-        this.currentTime = Math.max(0, Math.min(time, this.project.meta.duration))
-        this.syncAudio()
+        const clampedTime = Math.max(0, Math.min(time, this.project.meta.duration))
+        this.currentTime = clampedTime
+
+        // 使用 rAF 节流：将 seek 请求延迟到下一帧
+        this.pendingSeekTime = clampedTime
+
+        if (this.seekRafId === null) {
+            this.seekRafId = requestAnimationFrame(() => {
+                this.seekRafId = null
+                if (this.pendingSeekTime !== null) {
+                    const targetTime = this.pendingSeekTime
+                    this.pendingSeekTime = null
+                    this.lastActualSeekTime = targetTime
+                    this.syncAudioInternal(targetTime)
+                }
+            })
+        }
+    }
+
+    /**
+     * 立即同步音频（不使用节流）
+     * 用于播放/暂停等需要立即响应的场景
+     */
+    private syncAudioInternal(time: number): void {
+        for (const clip of this.audioClips) {
+            const isActive = time >= clip.timeStart && time < clip.timeEnd
+
+            if (isActive) {
+                // 计算素材内的时间位置
+                const localTime = time - clip.timeStart
+                const sourceTime = clip.sourceStart + localTime
+
+                // 设置音频时间（增大 seek 跳跃阈值，避免重播时从末尾跳到开头导致的卡顿）
+                // 当大幅度跳转时（如重播），允许音频先播放一小段再对齐，体验更流畅
+                const currentAudioTime = clip.element.currentTime
+                const timeDiff = Math.abs(currentAudioTime - sourceTime)
+                const isLargeJump = timeDiff > 1 // 超过1秒算大跳转
+                const threshold = isLargeJump ? 0.5 : 0.1 // 大跳转时用更大阈值
+
+                if (timeDiff > threshold) {
+                    clip.element.currentTime = sourceTime
+                }
+
+                // 取消静音并播放
+                clip.element.muted = this.isMuted
+                clip.element.volume = this.masterVolume
+
+                if (this.isPlaying && clip.element.paused) {
+                    clip.element.play().catch(() => {
+                        // 忽略自动播放失败（浏览器限制）
+                    })
+                }
+            } else {
+                // 不在活跃时间范围内，暂停并静音
+                clip.element.pause()
+                clip.element.muted = true
+            }
+        }
     }
 
     /**
@@ -201,40 +264,10 @@ export class VEIRAudioPlayer {
     }
 
     /**
-     * 同步所有音频到当前时间
+     * 同步所有音频到当前时间（公共方法供 play/pause 使用）
      */
     private syncAudio(): void {
-        const time = this.currentTime
-
-        for (const clip of this.audioClips) {
-            const isActive = time >= clip.timeStart && time < clip.timeEnd
-
-            if (isActive) {
-                // 计算素材内的时间位置
-                const localTime = time - clip.timeStart
-                const sourceTime = clip.sourceStart + localTime
-
-                // 设置音频时间（只在差异较大时 seek，避免音频卡顿）
-                const currentAudioTime = clip.element.currentTime
-                if (Math.abs(currentAudioTime - sourceTime) > 0.1) {
-                    clip.element.currentTime = sourceTime
-                }
-
-                // 取消静音并播放
-                clip.element.muted = this.isMuted
-                clip.element.volume = this.masterVolume
-
-                if (this.isPlaying && clip.element.paused) {
-                    clip.element.play().catch(() => {
-                        // 忽略自动播放失败（浏览器限制）
-                    })
-                }
-            } else {
-                // 不在活跃时间范围内，暂停并静音
-                clip.element.pause()
-                clip.element.muted = true
-            }
-        }
+        this.syncAudioInternal(this.currentTime)
     }
 
     /**
@@ -253,6 +286,12 @@ export class VEIRAudioPlayer {
      */
     destroy(): void {
         this.pause()
+        // 取消待执行的 seek
+        if (this.seekRafId !== null) {
+            cancelAnimationFrame(this.seekRafId)
+            this.seekRafId = null
+        }
+        this.pendingSeekTime = null
         this.cleanup()
         this.preloaded = false
     }

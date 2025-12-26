@@ -22,12 +22,16 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useTimelineStore } from '@/lib/timeline/store'
+import type { VEIRProject } from '@/lib/veir/types'
+import { getAssetDisplayName } from './clip-display'
 
 interface AIChatPanelProps {
   /** 当前选中的素材 ID */
   selectedClipId: string | null
   /** 当前选中的轨道 ID */
   selectedTrackId: string | null
+  /** 可选：VEIR 项目（用于展示与预览一致的素材名称） */
+  veirProject?: VEIRProject | null
   /** 自定义类名 */
   className?: string
 }
@@ -65,6 +69,7 @@ const WELCOME_MESSAGE: ChatMessage = {
 export function AIChatPanel({
   selectedClipId,
   selectedTrackId,
+  veirProject,
   className = '',
 }: AIChatPanelProps) {
   const { data, playback } = useTimelineStore()
@@ -167,7 +172,13 @@ export function AIChatPanel({
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span className="text-xs text-amber-400/80">当前选中</span>
           </div>
-          <p className="text-sm text-[#ddd] mt-1 truncate">{selectedClipInfo.clip.asset}</p>
+          <p className="text-sm text-[#ddd] mt-1 truncate">
+            {getAssetDisplayName(veirProject, selectedClipInfo.clip.asset)}
+          </p>
+          {veirProject &&
+            getAssetDisplayName(veirProject, selectedClipInfo.clip.asset) !== selectedClipInfo.clip.asset && (
+              <p className="text-[11px] text-[#555] mt-0.5 font-mono truncate">{selectedClipInfo.clip.asset}</p>
+            )}
         </div>
       )}
 

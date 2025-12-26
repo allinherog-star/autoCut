@@ -274,15 +274,30 @@ export default function DraftEditPage({ params }: PageProps) {
     <div className="absolute inset-0 flex flex-col bg-[#0f0f12]">
       <div className="flex-1 flex min-h-0">
         <div className="w-64 flex-shrink-0 border-r border-[#2a2a2e] bg-[#141417]">
-          <MaterialList selectedClipId={selectedClipId} onSelectClip={handleSelectClip} className="h-full" />
+          <MaterialList
+            selectedClipId={selectedClipId}
+            onSelectClip={handleSelectClip}
+            veirProject={veirProject}
+            className="h-full"
+          />
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
           <div className="h-[260px] flex-shrink-0 border-b border-[#2a2a2e] bg-[#141417]">
-            <MaterialOperations selectedClipId={selectedClipId} selectedTrackId={selectedTrackId} className="h-full" />
+            <MaterialOperations
+              selectedClipId={selectedClipId}
+              selectedTrackId={selectedTrackId}
+              veirProject={veirProject}
+              className="h-full"
+            />
           </div>
           <div className="flex-1 min-h-0">
-            <AIChatPanel selectedClipId={selectedClipId} selectedTrackId={selectedTrackId} className="h-full" />
+            <AIChatPanel
+              selectedClipId={selectedClipId}
+              selectedTrackId={selectedTrackId}
+              veirProject={veirProject}
+              className="h-full"
+            />
           </div>
         </div>
 

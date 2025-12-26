@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { VEIRProject } from '@/lib/veir/types'
 import { VEIRAudioPlayer } from './veir-audio-player'
+import type { ElementBounds } from '@/lib/modern-composer'
 
 type Props = {
   project: VEIRProject
@@ -11,6 +12,11 @@ type Props = {
   isPlaying?: boolean
   /** 是否静音 */
   isMuted?: boolean
+  /**
+   * 交互层：回传当前帧中各 clip 的真实包围盒（Content Space 像素）
+   * 用于实现 PR/AE 风格 WYSIWYG 选框/命中区。
+   */
+  onOverlayBoundsChange?: (boundsByClipId: Record<string, ElementBounds>) => void
   className?: string
 }
 
@@ -28,10 +34,12 @@ export function VEIRCanvasPreview({
   time,
   isPlaying = false,
   isMuted = false,
+  onOverlayBoundsChange,
   className = ''
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const composerRef = useRef<null | { render: (t: number) => void; destroy: () => void }>(null)
+  const composerInstanceRef = useRef<null | { getActiveClipIds: () => string[]; getClipBoundsBatch: (ids: string[]) => Record<string, ElementBounds> }>(null)
   const audioPlayerRef = useRef<VEIRAudioPlayer | null>(null)
   const projectRef = useRef<VEIRProject>(project)
   // 跟踪当前正在初始化的 composer，避免 React Strict Mode 下重复初始化导致的 Fabric 错误
@@ -43,7 +51,10 @@ export function VEIRCanvasPreview({
     if (audioPlayerRef.current) {
       audioPlayerRef.current.setProject(project)
     }
-  }, [project])
+    // 关键修复：project 变化时（如拖拽更新 clipOverrides）也需要重新渲染当前帧
+    // 否则拖拽时只更新了 projectRef，但 Canvas 不会反映新位置
+    composerRef.current?.render(time)
+  }, [project, time])
 
   const key = useMemo(() => {
     const [w, h] = project.meta.resolution
@@ -93,17 +104,62 @@ export function VEIRCanvasPreview({
 
       // 首帧
       await composer.renderFrame(projectRef.current, time)
+      composerInstanceRef.current = composer as unknown as {
+        getActiveClipIds: () => string[]
+        getClipBoundsBatch: (ids: string[]) => Record<string, ElementBounds>
+      }
+      // 回传一次 bbox（首帧）
+      try {
+        const clipIds = composerInstanceRef.current.getActiveClipIds()
+        const bounds = composerInstanceRef.current.getClipBoundsBatch(clipIds)
+        onOverlayBoundsChange?.(bounds)
+      } catch {
+        // ignore
+      }
 
-      // rAF 合并渲染请求（避免 time 高频更新时重复 await）
+      // 渲染调度（关键修复：避免 async renderFrame 并发堆积导致“二次播放变卡”）
+      // 目标：任何时刻最多只有 1 个 renderFrame 在飞行中；如果来新时间点，只渲染“最新一帧”（丢帧策略）
       let raf: number | null = null
-      let pending = time
-      const render = (t: number) => {
-        pending = t
+      let latest = time
+      let inFlight = false
+      let dirty = false
+
+      const pump = () => {
         if (raf) return
-        raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(async () => {
           raf = null
-          void composer.renderFrame(projectRef.current, pending)
+          if (cancelled) return
+          if (inFlight) {
+            dirty = true
+            return
+          }
+          inFlight = true
+          const t = latest
+          try {
+            await composer.renderFrame(projectRef.current, t)
+            // 每帧渲染后回传 bbox（用于 WYSIWYG 选框跟随动画/拖拽）
+            if (composerInstanceRef.current && onOverlayBoundsChange) {
+              const clipIds = composerInstanceRef.current.getActiveClipIds()
+              const bounds = composerInstanceRef.current.getClipBoundsBatch(clipIds)
+              onOverlayBoundsChange(bounds)
+            }
+          } finally {
+            inFlight = false
+          }
+          if (dirty) {
+            dirty = false
+            pump()
+          }
         })
+      }
+
+      const render = (t: number) => {
+        latest = t
+        if (inFlight) {
+          dirty = true
+          return
+        }
+        pump()
       }
 
       composerRef.current = {
@@ -126,6 +182,7 @@ export function VEIRCanvasPreview({
       }
       composerRef.current?.destroy()
       composerRef.current = null
+      composerInstanceRef.current = null
     }
     // key 变化代表分辨率/fps 变化，需要重建 composer
   }, [key, project.meta.duration])

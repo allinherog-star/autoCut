@@ -30,13 +30,16 @@ import {
   Wand2,
 } from 'lucide-react'
 import { useTimelineStore } from '@/lib/timeline/store'
-import type { TrackType, Clip, Track } from '@/lib/veir/types'
+import type { TrackType, Clip, Track, VEIRProject } from '@/lib/veir/types'
+import { getAssetDisplayName } from './clip-display'
 
 interface MaterialOperationsProps {
   /** 选中的素材 ID */
   selectedClipId: string | null
   /** 选中的轨道 ID */
   selectedTrackId: string | null
+  /** 可选：VEIR 项目（用于把 assetId 映射成更贴近预览的显示名） */
+  veirProject?: VEIRProject | null
   /** 自定义类名 */
   className?: string
 }
@@ -122,6 +125,7 @@ const TYPE_TITLES: Record<TrackType, { label: string; description: string }> = {
 export function MaterialOperations({
   selectedClipId,
   selectedTrackId,
+  veirProject,
   className = '',
 }: MaterialOperationsProps) {
   const { data, removeClip, playback, seek } = useTimelineStore()
@@ -180,6 +184,7 @@ export function MaterialOperations({
 
   const typeConfig = TYPE_TITLES[selectedInfo.track.type]
   const operations = getOperationsByType(selectedInfo.track.type)
+  const clipLabel = getAssetDisplayName(veirProject, selectedInfo.clip.asset)
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -188,9 +193,12 @@ export function MaterialOperations({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-amber-400" />
           <h3 className="text-sm font-medium text-[#eee] truncate">
-            {selectedInfo.clip.asset}
+            {clipLabel}
           </h3>
         </div>
+        {veirProject && clipLabel !== selectedInfo.clip.asset && (
+          <p className="text-[11px] text-[#555] mt-1 font-mono truncate">{selectedInfo.clip.asset}</p>
+        )}
         <p className="text-xs text-[#666] mt-1">
           {typeConfig.label} · {typeConfig.description}
         </p>

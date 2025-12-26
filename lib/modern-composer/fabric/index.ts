@@ -59,6 +59,17 @@ export interface RenderState {
   blur?: number;
 }
 
+export interface ElementBounds {
+  /** 左上角 X（画布像素，Content Space） */
+  left: number;
+  /** 左上角 Y（画布像素，Content Space） */
+  top: number;
+  /** 包围盒宽度（像素） */
+  width: number;
+  /** 包围盒高度（像素） */
+  height: number;
+}
+
 // ============================================
 // Fabric 画布引擎
 // ============================================
@@ -317,6 +328,9 @@ export class FabricEngine {
 
   /**
    * 更新视频时间
+   * 优化策略：
+   * - 小幅度时间变化（正常播放）：使用精确的帧同步等待
+   * - 大幅度时间跳转（重播/seek）：使用非阻塞模式，避免卡顿
    */
   async seekVideo(id: string, time: number): Promise<void> {
     const video = this.videoElements.get(id);
@@ -546,6 +560,32 @@ export class FabricEngine {
    */
   getElement(id: string): fabric.FabricObject | undefined {
     return this.elements.get(id);
+  }
+
+  /**
+   * 获取元素的包围盒（对齐视觉渲染）
+   * - 返回值在 Content Space（画布像素）中
+   * - 默认包含旋转/缩放后的 axis-aligned bounding box
+   */
+  getElementBounds(id: string): ElementBounds | null {
+    const element = this.elements.get(id) as unknown as { setCoords?: () => void; getBoundingRect?: (...args: any[]) => any } | undefined;
+    if (!element) return null;
+    try {
+      element.setCoords?.();
+      // Fabric: getBoundingRect(absolute, calculate) 的签名在不同版本略有差异，这里做兼容调用
+      const rect = typeof element.getBoundingRect === 'function'
+        ? element.getBoundingRect(true, true)
+        : null;
+      if (!rect) return null;
+      const left = Number(rect.left);
+      const top = Number(rect.top);
+      const width = Number(rect.width);
+      const height = Number(rect.height);
+      if (![left, top, width, height].every(Number.isFinite)) return null;
+      return { left, top, width, height };
+    } catch {
+      return null;
+    }
   }
 
   /**
