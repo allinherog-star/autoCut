@@ -154,7 +154,17 @@ export const UniversalPreview = forwardRef<UniversalPreviewRef, UniversalPreview
         // Refs
         const containerRef = useRef<HTMLDivElement>(null)
 
+        // 预览状态 (如果没有外部控制，使用内部状态)
+        // 关键：先计算 currentZoom，再传给 useCoordinateSystem
+        const { state, setZoom, reset } = usePreviewState({
+            initialZoom: controlledZoom ?? 1,
+        })
+
+        const currentZoom = controlledZoom ?? state.zoom
+        const handleZoomChange = onZoomChange ?? setZoom
+
         // 坐标系统
+        // 关键修复：传入 currentZoom，确保坐标换算与视觉缩放一致
         const {
             context,
             containerSize,
@@ -163,15 +173,7 @@ export const UniversalPreview = forwardRef<UniversalPreviewRef, UniversalPreview
             viewToContent,
             contentToView,
             viewDeltaToContentDelta,
-        } = useCoordinateSystem(containerRef, { contentResolution })
-
-        // 预览状态 (如果没有外部控制，使用内部状态)
-        const { state, setZoom, reset } = usePreviewState({
-            initialZoom: controlledZoom ?? 1,
-        })
-
-        const currentZoom = controlledZoom ?? state.zoom
-        const handleZoomChange = onZoomChange ?? setZoom
+        } = useCoordinateSystem(containerRef, { contentResolution, zoom: currentZoom })
 
         // 暴露给外部的方法
         useImperativeHandle(ref, () => ({

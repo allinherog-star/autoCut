@@ -526,11 +526,29 @@ export function VideoPreviewPanel({
       }
     }
 
-    // 使用 UniversalPreview 坐标系统换算位移，兼容 zoom/fit/居中偏移
-    const deltaNormalized = universalPreviewRef.current?.viewDeltaToContentDelta({ x: deltaX, y: deltaY })
-    if (!deltaNormalized) return
-    const deltaXPercent = deltaNormalized.x * 100
-    const deltaYPercent = deltaNormalized.y * 100
+    // 使用 UniversalPreview 的 renderSize 直接计算百分比位移
+    // 这是最简单可靠的方式，避免复杂坐标系统转换带来的问题
+    const renderSize = universalPreviewRef.current?.renderSize
+    if (!renderSize || renderSize.width <= 0 || renderSize.height <= 0) {
+      // 降级：如果 renderSize 不可用，尝试使用坐标转换
+      const deltaNormalized = universalPreviewRef.current?.viewDeltaToContentDelta({ x: deltaX, y: deltaY })
+      if (!deltaNormalized) return
+      const deltaXPercent = deltaNormalized.x * 100
+      const deltaYPercent = deltaNormalized.y * 100
+      const rawX = Math.max(0, Math.min(100, s.startPosX + deltaXPercent))
+      const rawY = Math.max(0, Math.min(100, s.startPosY + deltaYPercent))
+      const snapped = computeSnapped({ x: rawX, y: rawY }, { altKey: e.altKey, showGrid })
+      setSnapGuides(snapped.guides)
+      s.lastX = snapped.x
+      s.lastY = snapped.y
+      setDragOverride({ clipId: s.clipId, x: snapped.x, y: snapped.y })
+      onClipTransformChange?.(s.clipId, { xPercent: snapped.x, yPercent: snapped.y })
+      return
+    }
+
+    // 简单直接：像素位移 / 渲染区域尺寸 * 100 = 百分比位移
+    const deltaXPercent = (deltaX / renderSize.width) * 100
+    const deltaYPercent = (deltaY / renderSize.height) * 100
 
     const rawX = Math.max(0, Math.min(100, s.startPosX + deltaXPercent))
     const rawY = Math.max(0, Math.min(100, s.startPosY + deltaYPercent))
@@ -554,9 +572,12 @@ export function VideoPreviewPanel({
     if (e.pointerId !== s.pointerId) return
     if (!s.clipId) return
 
-    // 最终落点写回 VEIR
-    onClipTransformChange?.(s.clipId, { xPercent: s.lastX, yPercent: s.lastY })
-    onClipPositionChange?.(s.clipId, s.lastX, s.lastY)
+    // 关键修复：仅在真正拖动后才提交位置
+    // 避免"点击选中"时错误地将 bounds 反推的锚点固化为 clipOverrides
+    if (s.moved) {
+      onClipTransformChange?.(s.clipId, { xPercent: s.lastX, yPercent: s.lastY })
+      onClipPositionChange?.(s.clipId, s.lastX, s.lastY)
+    }
 
     // 清除临时覆盖（让交互层从 Canvas bounds 获取位置）
     setDragOverride(null)
@@ -878,9 +899,12 @@ function OverlayRectInteractiveBox({
   // 从 bounds 计算位置和尺寸
   const rect = bounds ? boundsToPercentRect(bounds, contentResolution) : null
 
-  // 计算位置：优先使用 bounds，否则使用 position（拖拽时）
+  // 计算交互框样式：
+  // - 非拖拽态：**直接用 Canvas 返回的 bounds 画框**（WYSIWYG，避免初始化/选中时错位）
+  // - 拖拽态：用锚点 position（实时跟手），尺寸仍优先用 bounds（更贴近真实渲染包围盒）
   const boxStyle = useMemo(() => {
-    if (rect) {
+    // 1) 非拖拽态：用 bounds 画框，保证“框一定包住真实渲染内容”
+    if (rect && !isDragging) {
       return {
         left: `${rect.left}%`,
         top: `${rect.top}%`,
@@ -888,15 +912,32 @@ function OverlayRectInteractiveBox({
         height: `${rect.height}%`,
       }
     }
-    // 回退：使用 position 定位（居中）
+
+    const subtitleLayoutPosition =
+      track.type === 'subtitle'
+        ? (((track.layout || {}) as { position?: 'top' | 'bottom' }).position ?? 'bottom')
+        : null
+
+    // transform 以锚点为基准：
+    // - text/pip: center/center
+    // - subtitle: center/top 或 center/bottom（取决于布局）
+    const transform =
+      track.type === 'subtitle'
+        ? (subtitleLayoutPosition === 'top' ? 'translate(-50%, 0%)' : 'translate(-50%, -100%)')
+        : 'translate(-50%, -50%)'
+
+    // 尺寸：优先来自 bounds（百分比），否则给一个合理默认值
+    const width = rect ? `${rect.width}%` : '120px'
+    const height = rect ? `${rect.height}%` : '40px'
+
     return {
       left: `${position.x}%`,
       top: `${position.y}%`,
-      width: '120px',
-      height: '40px',
-      transform: 'translate(-50%, -50%)',
+      width,
+      height,
+      transform,
     }
-  }, [rect, position.x, position.y])
+  }, [rect, isDragging, position.x, position.y, track.type, track.layout])
 
   // 选中时的颜色主题 - 简化为统一的青色
   const borderColor = isSubtitle ? '#22d3ee' : isText ? '#fbbf24' : '#f472b6'

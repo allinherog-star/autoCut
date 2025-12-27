@@ -65,6 +65,12 @@ export interface CoordinateSystemContext {
     viewZoom: number
     /** 预览平移偏移（屏幕像素） */
     viewOffset: { x: number; y: number }
+    /** 
+     * 预计算的 Canvas 缩放比例（可选）
+     * 如果提供，将直接使用此值，避免 canvasSize 为 0 时的计算错误
+     * 这是修复"首次拖动坐标偏移"问题的关键
+     */
+    canvasScale?: number
 }
 
 // ============================================================================
@@ -74,8 +80,16 @@ export interface CoordinateSystemContext {
 /**
  * 计算 Canvas 适配缩放比例
  * Content → Canvas 的等比缩放
+ * 
+ * 优先使用 ctx.canvasScale（如果已预计算），避免 canvasSize 为 0 时返回错误值 1
+ * 这是修复"首次拖动坐标偏移"问题的关键
  */
 export function getCanvasScale(ctx: CoordinateSystemContext): number {
+    // 优先使用预计算的缩放比例（解决初始化时 canvasSize 为 0 的问题）
+    if (typeof ctx.canvasScale === 'number' && ctx.canvasScale > 0) {
+        return ctx.canvasScale
+    }
+
     const [contentW, contentH] = ctx.contentResolution
     const { width: canvasW, height: canvasH } = ctx.canvasSize
 
