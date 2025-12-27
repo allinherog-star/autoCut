@@ -482,7 +482,7 @@ export class ModernComposer {
       const animState = this.calculateClipAnimation(clip, progress, clipDuration);
 
       // 计算位置（所有轨道类型都统一读取 clipOverrides，确保拖拽更新能正确反映）
-      const position = this.calculateClipPosition(clip, track, project);
+      const position = this.calculateClipPosition(clip, track, asset, project);
 
       // 应用渲染状态
       // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
@@ -543,7 +543,11 @@ export class ModernComposer {
       if (asset.type === 'video') {
         const elementId = `video-${clip.id}`;
         shouldBeActiveElementIds.add(elementId);
-        await this.ensureVideoElement(elementId, clip.id, clip.asset, asset.src);
+        // 交互策略：主轴背景视频不允许拖拽/选中（避免“背景被拖走”，且避免遮挡叠加层命中）
+        const isMainVideoTrack = track.type === 'video' && track.layer === 0;
+        const isBackgroundRole = asset.semanticRole === 'background';
+        const interactable = !(isMainVideoTrack || isBackgroundRole);
+        await this.ensureVideoElement(elementId, clip.id, clip.asset, asset.src, { interactable });
 
         // 默认清理 clipPath（如无 wipe 转场则不应残留）
         this.fabricEngine?.setClipPath(elementId, null);
@@ -613,7 +617,13 @@ export class ModernComposer {
   /**
    * 确保视频元素已创建（按 clip 实例化）
    */
-  private async ensureVideoElement(elementId: string, clipId: string, assetId: string, rawSrc?: string): Promise<void> {
+  private async ensureVideoElement(
+    elementId: string,
+    clipId: string,
+    assetId: string,
+    rawSrc?: string,
+    opts?: { interactable?: boolean }
+  ): Promise<void> {
     if (!this.fabricEngine) {
       console.warn('[ModernComposer] ensureVideoElement: no fabricEngine');
       return;
@@ -643,6 +653,7 @@ export class ModernComposer {
         width: this.config.width,
         height: this.config.height,
         opacity: 0,
+        interactable: opts?.interactable,
       });
 
       this.activeElements.set(elementId, { clipId, elementType: 'video' });
@@ -872,12 +883,19 @@ export class ModernComposer {
   private calculateClipPosition(
     clip: Clip,
     track: Track,
+    asset: Asset,
     project: VEIRProject
   ): { x: number; y: number; width: number; height: number } {
     let x = this.config.width / 2;
     let y = this.config.height / 2;
     let width = this.config.width;
     let height = this.config.height;
+
+    // 文本默认位置：底部 85%（与编辑器预览一致）
+    // - subtitle 由 renderSubtitleClip 基于安全区/对齐单独布局，这里不参与
+    if (asset.type === 'text' && track.type !== 'subtitle') {
+      y = this.config.height * 0.85;
+    }
 
     // 检查是否有自定义位置（来自预览组件的拖拽）
     const adjustment = project.adjustments?.clipOverrides?.[clip.id];
@@ -979,23 +997,26 @@ export class ModernComposer {
         id: elementId,
         type: 'text',
         content: asset.content,
-        x: finalX,
-        y: finalY,
+        // renderState 已经包含“基础位置 + 动画平移”，优先使用它，避免首帧出现跳位
+        x: renderState.x ?? finalX,
+        y: renderState.y ?? finalY,
         fontSize,
         fill,
         stroke,
         strokeWidth: stroke ? 4 : 0,
         opacity: renderState.opacity,
+        angle: renderState.angle || 0,
         originX: 'center',
         originY: 'center',
       });
       this.activeElements.set(elementId, { clipId: clip.id, elementType: 'text' });
     } else {
       // 更新位置和动画状态
+      // 关键修复：不要把 finalX/finalY 与 renderState.x/y 做“二次叠加”，否则拖拽后会出现偏移/跳位
       this.fabricEngine.applyRenderState(elementId, {
         ...renderState,
-        x: finalX + (renderState.x ? renderState.x - this.config.width / 2 : 0),
-        y: finalY + (renderState.y ? renderState.y - this.config.height / 2 : 0),
+        x: renderState.x ?? finalX,
+        y: renderState.y ?? finalY,
       });
     }
   }

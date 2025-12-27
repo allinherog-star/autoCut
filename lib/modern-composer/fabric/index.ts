@@ -50,6 +50,12 @@ export interface ElementConfig {
   opacity?: number;
   originX?: 'left' | 'center' | 'right';
   originY?: 'top' | 'center' | 'bottom';
+  /**
+   * 是否允许交互（选择/拖拽/命中）
+   * - 用于“背景主视频”等不应被拖拽/选中的元素
+   * - 默认 true（仅在全局 interactive=true 时才会启用交互）
+   */
+  interactable?: boolean;
   // 文本特有属性
   fontSize?: number;
   fontFamily?: string;
@@ -917,8 +923,9 @@ export class FabricEngine {
       __clipId: config.id, // 存储 clipId 用于事件回调
     };
 
-    // 交互模式下设置对象可拖拽
-    if (this.interactive) {
+    // 交互模式下设置对象可拖拽（支持按元素禁用）
+    const interactable = this.interactive && (config.interactable ?? true);
+    if (interactable) {
       element.set({
         selectable: true,
         evented: true,
@@ -950,11 +957,11 @@ export class FabricEngine {
       return data?.__clipId ?? null;
     };
 
+    // 注意：VEIR transform.offset 语义是“元素中心点”（与 originX/originY='center' 的渲染一致）
+    // 因此这里必须上报 center point，而不是 left/top（否则会出现拖拽松手后跳位/偏移）
     const getPosition = (obj: fabric.FabricObject): DragPosition => {
-      return {
-        x: obj.left ?? 0,
-        y: obj.top ?? 0,
-      };
+      const p = obj.getCenterPoint();
+      return { x: p.x, y: p.y };
     };
 
     // 对象被选中
