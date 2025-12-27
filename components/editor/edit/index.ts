@@ -6,5 +6,5 @@
 export { MaterialList } from './material-list'
 export { MaterialOperations } from './material-operations'
 export { AIChatPanel } from './ai-chat-panel'
-export { VideoPreviewPanel } from './video-preview-panel'
+export { UnifiedPreviewPanel } from './unified-preview-panel'
 

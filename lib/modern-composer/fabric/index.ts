@@ -10,6 +10,12 @@ import * as fabric from 'fabric';
 // 类型定义
 // ============================================
 
+/** 拖拽事件位置 */
+export interface DragPosition {
+  x: number;
+  y: number;
+}
+
 export interface FabricEngineConfig {
   width: number;
   height: number;
@@ -17,6 +23,16 @@ export interface FabricEngineConfig {
   preserveObjectStacking?: boolean;
   /** 可选：使用已有的 Canvas 元素，而不是创建新的 */
   canvas?: HTMLCanvasElement;
+  /** 启用交互模式（使用 fabric.Canvas 支持拖拽/选择） */
+  interactive?: boolean;
+  /** 拖拽开始回调 */
+  onObjectDragStart?: (id: string, position: DragPosition) => void;
+  /** 拖拽中回调 */
+  onObjectDragging?: (id: string, position: DragPosition) => void;
+  /** 拖拽结束回调 */
+  onObjectDragEnd?: (id: string, position: DragPosition) => void;
+  /** 对象被选中回调 */
+  onObjectSelected?: (id: string) => void;
 }
 
 export interface ElementConfig {
@@ -75,7 +91,7 @@ export interface ElementBounds {
 // ============================================
 
 export class FabricEngine {
-  private canvas: fabric.StaticCanvas;
+  private canvas: fabric.StaticCanvas | fabric.Canvas;
   private elements: Map<string, fabric.FabricObject> = new Map();
   private videoElements: Map<string, HTMLVideoElement> = new Map();
   private canvasElement: HTMLCanvasElement;
@@ -83,6 +99,12 @@ export class FabricEngine {
   private mountContainer: HTMLDivElement | null = null;
   // 存储 Blob URL 以便销毁时释放
   private blobUrls: string[] = [];
+  // 交互模式配置
+  private interactive: boolean = false;
+  private onObjectDragStart?: (id: string, position: DragPosition) => void;
+  private onObjectDragging?: (id: string, position: DragPosition) => void;
+  private onObjectDragEnd?: (id: string, position: DragPosition) => void;
+  private onObjectSelected?: (id: string) => void;
 
   constructor(config: FabricEngineConfig) {
     // 使用传入的 canvas 或创建新的
@@ -110,15 +132,36 @@ export class FabricEngine {
       this.mountContainer = container;
     }
 
+    // 保存交互模式配置和回调
+    this.interactive = config.interactive ?? false;
+    this.onObjectDragStart = config.onObjectDragStart;
+    this.onObjectDragging = config.onObjectDragging;
+    this.onObjectDragEnd = config.onObjectDragEnd;
+    this.onObjectSelected = config.onObjectSelected;
+
     // Fabric.js v7: 始终传入 canvas 元素
     // 注意：canvas 必须已添加到 DOM 中才能正常工作
-    this.canvas = new fabric.StaticCanvas(canvasEl, {
-      width: config.width,
-      height: config.height,
-      backgroundColor: config.backgroundColor || '#000000',
-      preserveObjectStacking: config.preserveObjectStacking ?? true,
-      renderOnAddRemove: false,
-    });
+    if (this.interactive) {
+      // 交互模式：使用 fabric.Canvas 支持拖拽/选择
+      this.canvas = new fabric.Canvas(canvasEl, {
+        width: config.width,
+        height: config.height,
+        backgroundColor: config.backgroundColor || '#000000',
+        preserveObjectStacking: config.preserveObjectStacking ?? true,
+        renderOnAddRemove: false,
+        selection: false, // 禁用多选框
+      });
+      this.setupInteractionEvents();
+    } else {
+      // 静态模式：用于导出或无交互场景
+      this.canvas = new fabric.StaticCanvas(canvasEl, {
+        width: config.width,
+        height: config.height,
+        backgroundColor: config.backgroundColor || '#000000',
+        preserveObjectStacking: config.preserveObjectStacking ?? true,
+        renderOnAddRemove: false,
+      });
+    }
   }
 
   /**
@@ -871,9 +914,98 @@ export class FabricEngine {
       ...existingData,
       __baseScaleX: element.scaleX ?? 1,
       __baseScaleY: element.scaleY ?? 1,
+      __clipId: config.id, // 存储 clipId 用于事件回调
     };
 
+    // 交互模式下设置对象可拖拽
+    if (this.interactive) {
+      element.set({
+        selectable: true,
+        evented: true,
+        hasControls: false, // 暂不显示变换控件
+        hasBorders: false,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: true,
+      });
+    } else {
+      element.set({
+        selectable: false,
+        evented: false,
+      });
+    }
+
     element.setCoords();
+  }
+
+  /**
+   * 设置交互事件（仅交互模式）
+   */
+  private setupInteractionEvents(): void {
+    if (!(this.canvas instanceof fabric.Canvas)) return;
+
+    const getClipId = (obj: fabric.FabricObject | undefined): string | null => {
+      if (!obj) return null;
+      const data = (obj as any).data;
+      return data?.__clipId ?? null;
+    };
+
+    const getPosition = (obj: fabric.FabricObject): DragPosition => {
+      return {
+        x: obj.left ?? 0,
+        y: obj.top ?? 0,
+      };
+    };
+
+    // 对象被选中
+    this.canvas.on('selection:created', (e) => {
+      const obj = e.selected?.[0];
+      const clipId = getClipId(obj);
+      if (clipId) {
+        this.onObjectSelected?.(clipId);
+      }
+    });
+
+    // 拖拽开始（mousedown 后开始移动）
+    this.canvas.on('object:moving', (e) => {
+      const obj = e.target;
+      const clipId = getClipId(obj);
+      if (!clipId || !obj) return;
+
+      // 首次 moving 视为 dragStart
+      const data = (obj as any).data;
+      if (!data.__isDragging) {
+        data.__isDragging = true;
+        this.onObjectDragStart?.(clipId, getPosition(obj));
+      } else {
+        this.onObjectDragging?.(clipId, getPosition(obj));
+      }
+    });
+
+    // 拖拽结束
+    this.canvas.on('object:modified', (e) => {
+      const obj = e.target;
+      const clipId = getClipId(obj);
+      if (!clipId || !obj) return;
+
+      const data = (obj as any).data;
+      if (data?.__isDragging) {
+        data.__isDragging = false;
+        this.onObjectDragEnd?.(clipId, getPosition(obj));
+      }
+    });
+
+    // 鼠标释放时也结束拖拽（处理没有 modified 事件的情况）
+    this.canvas.on('mouse:up', () => {
+      // 遍历所有元素，检查是否有正在拖拽的
+      this.elements.forEach((obj, id) => {
+        const data = (obj as any).data;
+        if (data?.__isDragging) {
+          data.__isDragging = false;
+          this.onObjectDragEnd?.(id, getPosition(obj));
+        }
+      });
+    });
   }
 
   /**

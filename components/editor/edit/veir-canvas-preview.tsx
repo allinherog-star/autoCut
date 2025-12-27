@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react'
 import type { VEIRProject } from '@/lib/veir/types'
 import { VEIRAudioPlayer } from './veir-audio-player'
-import type { ElementBounds } from '@/lib/modern-composer'
+import type { ElementBounds, DragPosition } from '@/lib/modern-composer'
 
 type Props = {
   project: VEIRProject
@@ -17,6 +17,16 @@ type Props = {
    * 用于实现 PR/AE 风格 WYSIWYG 选框/命中区。
    */
   onOverlayBoundsChange?: (boundsByClipId: Record<string, ElementBounds>) => void
+  /** 启用交互模式（Canvas 内拖拽） */
+  interactive?: boolean
+  /** 拖拽开始回调 */
+  onDragStart?: (clipId: string) => void
+  /** 拖拽中回调（百分比坐标） */
+  onDragging?: (clipId: string, xPercent: number, yPercent: number) => void
+  /** 拖拽结束回调（百分比坐标） */
+  onDragEnd?: (clipId: string, xPercent: number, yPercent: number) => void
+  /** 对象被选中回调 */
+  onSelect?: (clipId: string) => void
   className?: string
 }
 
@@ -28,6 +38,7 @@ type Props = {
  * - 复用 ModernComposer.renderFrame()，不启动编码器
  * - 集成音频播放器，实现音画同步
  * - CSS 等比缩放显示
+ * - 可选交互模式：启用 Canvas 内拖拽
  */
 export function VEIRCanvasPreview({
   project,
@@ -35,15 +46,99 @@ export function VEIRCanvasPreview({
   isPlaying = false,
   isMuted = false,
   onOverlayBoundsChange,
+  interactive = false,
+  onDragStart,
+  onDragging,
+  onDragEnd,
+  onSelect,
   className = ''
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const composerRef = useRef<null | { render: (t: number) => void; destroy: () => void }>(null)
   const composerInstanceRef = useRef<null | { getActiveClipIds: () => string[]; getClipBoundsBatch: (ids: string[]) => Record<string, ElementBounds> }>(null)
   const audioPlayerRef = useRef<VEIRAudioPlayer | null>(null)
   const projectRef = useRef<VEIRProject>(project)
   // 跟踪当前正在初始化的 composer，避免 React Strict Mode 下重复初始化导致的 Fabric 错误
   const initializingComposerRef = useRef<{ destroy: () => void } | null>(null)
+
+  /**
+   * 关键修复：Fabric 会把 <canvas> 包装成 `.canvas-container`，并把 CSS width/height 写死为「项目分辨率像素」。
+   * 在预览容器较小时会被 overflow-hidden 裁掉，导致“画面显示不全/只显示局部”。
+   *
+   * 这里强制把 `.canvas-container` 以及 lower/upper 两层 canvas 的 CSS 尺寸改成 100% 自适应父容器，
+   * 同时保持 canvas.width/canvas.height（真实像素）不变，确保渲染/导出语义一致。
+   */
+  const fixFabricContainerSizing = useCallback(() => {
+    const canvas = canvasRef.current
+    const host = containerRef.current
+    if (!canvas || !host) return
+
+    // Fabric 会把原 canvas 替换成 lower-canvas，并在其外层创建 .canvas-container
+    const fabricContainer = canvas.closest('.canvas-container') as HTMLDivElement | null
+    if (!fabricContainer) return
+
+    // 让容器彻底 follow 父容器尺寸（UniversalPreview 的 renderArea）
+    fabricContainer.style.width = '100%'
+    fabricContainer.style.height = '100%'
+    fabricContainer.style.position = 'absolute'
+    fabricContainer.style.left = '0'
+    fabricContainer.style.top = '0'
+
+    // lower/upper 两层 canvas 同步改成 100%（覆盖 Fabric 写死的 1920x1080 CSS 像素）
+    const lower = fabricContainer.querySelector('canvas.lower-canvas') as HTMLCanvasElement | null
+    const upper = fabricContainer.querySelector('canvas.upper-canvas') as HTMLCanvasElement | null
+    for (const c of [lower, upper]) {
+      if (!c) continue
+      c.style.width = '100%'
+      c.style.height = '100%'
+      c.style.display = 'block'
+    }
+  }, [])
+
+  // 容器尺寸变化时也需要再次修正（避免 Fabric 在某些路径重写 style）
+  useLayoutEffect(() => {
+    const host = containerRef.current
+    if (!host) return
+
+    fixFabricContainerSizing()
+
+    let ro: ResizeObserver | null = null
+    try {
+      ro = new ResizeObserver(() => {
+        // 避免同步布局抖动
+        requestAnimationFrame(() => fixFabricContainerSizing())
+      })
+      ro.observe(host)
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      ro?.disconnect()
+    }
+  }, [fixFabricContainerSizing])
+
+  // 坐标转换：Canvas 像素 -> 百分比
+  const pixelToPercent = useCallback((pos: DragPosition): { xPercent: number; yPercent: number } => {
+    const [w, h] = project.meta.resolution
+    return {
+      xPercent: (pos.x / w) * 100,
+      yPercent: (pos.y / h) * 100,
+    }
+  }, [project.meta.resolution])
+
+  // 提取 clipId（移除 elementId 前缀如 "video-"、"text-" 等）
+  const extractClipId = useCallback((elementId: string): string => {
+    // elementId 格式: "video-{clipId}", "text-{clipId}", "subtitle-{clipId}", "image-{clipId}"
+    const prefixes = ['video-', 'text-', 'subtitle-', 'image-']
+    for (const prefix of prefixes) {
+      if (elementId.startsWith(prefix)) {
+        return elementId.slice(prefix.length)
+      }
+    }
+    return elementId
+  }, [])
 
   useEffect(() => {
     projectRef.current = project
@@ -58,8 +153,9 @@ export function VEIRCanvasPreview({
 
   const key = useMemo(() => {
     const [w, h] = project.meta.resolution
-    return `${w}x${h}@${project.meta.fps}`
-  }, [project.meta.resolution, project.meta.fps])
+    // 包含 interactive 以便切换交互模式时重建 composer
+    return `${w}x${h}@${project.meta.fps}:${interactive}`
+  }, [project.meta.resolution, project.meta.fps, interactive])
 
   // 初始化 Canvas 渲染器
   useEffect(() => {
@@ -87,6 +183,25 @@ export function VEIRCanvasPreview({
         duration: project.meta.duration,
         canvas,
         backgroundColor: '#000000',
+        interactive,
+        onObjectDragStart: interactive ? (elementId, pos) => {
+          const clipId = extractClipId(elementId)
+          onDragStart?.(clipId)
+        } : undefined,
+        onObjectDragging: interactive ? (elementId, pos) => {
+          const clipId = extractClipId(elementId)
+          const { xPercent, yPercent } = pixelToPercent(pos)
+          onDragging?.(clipId, xPercent, yPercent)
+        } : undefined,
+        onObjectDragEnd: interactive ? (elementId, pos) => {
+          const clipId = extractClipId(elementId)
+          const { xPercent, yPercent } = pixelToPercent(pos)
+          onDragEnd?.(clipId, xPercent, yPercent)
+        } : undefined,
+        onObjectSelected: interactive ? (elementId) => {
+          const clipId = extractClipId(elementId)
+          onSelect?.(clipId)
+        } : undefined,
       })
 
       // 在初始化之前保存引用，以便 cleanup 可以销毁它
@@ -101,6 +216,9 @@ export function VEIRCanvasPreview({
         composer.destroy()
         return
       }
+
+      // 关键修复：初始化完成后立即修正 Fabric 的 CSS 尺寸，避免预览被裁切
+      fixFabricContainerSizing()
 
       // 首帧
       await composer.renderFrame(projectRef.current, time)
@@ -238,19 +356,20 @@ export function VEIRCanvasPreview({
   const canvasStyle = useMemo(() => {
     return {
       display: 'block',
-      maxWidth: '100%',
-      maxHeight: '100%',
-      objectFit: 'contain' as const,
-      // 居中显示
-      margin: 'auto',
+      // 注意：Fabric 会把 canvas 包装并写死 CSS 尺寸；我们在 fixFabricContainerSizing 里统一改为 100%。
+      // 这里保留基础样式即可。
+      width: '100%',
+      height: '100%',
     }
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={className}
-      style={canvasStyle}
-    />
+    <div ref={containerRef} className={`relative w-full h-full ${className}`}>
+      <canvas
+        ref={canvasRef}
+        className="block w-full h-full"
+        style={canvasStyle}
+      />
+    </div>
   )
 }

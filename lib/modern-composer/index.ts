@@ -33,6 +33,7 @@ export {
   type ElementConfig,
   type RenderState,
   type ElementBounds,
+  type DragPosition,
   fabric,
 } from './fabric';
 
@@ -86,7 +87,7 @@ export {
 
 import type { VEIRProject, Clip, Track, Asset } from '../veir/types';
 import { compileVEIRToRenderPlan, createPreferredTimeStretchEngine, frameIndexToTimeUs, usToSec } from '../veir/engine';
-import { FabricEngine, type ElementBounds, type ElementConfig, type RenderState, fabric } from './fabric';
+import { FabricEngine, type ElementBounds, type ElementConfig, type RenderState, type DragPosition, fabric } from './fabric';
 import { AnimeEngine, calculateAnimationState, type Keyframe, type AnimationState } from './anime';
 import {
   MediaBunnyComposer,
@@ -119,6 +120,13 @@ export interface ModernComposerConfig {
   quality?: 'high' | 'medium' | 'low';
   // 背景
   backgroundColor?: string;
+  // 交互模式（启用 Canvas 拖拽）
+  interactive?: boolean;
+  // 拖拽事件回调
+  onObjectDragStart?: (id: string, position: DragPosition) => void;
+  onObjectDragging?: (id: string, position: DragPosition) => void;
+  onObjectDragEnd?: (id: string, position: DragPosition) => void;
+  onObjectSelected?: (id: string) => void;
 }
 
 /**
@@ -178,6 +186,11 @@ export class ModernComposer {
       height: this.config.height,
       backgroundColor: this.config.backgroundColor || '#000000',
       canvas: this.config.canvas,
+      interactive: this.config.interactive,
+      onObjectDragStart: this.config.onObjectDragStart,
+      onObjectDragging: this.config.onObjectDragging,
+      onObjectDragEnd: this.config.onObjectDragEnd,
+      onObjectSelected: this.config.onObjectSelected,
     });
 
     // 初始化 Anime 动画引擎
@@ -929,7 +942,7 @@ export class ModernComposer {
     // 读取 clipOverrides 中的自定义位置（来自预览拖拽）
     const adjustment = project.adjustments?.clipOverrides?.[clip.id];
     const transform = adjustment?.video?.transform;
-    
+
     // 计算最终位置：优先使用 clipOverrides，否则使用默认中心位置
     let finalX = this.config.width / 2;
     let finalY = this.config.height * 0.85; // 文本默认在下方 85% 位置
@@ -1048,7 +1061,7 @@ export class ModernComposer {
     // 读取 clipOverrides 中的自定义位置（来自预览拖拽）
     const adjustment = project.adjustments?.clipOverrides?.[clip.id];
     const transform = adjustment?.video?.transform;
-    
+
     // 计算最终位置：优先使用 clipOverrides
     let finalX = defaultX;
     let finalY = defaultY;

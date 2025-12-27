@@ -26,8 +26,9 @@ import {
   MaterialList,
   MaterialOperations,
   AIChatPanel,
-  VideoPreviewPanel,
+  UnifiedPreviewPanel,
 } from '@/components/editor/edit'
+
 
 // VEIR 测试项目 - 使用网络视频（CORS 友好，用于测试跨域视频加载）
 import networkVideoDemo from '@/lib/veir/test-projects/network-video-demo.json'
@@ -236,13 +237,12 @@ export default function EditPage() {
 
         {/* 右侧：预览区（优先空间，最佳预览效果） */}
         <div className="flex-1 min-w-[400px]">
-          <VideoPreviewPanel
+          <UnifiedPreviewPanel
             selectedClipId={selectedClipId}
             selectedTrackId={selectedTrackId}
             veirProject={veirProject}
             targetDevice={targetDevice}
             deviceConfig={deviceConfig}
-            onClipPositionChange={handleClipPositionChange}
             onClipTransformChange={handleClipTransformChange}
             onSelectClip={handleSelectClip}
             className="h-full"

@@ -12,8 +12,9 @@ import {
   MaterialList,
   MaterialOperations,
   AIChatPanel,
-  VideoPreviewPanel,
+  UnifiedPreviewPanel,
 } from '@/components/editor/edit'
+
 
 import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.json'
 import { createDraft, getDraft } from '@/features/editor-drafts/idb'
@@ -36,9 +37,9 @@ function applyClipTransformToVEIR(
   const nextOffset =
     typeof xPercent === 'number' || typeof yPercent === 'number'
       ? ([
-          typeof xPercent === 'number' ? (xPercent / 100) * w : (prevOffset?.[0] ?? w * 0.5),
-          typeof yPercent === 'number' ? (yPercent / 100) * h : (prevOffset?.[1] ?? h * 0.5),
-        ] as [number, number])
+        typeof xPercent === 'number' ? (xPercent / 100) * w : (prevOffset?.[0] ?? w * 0.5),
+        typeof yPercent === 'number' ? (yPercent / 100) * h : (prevOffset?.[1] ?? h * 0.5),
+      ] as [number, number])
       : prevOffset
 
   // VEIR Transform.scale 语义：1 = 100%（ratio），UI 侧传入的是百分比（100=100%）
@@ -141,7 +142,11 @@ export default function DraftEditPage({ params }: PageProps) {
   // 把 VEIR 写入 EditorLayout context（供其他页面使用）
   useEffect(() => {
     setVeirProject(veirProject)
-    return () => setVeirProject(null)
+    // 关键：不要在本页面 unmount 时清空 veirProject
+    // 否则从 /editor/[draftId]/edit 跳转到 /editor/[draftId]/export 时，
+    // export 页面会读到 null 并回退到 demo 项目，导致“导出与预览不一致”。
+    // 草稿数据本身由 autosave 写入 IndexedDB；EditorLayout context 负责跨步骤传递同一份 veirProject。
+    return () => {}
   }, [setVeirProject, veirProject])
 
   // 自动保存：VEIR 变更后防抖写入 IndexedDB
@@ -302,7 +307,7 @@ export default function DraftEditPage({ params }: PageProps) {
         </div>
 
         <div className="w-[480px] flex-shrink-0 border-l border-[#2a2a2e]">
-          <VideoPreviewPanel
+          <UnifiedPreviewPanel
             selectedClipId={selectedClipId}
             selectedTrackId={selectedTrackId}
             veirProject={veirProject}
