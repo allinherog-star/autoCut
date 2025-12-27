@@ -28,7 +28,7 @@ import {
   Maximize2,
   Monitor,
 } from 'lucide-react'
-import { Button, Card, Badge, Slider, Switch, Tabs } from '@/components/ui'
+import { Button, Card, Badge, Slider, Switch, Tabs, TabsList, TabsTrigger } from '@/components/ui'
 import { useEditor } from '../layout'
 import { 
   EmotionTextEffect, 
@@ -63,7 +63,7 @@ interface EmotionPoint {
 interface EmotionPreset {
   emotion: EmotionType
   label: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
   color: string
   soundEffects: string[]
   visualEffects: string[]
@@ -423,7 +423,7 @@ function VideoPreviewWithEffects({
               className="absolute top-4 left-4 z-20"
             >
               <Badge 
-                variant="secondary" 
+                variant="outline" 
                 className="bg-black/60 backdrop-blur-sm"
                 style={{ 
                   borderColor: EMOTION_COLORS[activeEffect.emotion].primary,
@@ -523,7 +523,7 @@ function VideoPreviewWithEffects({
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+              <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                 <Monitor className="w-3 h-3 mr-1" />
                 实时预览
               </Badge>
@@ -696,15 +696,19 @@ export default function EmotionPage() {
 
         {/* 标签页切换 */}
         <div className="px-6 mb-4">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            tabs={[
-              { value: 'preview', label: '视频预览', icon: <Monitor className="w-4 h-4" /> },
-              { value: 'timeline', label: '时间线', icon: <Zap className="w-4 h-4" /> },
-              { value: 'texteffects', label: '花字特效库', icon: <Wand2 className="w-4 h-4" /> },
-            ]}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="preview" leftIcon={<Monitor className="w-4 h-4" />}>
+                视频预览
+              </TabsTrigger>
+              <TabsTrigger value="timeline" leftIcon={<Zap className="w-4 h-4" />}>
+                时间线
+              </TabsTrigger>
+              <TabsTrigger value="texteffects" leftIcon={<Wand2 className="w-4 h-4" />}>
+                花字特效库
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* 内容区域 */}
@@ -965,7 +969,7 @@ export default function EmotionPage() {
                               {point.intensity}%
                             </span>
                             {(point.textEffect || point.varietyEffect) && (
-                              <Badge variant="secondary" size="sm">
+                              <Badge variant="default" size="sm">
                                 <Wand2 className="w-3 h-3 mr-1" />
                                 {point.varietyEffect ? '综艺花字' : '花字'}
                               </Badge>
@@ -981,7 +985,7 @@ export default function EmotionPage() {
                           )}
                           <div className="flex flex-wrap gap-1.5">
                             {point.effects.map((effect) => (
-                              <Badge key={effect} variant="secondary" size="sm">
+                              <Badge key={effect} variant="default" size="sm">
                                 {effect}
                               </Badge>
                             ))}
@@ -1034,7 +1038,7 @@ export default function EmotionPage() {
                       <span className="font-medium text-surface-200">
                         {getEmotionLabel(emotion as EmotionType)}
                       </span>
-                      <Badge variant="secondary" size="sm">
+                      <Badge variant="default" size="sm">
                         {presets.length} 个效果
                       </Badge>
                     </div>
@@ -1141,7 +1145,7 @@ export default function EmotionPage() {
                     <Wand2 className="w-3 h-3" />
                     花字特效
                   </p>
-                  <Badge variant="secondary" size="sm">
+                  <Badge variant="default" size="sm">
                     {EMOTION_TEXT_PRESETS.filter(p => p.emotion === preset.emotion).length} 个样式
                   </Badge>
                 </div>

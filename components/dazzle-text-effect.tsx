@@ -789,7 +789,7 @@ export const DazzleTextEffect: React.FC<DazzleTextEffectProps> = ({
                     scale: 1,
                   } : { opacity: 0, y: 50, scale: 0 }}
                   transition={{
-                    delay: index * (preset.animation.stagger / 1000),
+                    delay: index * ((preset.animation.stagger ?? 0) / 1000),
                     type: 'spring',
                     stiffness: 500,
                     damping: 20,
@@ -926,6 +926,7 @@ export const DazzlePreviewCard: React.FC<DazzlePreviewCardProps> = ({
 }
 
 export default DazzleTextEffect
+
 
 
 

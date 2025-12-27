@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { CategoryDimension } from '@prisma/client'
+import { CACHE_TAGS } from '@/lib/server/cache-tags'
 
 // 统一响应格式
 function successResponse<T>(data: T) {
@@ -123,6 +125,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 刷新分类标签缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.categories)
+
     return successResponse(tag)
   } catch (error) {
     console.error('Create category error:', error)
@@ -160,6 +165,9 @@ export async function DELETE(request: NextRequest) {
     await prisma.categoryTag.delete({
       where: { id },
     })
+
+    // 刷新分类标签缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.categories)
 
     return successResponse({ id, deleted: true })
   } catch (error) {

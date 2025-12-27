@@ -24,7 +24,7 @@ interface TimelineEditorProps {
 export function TimelineEditor({ className = '' }: TimelineEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(0);
 
     // Store

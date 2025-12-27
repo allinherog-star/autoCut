@@ -34,7 +34,7 @@ import type { VEIRProject } from '@/lib/veir/types'
 interface ExportPreset {
   id: string
   name: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string }>
   resolution: string
   fps: number
   bitrate: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -73,6 +73,8 @@ import {
 } from '@/lib/dazzle-text-presets'
 import { EmotionTextEffect } from '@/components/emotion-text-effect'
 import { DazzleTextEffect, DazzlePreviewCard } from '@/components/dazzle-text-effect'
+import { useLibraryInitialData } from '@/app/library/_components/library-data-provider'
+import { MediaThumb } from '@/components/media-thumb'
 
 // ============================================
 // 类型定义
@@ -181,12 +183,17 @@ function getMediaTypeName(type: Media['type']): string {
 export default function LibraryPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { categoriesDimensions, mediaList: initialMediaList, mediaPagination: initialPagination } =
+    useLibraryInitialData()
+  const didHydrateRef = useRef(false)
 
   // 状态
-  const [mediaList, setMediaList] = useState<Media[]>([])
-  const [loading, setLoading] = useState(true)
+  const [mediaList, setMediaList] = useState<Media[]>(() => (initialMediaList ?? []) as Media[])
+  const [loading, setLoading] = useState(() => initialMediaList == null)
   const [error, setError] = useState<string | null>(null)
-  const [pagination, setPagination] = useState<MediaListResponse['pagination'] | null>(null)
+  const [pagination, setPagination] = useState<MediaListResponse['pagination'] | null>(
+    () => (initialPagination ?? null) as MediaListResponse['pagination'] | null
+  )
 
   // 视图状态
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -222,7 +229,11 @@ export default function LibraryPage() {
 
   // 用户标签管理
   const [showTagModal, setShowTagModal] = useState(false)
-  const [userTags, setUserTags] = useState<CategoryTag[]>([])
+  const initialUserTags = useMemo(() => {
+    const allTags = (categoriesDimensions ?? []).flatMap((d) => d.tags)
+    return allTags.filter((t) => !t.isSystem)
+  }, [categoriesDimensions])
+  const [userTags, setUserTags] = useState<CategoryTag[]>(() => initialUserTags)
 
   // 获取当前类型配置
   const currentTypeConfig = MEDIA_TYPE_CONFIG.find((c) => c.type === typeFilter)
@@ -310,6 +321,12 @@ export default function LibraryPage() {
 
   // 初始加载
   useEffect(() => {
+    // 首屏由 Server Layout 注入数据，避免客户端二次请求
+    if (!didHydrateRef.current) {
+      didHydrateRef.current = true
+      setLoading(false)
+      return
+    }
     loadMedia()
   }, [loadMedia])
 
@@ -318,10 +335,10 @@ export default function LibraryPage() {
     loadTypeCounts()
   }, [loadTypeCounts])
 
-  // 加载用户标签
+  // 同步首屏注入的用户标签（避免 mount 时二次请求）
   useEffect(() => {
-    loadUserTags()
-  }, [loadUserTags])
+    setUserTags(initialUserTags)
+  }, [initialUserTags])
 
   // 上传文件
   const handleUpload = async (files: FileList | null) => {
@@ -557,6 +574,7 @@ export default function LibraryPage() {
                 <SubcategoryTags
                   selectedTags={categoryTags}
                   onTagsChange={setCategoryTags}
+                  initialDimensions={categoriesDimensions}
                 />
               </div>
 
@@ -933,16 +951,20 @@ export default function LibraryPage() {
                         <div className="absolute inset-0 bg-grid opacity-10" />
                         {/* 表情预览 */}
                         {sticker.content.type === 'image' ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <MediaThumb
                             src={sticker.content.value}
                             alt={sticker.name}
+                            width={Math.max(1, Math.round(sticker.content.size * 0.55))}
+                            height={Math.max(1, Math.round(sticker.content.size * 0.55))}
                             className="relative z-10 object-contain"
                             style={{
-                              width: `${sticker.content.size * 0.55}px`,
-                              height: `${sticker.content.size * 0.55}px`,
-                              borderRadius: sticker.style.borderRadius ? `${sticker.style.borderRadius}px` : undefined,
+                              borderRadius: sticker.style.borderRadius
+                                ? `${sticker.style.borderRadius}px`
+                                : undefined,
                             }}
+                            // 小图标类资源不强制走优化管线，避免 data: / 复杂来源带来的限制
+                            unoptimized
+                            fallback={null}
                           />
                         ) : (
                           <span 
@@ -1171,20 +1193,18 @@ export default function LibraryPage() {
                       <div className="relative aspect-video bg-surface-800 overflow-hidden">
                         {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
                           media.thumbnailPath || media.path ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <MediaThumb
                               src={media.thumbnailPath || media.path}
-                              alt=""
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                // 图片加载失败时隐藏图片，显示默认图标
-                                const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                const parent = target.parentElement
-                                if (parent) {
-                                  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-surface-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
-                                }
-                              }}
+                              alt={media.name}
+                              fill
+                              className="object-cover"
+                              sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
+                              quality={80}
+                              fallback={
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Icon className="w-8 h-8 text-surface-600" />
+                                </div>
+                              }
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
@@ -1299,15 +1319,19 @@ export default function LibraryPage() {
                         {/* 缩略图 */}
                         <div className={`w-16 h-10 rounded-lg overflow-hidden flex-shrink-0 ${typeConfig?.bgColor || 'bg-surface-800'}`}>
                           {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <MediaThumb
                               src={media.thumbnailPath || media.path}
-                              alt=""
+                              alt={media.name}
+                              width={64}
+                              height={40}
                               className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                              }}
+                              sizes="64px"
+                              quality={80}
+                              fallback={
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Icon className={`w-5 h-5 ${typeConfig?.color || 'text-surface-500'}`} />
+                                </div>
+                              }
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

@@ -484,14 +484,20 @@ export class ModernComposer {
       // 计算位置（所有轨道类型都统一读取 clipOverrides，确保拖拽更新能正确反映）
       const position = this.calculateClipPosition(clip, track, asset, project);
 
+      // 关键修复：检测是否有用户拖拽设置的位置（clipOverrides.offset）
+      // 如果有，跳过动画的 translateX/Y 叠加，元素固定在用户指定的位置
+      // 这样用户拖拽到哪里就在哪里，不会因为动画而"飘走"或"回弹"
+      const hasUserOverride = !!project.adjustments?.clipOverrides?.[clip.id]?.video?.transform?.offset;
+
       // 应用渲染状态
       // 注意：animState 中的值在 calculateClipAnimation 中始终是 number 类型
       const getNum = (v: number | number[] | undefined, def: number) =>
         typeof v === 'number' ? v : (Array.isArray(v) ? v[0] : def);
 
       const renderState: RenderState = {
-        x: position.x + getNum(animState.translateX, 0),
-        y: position.y + getNum(animState.translateY, 0),
+        // 如果用户设置了位置，不叠加动画位移；否则正常叠加
+        x: hasUserOverride ? position.x : position.x + getNum(animState.translateX, 0),
+        y: hasUserOverride ? position.y : position.y + getNum(animState.translateY, 0),
         scaleX: getNum(animState.scaleX, 1) || getNum(animState.scale, 1),
         scaleY: getNum(animState.scaleY, 1) || getNum(animState.scale, 1),
         angle: getNum(animState.rotate, 0),

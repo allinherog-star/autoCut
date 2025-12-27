@@ -21,6 +21,7 @@ import {
   Shuffle,
 } from 'lucide-react'
 import { Button, Card, Badge, Input, Slider } from '@/components/ui'
+import { MediaThumb } from '@/components/media-thumb'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -284,11 +285,20 @@ export default function MusicPage() {
                 <div className="flex items-center gap-4">
                   {/* 封面 */}
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <MediaThumb
                       src={track.coverUrl}
                       alt={track.name}
+                      width={56}
+                      height={56}
                       className="w-full h-full object-cover"
+                      sizes="56px"
+                      quality={80}
+                      unoptimized
+                      fallback={
+                        <div className="w-full h-full bg-surface-800 flex items-center justify-center">
+                          <Music className="w-5 h-5 text-surface-500" />
+                        </div>
+                      }
                     />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Play className="w-6 h-6 text-white" />
@@ -372,11 +382,20 @@ export default function MusicPage() {
             {selectedTrack ? (
               <>
                 <div className="w-12 h-12 rounded-lg overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <MediaThumb
                     src={selectedTrack.coverUrl}
                     alt={selectedTrack.name}
+                    width={48}
+                    height={48}
                     className="w-full h-full object-cover"
+                    sizes="48px"
+                    quality={80}
+                    unoptimized
+                    fallback={
+                      <div className="w-full h-full bg-surface-800 flex items-center justify-center">
+                        <Music className="w-4 h-4 text-surface-500" />
+                      </div>
+                    }
                   />
                 </div>
                 <div className="min-w-0">

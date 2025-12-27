@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAssetManager, type Asset, type AssetType } from '@/lib/assets';
 import { formatFileSize, formatDuration } from '@/lib/assets/parser/utils';
+import { MediaThumb } from '@/components/media-thumb'
 
 interface AssetListProps {
     /** 素材类型过滤 */
@@ -164,10 +165,18 @@ function AssetCard({ asset, selected, onClick, onDoubleClick, onDelete }: AssetC
             {/* 缩略图 */}
             <div className="aspect-video bg-gray-900 relative">
                 {asset.thumbnailUrl ? (
-                    <img
-                        src={asset.thumbnailUrl}
-                        alt={asset.name}
-                        className="w-full h-full object-cover"
+                    <MediaThumb
+                      src={asset.thumbnailUrl}
+                      alt={asset.name}
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 1024px) 160px, 45vw"
+                      quality={80}
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
+                          {typeIcon}
+                        </div>
+                      }
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">

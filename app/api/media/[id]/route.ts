@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { deleteFile } from '@/lib/storage'
+import { CACHE_TAGS } from '@/lib/server/cache-tags'
 
 // 统一响应格式
 function successResponse<T>(data: T) {
@@ -69,6 +71,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       where: { id },
     })
 
+    // 刷新素材列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.media)
+
     return successResponse({ id, deleted: true })
   } catch (error) {
     console.error('Delete media error:', error)
@@ -113,12 +118,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       data: updateData,
     })
 
+    // 刷新素材列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.media)
+
     return successResponse(media)
   } catch (error) {
     console.error('Update media error:', error)
     return errorResponse('Failed to update media', 'UPDATE_FAILED', 500)
   }
 }
+
 
 
 

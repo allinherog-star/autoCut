@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor } from '../../layout'
 
 import { TimelineViewer } from '@/components/editor/timeline'
@@ -20,7 +20,7 @@ import fullFeatureDemo from '@/lib/veir/test-projects/full-feature-edit-demo.jso
 import { createDraft, getDraft } from '@/features/editor-drafts/idb'
 import { createDraftAutosaver } from '@/features/editor-drafts/autosave'
 
-type PageProps = { params: { draftId: string } }
+type PageProps = { params: Promise<{ draftId: string }> }
 
 function applyClipTransformToVEIR(
   veir: VEIRProject,
@@ -70,7 +70,8 @@ function applyClipTransformToVEIR(
 }
 
 export default function DraftEditPage({ params }: PageProps) {
-  const { draftId, setVeirProject, hideBottomBar, targetDevice, deviceConfig, markStepCompleted, currentStep, goToNextStep } =
+  const { draftId: routeDraftId } = use(params)
+  const { setVeirProject, hideBottomBar, targetDevice, deviceConfig, markStepCompleted, currentStep, goToNextStep } =
     useEditor()
 
   const { data, playback, loadData, _tick } = useTimelineStore()
@@ -90,14 +91,14 @@ export default function DraftEditPage({ params }: PageProps) {
 
   // autosave
   const autosaver = useMemo(() => {
-    if (!draftId) return null
+    if (!routeDraftId) return null
     return createDraftAutosaver({
-      draftId,
+      draftId: routeDraftId,
       debounceMs: 800,
       onSaved: (record) => setDraftRevision(record.revision),
       onError: (e) => setError(e.message),
     })
-  }, [draftId])
+  }, [routeDraftId])
 
   // 加载/创建草稿
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function DraftEditPage({ params }: PageProps) {
         setIsLoading(true)
         setError(null)
 
-        const id = params.draftId
+        const id = routeDraftId
         const existing = await getDraft(id)
         const record =
           existing ??
@@ -131,7 +132,7 @@ export default function DraftEditPage({ params }: PageProps) {
     return () => {
       cancelled = true
     }
-  }, [params.draftId, setVeirProject])
+  }, [routeDraftId, setVeirProject])
 
   // 初始化时间轴数据（从 VEIR → Timeline UI）
   useEffect(() => {
@@ -328,7 +329,7 @@ export default function DraftEditPage({ params }: PageProps) {
             <span className="text-amber-400">✨</span>
           </div>
           <div>
-            <p className="font-medium text-sm text-[#eee]">草稿：{params.draftId}</p>
+            <p className="font-medium text-sm text-[#eee]">草稿：{routeDraftId}</p>
             <p className="text-xs text-[#888]">
               总时长 {formatTime(playback.duration)} · {trackCount} 轨道 · {clipCount} 片段 · rev{' '}
               {draftRevision ?? '-'}

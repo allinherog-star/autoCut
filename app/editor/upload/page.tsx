@@ -24,6 +24,7 @@ import { MediaPreviewModal } from '@/components/media-preview-modal'
 import { MediaLibraryPanel } from '@/components/media-library-panel'
 import { useEditor, DEVICE_CONFIGS, VIDEO_TYPES, type TargetDevice } from '../layout'
 import { uploadMedia, type Media } from '@/lib/api/media'
+import { MediaThumb } from '@/components/media-thumb'
 
 // ============================================
 // 类型定义
@@ -118,6 +119,7 @@ export default function UploadPage() {
     })
 
     if (response.success && response.data) {
+      const uploaded = response.data
       setMediaFiles((prev) =>
         prev.map((f) =>
           f.id === mediaFile.id
@@ -125,8 +127,8 @@ export default function UploadPage() {
                 ...f,
                 uploadProgress: 100,
                 isUploaded: true,
-                media: response.data,
-                thumbnailUrl: response.data.path,
+                media: uploaded,
+                thumbnailUrl: uploaded.path,
               }
             : f
         )
@@ -560,11 +562,19 @@ export default function UploadPage() {
                             {mediaFile.type === 'video' ? (
                               <video src={mediaFile.thumbnailUrl} className="w-full h-full object-cover" />
                             ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
+                              <MediaThumb
                                 src={mediaFile.thumbnailUrl}
                                 alt={mediaFile.name}
+                                width={96}
+                                height={56}
                                 className="w-full h-full object-cover"
+                                sizes="96px"
+                                quality={80}
+                                fallback={
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-6 h-6 text-surface-500" />
+                                  </div>
+                                }
                               />
                             )}
                             {/* 预览按钮覆盖层 */}

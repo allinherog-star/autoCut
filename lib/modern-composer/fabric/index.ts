@@ -523,6 +523,8 @@ export class FabricEngine {
       );
     }
 
+    // 关键修复：调用 applyElementConfig 设置交互属性（selectable/evented），否则文本无法拖拽
+    this.applyElementConfig(text, config);
     this.canvas.add(text);
     this.elements.set(config.id, text);
 
@@ -745,11 +747,22 @@ export class FabricEngine {
     const element = this.elements.get(id);
     if (!element) return;
 
-    if (state.x !== undefined) element.set('left', state.x);
-    if (state.y !== undefined) element.set('top', state.y);
+    // 交互拖拽期间：让“用户拖拽”优先于“播放渲染循环”
+    // 否则在播放/高频 renderFrame 下，会出现“拖一下下一帧又被改回去”的回弹感。
+    const data = (element as any).data || {};
+    const isDragging = data.__isDragging === true;
+    // 拖拽结束后的短窗口：避免 React state/VEIR patch 还没落盘时，下一帧先用旧 project 覆写 left/top 造成“松手回弹”
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    const freezeUntil = typeof data.__dragFreezeUntil === 'number' ? data.__dragFreezeUntil : 0;
+    const isFreeze = freezeUntil > now;
+
+    if (!isDragging && !isFreeze) {
+      if (state.x !== undefined) element.set('left', state.x);
+      if (state.y !== undefined) element.set('top', state.y);
+    }
     // 关键：renderState.scaleX/scaleY 是“动画倍率”，不应覆盖元素在创建时根据 width/height 计算出来的基础缩放。
     // 否则会出现：导出时视频被缩回原始分辨率（看起来像“没画面”，实际是画面变成一个很小的点）。
-    const data = (element as any).data || {};
     const baseScaleX = typeof data.__baseScaleX === 'number' ? data.__baseScaleX : (element.scaleX ?? 1);
     const baseScaleY = typeof data.__baseScaleY === 'number' ? data.__baseScaleY : (element.scaleY ?? 1);
     if (state.scaleX !== undefined) element.set('scaleX', baseScaleX * state.scaleX);
@@ -998,6 +1011,11 @@ export class FabricEngine {
       const data = (obj as any).data;
       if (data?.__isDragging) {
         data.__isDragging = false;
+        // 释放拖拽后冻结 x/y，等待 VEIR patch 生效（避免下一帧用旧值覆写导致回弹）
+        // 关键修复：将冻结时间从 220ms 增加到 500ms，确保 React state 更新有足够时间传播
+        const now =
+          typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+        data.__dragFreezeUntil = now + 500;
         this.onObjectDragEnd?.(clipId, getPosition(obj));
       }
     });
@@ -1009,7 +1027,15 @@ export class FabricEngine {
         const data = (obj as any).data;
         if (data?.__isDragging) {
           data.__isDragging = false;
-          this.onObjectDragEnd?.(id, getPosition(obj));
+          // 同 object:modified 的兜底：避免松手后立即被旧 renderState 覆写
+          // 关键修复：将冻结时间从 220ms 增加到 500ms
+          const now =
+            typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+          data.__dragFreezeUntil = now + 500;
+          const clipId = getClipId(obj);
+          if (clipId) {
+            this.onObjectDragEnd?.(clipId, getPosition(obj));
+          }
         }
       });
     });

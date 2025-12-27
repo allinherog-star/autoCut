@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 export type TabsVariant = 'default' | 'pills' | 'underline'
 export type TabsSize = 'sm' | 'md' | 'lg'
 
-export interface TabsProps extends HTMLAttributes<HTMLDivElement> {
+export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, 'dir'> {
   /** 当前选中的 tab */
   value?: string
   /** 默认选中的 tab */

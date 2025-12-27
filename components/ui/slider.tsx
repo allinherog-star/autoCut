@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 // 类型定义
 // ============================================
 
-export interface SliderProps extends HTMLAttributes<HTMLDivElement> {
+export interface SliderProps extends Omit<HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value'> {
   /** 当前值 */
   value?: number[]
   /** 默认值 */

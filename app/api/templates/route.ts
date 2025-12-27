@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { TemplateType, AssetSource, FancyTextUsage, Prisma } from '@prisma/client'
+import { CACHE_TAGS } from '@/lib/server/cache-tags'
 
 // GET /api/templates - 获取模版列表
 export async function GET(request: NextRequest) {
@@ -114,6 +116,9 @@ export async function POST(request: NextRequest) {
         tags: true,
       },
     })
+
+    // 刷新模版列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.templates)
 
     return NextResponse.json({
       success: true,

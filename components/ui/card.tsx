@@ -20,7 +20,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg'
 }
 
-export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardHeaderProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   /** 标题 */
   title?: ReactNode
   /** 副标题/描述 */
@@ -217,6 +217,7 @@ CardFooter.displayName = 'CardFooter'
 // ============================================
 
 export default Card
+
 
 
 

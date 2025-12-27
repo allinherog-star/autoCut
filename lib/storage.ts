@@ -266,7 +266,10 @@ export async function saveFile(
  */
 export async function deleteFile(relativePath: string): Promise<boolean> {
   try {
-    const fullPath = path.join(process.cwd(), 'public', relativePath)
+    const safeRelativePath = relativePath.startsWith('/')
+      ? relativePath.slice(1)
+      : relativePath
+    const fullPath = path.join(process.cwd(), 'public', safeRelativePath)
     await unlink(fullPath)
     return true
   } catch (error) {
@@ -280,7 +283,10 @@ export async function deleteFile(relativePath: string): Promise<boolean> {
  */
 export async function fileExists(relativePath: string): Promise<boolean> {
   try {
-    const fullPath = path.join(process.cwd(), 'public', relativePath)
+    const safeRelativePath = relativePath.startsWith('/')
+      ? relativePath.slice(1)
+      : relativePath
+    const fullPath = path.join(process.cwd(), 'public', safeRelativePath)
     await stat(fullPath)
     return true
   } catch {

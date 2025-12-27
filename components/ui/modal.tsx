@@ -26,7 +26,7 @@ export interface ModalProps {
   children?: ReactNode
 }
 
-export interface ModalHeaderProps extends HTMLAttributes<HTMLDivElement> {
+export interface ModalHeaderProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   /** 标题 */
   title?: ReactNode
   /** 描述 */
@@ -231,6 +231,7 @@ export const ModalTrigger = DialogPrimitive.Trigger
 // ============================================
 
 export default Modal
+
 
 
 

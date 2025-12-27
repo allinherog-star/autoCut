@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Download,
@@ -36,7 +36,7 @@ interface CompositionResult {
 interface ExportPreset {
   id: string
   name: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string }>
   resolution: string
   fps: number
   bitrate: string
@@ -77,7 +77,8 @@ function getStageLabel(stage: CompositionStage): string {
   }
 }
 
-export default function DraftExportPage({ params }: { params: { draftId: string } }) {
+export default function DraftExportPage({ params }: { params: Promise<{ draftId: string }> }) {
+  const { draftId } = use(params)
   const [veirProject, setVeirProject] = useState<VEIRProject | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -101,7 +102,7 @@ export default function DraftExportPage({ params }: { params: { draftId: string 
     const run = async () => {
       try {
         setIsLoading(true)
-        const record = await getDraft(params.draftId)
+        const record = await getDraft(draftId)
         if (cancelled) return
         setVeirProject((record?.veir as VEIRProject) ?? null)
       } finally {
@@ -110,7 +111,7 @@ export default function DraftExportPage({ params }: { params: { draftId: string 
     }
     void run()
     return () => { cancelled = true }
-  }, [params.draftId])
+  }, [draftId])
 
   const startExport = useCallback(async () => {
     let projectToExport = veirProject
@@ -159,11 +160,11 @@ export default function DraftExportPage({ params }: { params: { draftId: string 
     if (!compositionResult) return
     const link = document.createElement('a')
     link.href = compositionResult.downloadUrl
-    link.download = `draft-${params.draftId}-${Date.now()}.${compositionResult.format}`
+    link.download = `draft-${draftId}-${Date.now()}.${compositionResult.format}`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }, [compositionResult, params.draftId])
+  }, [compositionResult, draftId])
 
   const resetExport = useCallback(() => {
     setIsExportComplete(false)
@@ -192,7 +193,7 @@ export default function DraftExportPage({ params }: { params: { draftId: string 
       <div className="flex-1 flex flex-col p-6 border-r border-surface-800">
         <div className="mb-6">
           <h1 className="text-2xl font-display font-bold text-surface-100 mb-2">导出成片</h1>
-          <p className="text-surface-400">{veirProject ? `草稿 ${params.draftId} · 生成高质量 MP4` : '未找到草稿，仍可导出示例项目'}</p>
+          <p className="text-surface-400">{veirProject ? `草稿 ${draftId} · 生成高质量 MP4` : '未找到草稿，仍可导出示例项目'}</p>
         </div>
 
         <div className="flex-1 flex items-center justify-center mb-6">

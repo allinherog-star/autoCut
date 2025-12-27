@@ -48,7 +48,7 @@ interface MaterialOperationsProps {
 interface OperationButton {
   id: string
   label: string
-  icon: React.ElementType
+  icon: React.ElementType<{ className?: string }>
   action?: () => void
   variant?: 'default' | 'danger'
 }

@@ -13,6 +13,7 @@ import {
   SkipForward,
 } from 'lucide-react'
 import { Button, Slider } from '@/components/ui'
+import { MediaThumb } from '@/components/media-thumb'
 
 // ============================================
 // 类型定义
@@ -326,12 +327,17 @@ export function MediaPreviewModal({
                 </>
               ) : (
                 // 图片预览
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={src}
-                  alt={title || '图片预览'}
-                  className="w-full max-h-[80vh] object-contain"
-                />
+                <div className="relative w-full h-[80vh]">
+                  <MediaThumb
+                    src={src}
+                    alt={title || '图片预览'}
+                    fill
+                    className="object-contain"
+                    sizes="90vw"
+                    quality={90}
+                    fallback={null}
+                  />
+                </div>
               )}
             </div>
 

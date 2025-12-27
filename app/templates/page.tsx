@@ -38,9 +38,8 @@ import {
   VISUAL_STYLE_PRESETS,
 } from '@/lib/fancy-text/presets'
 import type { FancyTextTemplate, FancyTextUsage, ColorValue } from '@/lib/fancy-text/types'
-import { loadPresets, getPreset, type PresetRegistryItem } from '@/lib/fancy-text-presets/registry'
-import { convertPresetToTemplate } from '@/lib/fancy-text-presets/converter'
 import { addFavorite, removeFavorite, batchCheckFavorites } from '@/lib/api/favorites'
+import { useTemplatesInitialData } from '@/app/templates/_components/templates-data-provider'
 
 // ============================================
 // 类型定义
@@ -76,14 +75,14 @@ function formatNumber(num: number): string {
 
 export default function TemplatesPage() {
   const router = useRouter()
+  const { categoriesDimensions, fancyTextTemplates: initialFancyTextTemplates } = useTemplatesInitialData()
 
   // 状态
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => initialFancyTextTemplates == null)
   const [error, setError] = useState<string | null>(null)
 
   // 动态加载的花字模版
   const [fancyTextTemplates, setFancyTextTemplates] = useState<FancyTextTemplate[]>([])
-  const [presetRegistry, setPresetRegistry] = useState<PresetRegistryItem[]>([])
 
   // 视图状态
   const [typeFilter, setTypeFilter] = useState<TemplateType>('FANCY_TEXT')
@@ -179,34 +178,12 @@ export default function TemplatesPage() {
     tab => !tab.showFor || tab.showFor.includes(typeFilter)
   )
 
-  // 加载花字预设
+  // 首屏花字模版由 Server Layout 预注入，避免客户端重复加载/重复计算
   useEffect(() => {
-    const loadFancyTextPresets = async () => {
-      setLoading(true)
-      try {
-        const registry = await loadPresets()
-        setPresetRegistry(registry)
-
-        // 加载每个预设并转换为模版
-        const templates: FancyTextTemplate[] = []
-        for (const item of registry) {
-          const preset = await getPreset(item)
-          if (preset) {
-            templates.push(convertPresetToTemplate(preset))
-          }
-        }
-
-        setFancyTextTemplates(templates)
-        setTypeCounts(prev => ({ ...prev, FANCY_TEXT: templates.length }))
-      } catch (err) {
-        console.error('Failed to load fancy text presets:', err)
-        setError('加载花字模版失败')
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadFancyTextPresets()
-  }, [])
+    setFancyTextTemplates(initialFancyTextTemplates ?? [])
+    setTypeCounts((prev) => ({ ...prev, FANCY_TEXT: initialFancyTextTemplates?.length ?? 0 }))
+    setLoading(false)
+  }, [initialFancyTextTemplates])
 
   // 初始化收藏状态
   useEffect(() => {
@@ -343,6 +320,7 @@ export default function TemplatesPage() {
                   selectedTags={categoryTags}
                   onTagsChange={setCategoryTags}
                   extraDimensions={typeFilter === 'FANCY_TEXT' ? [fancyTextUsageDimension] : []}
+                  initialDimensions={categoriesDimensions}
                 />
               </div>
             </div>

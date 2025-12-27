@@ -27,7 +27,7 @@ interface SyncTask {
   id: string
   name: string
   description: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string }>
   status: 'pending' | 'processing' | 'completed' | 'error'
   progress: number
   details?: string

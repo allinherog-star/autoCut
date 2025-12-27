@@ -24,6 +24,7 @@ import {
   Layers,
 } from 'lucide-react'
 import { Button, Card, Badge, Spinner } from '@/components/ui'
+import { MediaThumb } from '@/components/media-thumb'
 import {
   getMediaList,
   deleteMedia,
@@ -90,8 +91,6 @@ function getMediaIcon(type: Media['type']) {
       return Sparkles
     case 'TRANSITION':
       return Layers
-    case 'TEMPLATE':
-      return LayoutTemplate
     default:
       return FolderOpen
   }
@@ -281,11 +280,18 @@ export function MediaLibraryPanel({
                     <div className="relative aspect-video bg-surface-800">
                       {media.type === 'VIDEO' || media.type === 'IMAGE' ? (
                         media.thumbnailPath || media.path ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <MediaThumb
                             src={media.thumbnailPath || media.path}
                             alt={media.name}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            sizes="(min-width: 1024px) 180px, 45vw"
+                            quality={80}
+                            fallback={
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Icon className="w-8 h-8 text-surface-600" />
+                              </div>
+                            }
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

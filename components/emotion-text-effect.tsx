@@ -3161,8 +3161,9 @@ const Character = memo(function Character({ char, index, preset, scale, totalCha
 const Decoration = memo(function Decoration({ preset, textLength }: DecorationProps) {
   const { decoration } = preset
   
-  const emojis = decoration?.items.length > 0 
-    ? decoration.items 
+  const decoItems = decoration?.items
+  const emojis = (decoItems?.length ?? 0) > 0
+    ? decoItems!
     : DECORATION_EMOJIS[preset.emotion].slice(0, 6)
 
   const decorationElements = useMemo(() => {

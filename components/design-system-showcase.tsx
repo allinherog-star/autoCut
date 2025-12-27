@@ -459,16 +459,16 @@ export function DesignSystemShowcase() {
       <Section title="剪辑步骤" icon={<Scissors className="w-5 h-5" />}>
         <StaggerContainer className="flex flex-wrap gap-4">
           {[
-            { icon: Upload, label: '上传素材', status: 'completed' },
-            { icon: Wand2, label: '理解视频', status: 'completed' },
-            { icon: Type, label: '字幕推荐', status: 'active' },
-            { icon: Sparkles, label: '标题推荐', status: 'pending' },
-            { icon: Music, label: '音乐卡点', status: 'pending' },
-            { icon: Layers, label: '特效渲染', status: 'pending' },
-            { icon: AlertCircle, label: '情绪增强', status: 'pending' },
-            { icon: Play, label: '音画同步', status: 'pending' },
-            { icon: Scissors, label: '剪辑微调', status: 'pending' },
-            { icon: Download, label: '完成导出', status: 'pending' },
+            { icon: Upload, label: '上传素材', status: 'completed' as const },
+            { icon: Wand2, label: '理解视频', status: 'completed' as const },
+            { icon: Type, label: '字幕推荐', status: 'active' as const },
+            { icon: Sparkles, label: '标题推荐', status: 'pending' as const },
+            { icon: Music, label: '音乐卡点', status: 'pending' as const },
+            { icon: Layers, label: '特效渲染', status: 'pending' as const },
+            { icon: AlertCircle, label: '情绪增强', status: 'pending' as const },
+            { icon: Play, label: '音画同步', status: 'pending' as const },
+            { icon: Scissors, label: '剪辑微调', status: 'pending' as const },
+            { icon: Download, label: '完成导出', status: 'pending' as const },
           ].map((step, i) => (
             <StaggerItem key={i}>
               <StepIndicator {...step} index={i + 1} />
@@ -543,7 +543,7 @@ function StepIndicator({
   status,
   index,
 }: {
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ElementType<{ className?: string }>
   label: string
   status: 'completed' | 'active' | 'pending'
   index: number
@@ -575,6 +575,7 @@ function StepIndicator({
     </div>
   )
 }
+
 
 
 

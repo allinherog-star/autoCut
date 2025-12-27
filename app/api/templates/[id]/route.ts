@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { CACHE_TAGS } from '@/lib/server/cache-tags'
 
 // GET /api/templates/[id] - 获取单个模版
 export async function GET(
@@ -88,6 +90,9 @@ export async function PUT(
       })
     }
 
+    // 刷新模版列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.templates)
+
     return NextResponse.json({
       success: true,
       data: template,
@@ -111,6 +116,9 @@ export async function DELETE(
 
     await prisma.template.delete({ where: { id } })
 
+    // 刷新模版列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.templates)
+
     return NextResponse.json({
       success: true,
       message: '删除成功',
@@ -123,6 +131,7 @@ export async function DELETE(
     )
   }
 }
+
 
 
 

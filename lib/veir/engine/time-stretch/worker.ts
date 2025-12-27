@@ -171,7 +171,9 @@ async function ffmpegAtempoTimeStretch(params: {
       outName,
     ])
 
-    const outBytes = await ffmpeg.readFile(outName)
+    // @ffmpeg/ffmpeg 的类型定义返回 FileData（string | Uint8Array），
+    // 这里输出为 raw f32le，实际一定是 Uint8Array。
+    const outBytes = (await ffmpeg.readFile(outName)) as Uint8Array
     // Cleanup (best effort)
     try { await ffmpeg.deleteFile(inName) } catch {}
     try { await ffmpeg.deleteFile(outName) } catch {}

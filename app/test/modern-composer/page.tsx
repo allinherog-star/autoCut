@@ -197,7 +197,14 @@ export default function ModernComposerPreviewPage() {
       const titleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
       const subtitleState = { opacity: 0, y: 0, scale: 0.5, rotate: 0, x: 0 };
 
-      type AnimTarget = { opacity: number; scale: number; y?: number; rotate?: number; x?: number };
+      // Anime.js 允许属性使用关键帧数组（e.g. scale: [1, 1.2, 1]）
+      type AnimTarget = {
+        opacity?: number | number[]
+        scale?: number | number[]
+        y?: number | number[]
+        rotate?: number | number[]
+        x?: number | number[]
+      }
       type AnimState = { opacity: number; y: number; scale: number; rotate: number; x: number; [k: string]: number };
 
       // 根据动画类型设置目标值
@@ -522,10 +529,10 @@ export default function ModernComposerPreviewPage() {
             // 关键帧动画 - 使用线性进度插值（与 Anime.js 行为一致）
             // Anime.js 使用线性时间来分布关键帧，然后对每个段应用缓动
             for (const [prop, keyframes] of Object.entries(titleKeyframes)) {
-              (titleState as AnimState)[prop] = interpolateKeyframes(keyframes, titleAnimProgress);
+              (titleState as Record<string, number>)[prop] = interpolateKeyframes(keyframes, titleAnimProgress);
             }
             for (const [prop, keyframes] of Object.entries(subtitleKeyframes)) {
-              (subtitleState as AnimState)[prop] = interpolateKeyframes(keyframes, subtitleAnimProgress);
+              (subtitleState as Record<string, number>)[prop] = interpolateKeyframes(keyframes, subtitleAnimProgress);
             }
           } else {
             // 普通过渡动画 - 从初始状态插值到目标状态

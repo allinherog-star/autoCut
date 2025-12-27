@@ -94,7 +94,7 @@ export const MotionButton = motion.button
 // FadeIn 组件
 // ============================================
 
-interface FadeInProps extends HTMLMotionProps<'div'> {
+interface FadeInProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
   /** 动画方向 */
   direction?: 'up' | 'down' | 'left' | 'right' | 'none'
   /** 动画延迟 */
@@ -103,6 +103,7 @@ interface FadeInProps extends HTMLMotionProps<'div'> {
   duration?: number
   /** 是否禁用动画 */
   disabled?: boolean
+  children?: ReactNode
 }
 
 /**
@@ -235,7 +236,7 @@ ScaleIn.displayName = 'ScaleIn'
 // StaggerContainer 容器组件
 // ============================================
 
-interface StaggerContainerProps extends HTMLAttributes<HTMLDivElement> {
+interface StaggerContainerProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
   /** 子元素间隔时间 */
   staggerDelay?: number
   /** 初始延迟 */
@@ -383,6 +384,7 @@ export const listAnimation = {
     visible: { opacity: 1, x: 0 },
   },
 }
+
 
 
 

@@ -232,7 +232,11 @@ export default function EffectsPage() {
                         </Badge>
                       )}
                       {effect.isPremium && (
-                        <Badge variant="gradient" size="sm">
+                        <Badge
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-400/30 bg-gradient-to-r from-amber-400/20 to-fuchsia-500/20 text-amber-200"
+                        >
                           <Sparkles className="w-3 h-3" />
                           高级
                         </Badge>

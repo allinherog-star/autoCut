@@ -36,6 +36,7 @@ import {
   type LegacyProgressCallback as ProgressCallback,
 } from '@/lib/modern-composer'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
+import { MediaThumb } from '@/components/media-thumb'
 import { useEditor, type TargetDevice } from '../layout'
 import { VideoPreview, type SubtitleItem } from '@/components/video-preview'
 import {
@@ -1427,11 +1428,14 @@ export default function SubtitlePage() {
                             openPreview(segment)
                           }}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <MediaThumb
                             src={segment.thumbnailUrl}
                             alt={`片段 ${segment.id}`}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="112px"
+                            quality={80}
+                            fallback={null}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                           {/* 播放按钮 */}
@@ -1555,11 +1559,14 @@ export default function SubtitlePage() {
                                     }}
                                   >
                                     {subtitle.thumbnailUrl ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
+                                      <MediaThumb
                                         src={subtitle.thumbnailUrl}
                                         alt="画面"
-                                        className="w-full h-full object-cover transition-transform duration-200 group-hover/preview:scale-105"
+                                        fill
+                                        className="object-cover transition-transform duration-200 group-hover/preview:scale-105"
+                                        sizes="112px"
+                                        quality={80}
+                                        fallback={null}
                                       />
                                     ) : (
                                       <div className="w-full h-full bg-surface-700 flex items-center justify-center">

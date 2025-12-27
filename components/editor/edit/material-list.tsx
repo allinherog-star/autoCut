@@ -33,7 +33,7 @@ interface MaterialListProps {
 // 轨道类型配置
 const TRACK_TYPE_CONFIG: Record<TrackType, { 
   label: string
-  icon: React.ElementType
+  icon: React.ElementType<{ className?: string }>
   color: string
   bgColor: string
 }> = {

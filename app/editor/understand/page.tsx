@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Button, Card, Badge, Progress, Tabs, TabsList, TabsTrigger } from '@/components/ui'
 import { MediaPreviewModal } from '@/components/media-preview-modal'
+import { MediaThumb } from '@/components/media-thumb'
 import { useEditor } from '../layout'
 
 // ============================================
@@ -433,11 +434,14 @@ export default function UnderstandPage() {
                             className="relative w-32 h-18 rounded-lg overflow-hidden bg-surface-800 flex-shrink-0 group cursor-pointer"
                             onClick={() => openPreview(segment)}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <MediaThumb
                               src={segment.thumbnailUrl}
                               alt={`片段 ${segment.id}`}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              fill
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              sizes="128px"
+                              quality={80}
+                              fallback={null}
                             />
                             {/* 渐变遮罩 */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />

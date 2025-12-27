@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import {
   saveFile,
@@ -8,6 +9,7 @@ import {
   initStorage,
 } from '@/lib/storage'
 import { MediaType } from '@prisma/client'
+import { CACHE_TAGS } from '@/lib/server/cache-tags'
 
 // 统一响应格式
 function successResponse<T>(data: T) {
@@ -83,6 +85,9 @@ export async function POST(request: NextRequest) {
         path: storageResult.path,
       },
     })
+
+    // 刷新素材列表缓存（RSC fetch tags）
+    revalidateTag(CACHE_TAGS.media)
 
     return successResponse(media)
   } catch (error) {

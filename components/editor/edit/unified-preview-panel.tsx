@@ -10,7 +10,7 @@
  * - 保留：工具栏、播放控制、吸附参考线
  */
 
-import React, { useMemo, useRef, useState, useCallback } from 'react'
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import {
     Play,
     Pause,
@@ -99,6 +99,9 @@ export function UnifiedPreviewPanel({
 
     // 播放恢复标记
     const resumeAfterDragRef = useRef(false)
+    // 等待 VEIR 写回后再恢复播放（避免"松手瞬间回弹/恢复过早"）
+    const pendingResumeRef = useRef(false)
+    const lastDragCommitRef = useRef<{ clipId: string; xPercent: number; yPercent: number } | null>(null)
 
     // 内容分辨率：优先使用 VEIR 项目的分辨率
     const contentResolution: [number, number] = useMemo(() => {
@@ -185,16 +188,23 @@ export function UnifiedPreviewPanel({
     }, [selectedClipId, onClipTransformChange])
 
     // Fabric.js 拖拽回调
+    // 关键修复：简化拖拽逻辑，直接存储用户拖拽后的最终位置（百分比），不做复杂的"动画补偿"
+    // 渲染时如果有 clipOverrides.offset，会跳过动画位移叠加，元素固定在用户指定的位置
     const handleDragStart = useCallback((clipId: string) => {
         const trackId = findTrackIdByClipId(clipId)
         if (trackId) {
             onSelectClip?.(clipId, trackId)
         }
+        // 拖拽时暂停播放，避免渲染循环和交互的竞态
         if (playback.isPlaying) {
             resumeAfterDragRef.current = true
+            pendingResumeRef.current = false
+            lastDragCommitRef.current = null
             pause()
         } else {
             resumeAfterDragRef.current = false
+            pendingResumeRef.current = false
+            lastDragCommitRef.current = null
         }
         setIsDragging(true)
     }, [findTrackIdByClipId, onSelectClip, playback.isPlaying, pause])
@@ -202,19 +212,27 @@ export function UnifiedPreviewPanel({
     const handleDragging = useCallback((clipId: string, xPercent: number, yPercent: number) => {
         const snapped = computeSnapped({ x: xPercent, y: yPercent }, { altKey: false })
         setSnapGuides(snapped.guides)
-        onClipTransformChange?.(clipId, { xPercent: snapped.x, yPercent: snapped.y })
-    }, [computeSnapped, onClipTransformChange])
+        // 拖拽过程中只更新吸附参考线，不写 VEIR（降低抖动/竞态），在松手时 commit
+    }, [computeSnapped])
 
     const handleDragEnd = useCallback((clipId: string, xPercent: number, yPercent: number) => {
         const snapped = computeSnapped({ x: xPercent, y: yPercent }, { altKey: false })
-        onClipTransformChange?.(clipId, { xPercent: snapped.x, yPercent: snapped.y })
+        const clamp01 = (v: number) => Math.max(0, Math.min(100, v))
+        // 关键修复：直接存储用户拖拽后的最终位置，不做"动画补偿"
+        // 渲染时会检测到有 clipOverrides.offset 并跳过动画位移叠加，元素固定在此位置
+        const commitX = clamp01(snapped.x)
+        const commitY = clamp01(snapped.y)
+        console.log('[handleDragEnd] 写入 VEIR offset:', clipId, { xPercent: commitX, yPercent: commitY })
+        onClipTransformChange?.(clipId, { xPercent: commitX, yPercent: commitY })
         setSnapGuides({ v: null, h: null })
         setIsDragging(false)
+        // 等待 VEIR 落盘后再恢复播放
         if (resumeAfterDragRef.current) {
             resumeAfterDragRef.current = false
-            play()
+            pendingResumeRef.current = true
+            lastDragCommitRef.current = { clipId, xPercent: commitX, yPercent: commitY }
         }
-    }, [computeSnapped, onClipTransformChange, play])
+    }, [computeSnapped, onClipTransformChange])
 
     const handleSelect = useCallback((clipId: string) => {
         const trackId = findTrackIdByClipId(clipId)
@@ -222,6 +240,29 @@ export function UnifiedPreviewPanel({
             onSelectClip?.(clipId, trackId)
         }
     }, [findTrackIdByClipId, onSelectClip])
+
+    // 当 veirProject 写回完成（offset 已落到 clipOverrides）后再恢复播放
+    useEffect(() => {
+        if (!pendingResumeRef.current) return
+        if (!veirProject) return
+        const commit = lastDragCommitRef.current
+        if (!commit) return
+
+        const transform = veirProject.adjustments?.clipOverrides?.[commit.clipId]?.video?.transform
+        const offset = transform?.offset
+        if (!offset) return
+
+        const [w, h] = veirProject.meta.resolution as [number, number]
+        const x = (offset[0] / w) * 100
+        const y = (offset[1] / h) * 100
+        const eps = 0.6 // percent：吸附/浮点误差容忍
+
+        if (Math.abs(x - commit.xPercent) <= eps && Math.abs(y - commit.yPercent) <= eps) {
+            pendingResumeRef.current = false
+            lastDragCommitRef.current = null
+            play()
+        }
+    }, [veirProject, play])
 
     return (
         <div className={`flex flex-col h-full bg-black ${className}`}>

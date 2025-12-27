@@ -41,6 +41,11 @@ interface SubcategoryTagsProps {
   onTagsChange: (tags: string[]) => void
   /** 额外的自定义维度（如花字用途），会显示在数据库维度之前 */
   extraDimensions?: ExtraDimension[]
+  /**
+   * 首屏预注入的维度数据（由 Server Components 提供）
+   * - 提供时将跳过客户端 getAllCategories() 请求
+   */
+  initialDimensions?: DimensionGroup[]
   className?: string
 }
 
@@ -63,15 +68,22 @@ export function SubcategoryTags({
   selectedTags,
   onTagsChange,
   extraDimensions = [],
+  initialDimensions,
   className = '',
 }: SubcategoryTagsProps) {
-  const [dimensions, setDimensions] = useState<DimensionGroup[]>([])
-  const [loading, setLoading] = useState(true)
+  const [dimensions, setDimensions] = useState<DimensionGroup[]>(initialDimensions ?? [])
+  const [loading, setLoading] = useState(!initialDimensions)
   const [isExpanded, setIsExpanded] = useState(false)
 
   // 加载分类数据
   useEffect(() => {
     async function loadCategories() {
+      // 有服务端注入数据时，不重复请求
+      if (initialDimensions?.length) {
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       const response = await getAllCategories()
       if (response.success && response.data) {
@@ -80,7 +92,7 @@ export function SubcategoryTags({
       setLoading(false)
     }
     loadCategories()
-  }, [])
+  }, [initialDimensions])
 
   // 按指定顺序筛选维度
   const filteredDimensions = useMemo(() => {
